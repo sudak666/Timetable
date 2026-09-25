@@ -277,16 +277,19 @@ details[open] summary::before{transform:rotate(45deg)}
 [data-style=blocks] .gbtn button{border-radius:10px;box-shadow:inset 0 -5px 0 rgba(0,0,0,.22),inset 0 3px 0 rgba(255,255,255,.2)}
 [data-style=blocks] .n,[data-style=blocks] .gi .g{border-radius:8px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2)}
 /* електромотобайк */
-.lane{position:relative;height:110px;margin-bottom:16px;border-radius:22px;overflow:hidden;background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 12%,var(--card)) 0,var(--card) 70%);border:1px solid var(--line)}
+.lane{position:relative;height:142px;margin-bottom:16px;border-radius:22px;overflow:hidden;background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 12%,var(--card)) 0,var(--card) 70%);border:1px solid var(--line)}
 .lane::after{content:"";position:absolute;left:0;right:0;bottom:12px;height:3px;background:repeating-linear-gradient(90deg,var(--line) 0 22px,transparent 22px 40px);border-radius:3px}
 .lane-txt{position:absolute;left:16px;top:10px;font-weight:800;font-size:13px;color:var(--muted);z-index:1;pointer-events:none}
-.bike{position:absolute;left:0;bottom:6px;width:156px;height:94px;cursor:pointer;will-change:transform;z-index:2}
+.bike{position:absolute;left:0;bottom:6px;width:156px;height:127px;cursor:pointer;will-change:transform;z-index:2}
 .bk-sh{position:absolute;left:12%;right:12%;bottom:3px;height:8px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.28),transparent);transform-origin:18% 50%;transition:transform .35s cubic-bezier(.3,1.4,.5,1),opacity .35s}
 .bike.wheelie .bk-sh{transform:scaleX(.72);opacity:.8}
-.bk-in{transform-origin:34px 86px;transition:transform .35s cubic-bezier(.3,1.4,.5,1)}
+.bk-in{transform-origin:34px 122px;transition:transform .35s cubic-bezier(.3,1.4,.5,1)}
 .bike.wheelie .bk-in{transform:rotate(-16deg)}
 .bk-spin{animation:spin .35s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+.rider{animation:lean 1.6s ease-in-out infinite alternate;transform-origin:52px 24px}
+@keyframes lean{to{transform:rotate(-2.5deg) translateY(.6px)}}
+.bike.wheelie .rider{animation:none;transform:rotate(8deg);transition:transform .3s}
 .bk-body{animation:bump .45s ease-in-out infinite alternate}
 @keyframes bump{to{transform:translateY(1.2px)}}
 .bk-glow{animation:glow 1s ease-in-out infinite alternate}
@@ -309,10 +312,13 @@ details[open] summary::before{transform:rotate(45deg)}
   </div>
 </header>
 <div class="prof" id="prof" hidden></div>
-<div class="lane" id="lane"><div class="lane-txt" id="laneTxt"></div><div class="bike" id="bike" title="Натисни — буде вілі!"><div class="bk-sh"></div><div class="bk-in"><svg viewBox="0 0 130 78" width="156" height="94" aria-hidden="true">
+<div class="lane" id="lane"><div class="lane-txt" id="laneTxt"></div><div class="bike" id="bike" title="Натисни — буде вілі!"><div class="bk-sh"></div><div class="bk-in"><svg viewBox="0 -28 130 106" width="156" height="127" aria-hidden="true">
  <defs>
   <linearGradient id="bkBody" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22d3ee"/><stop offset=".55" style="stop-color:var(--accent)"/><stop offset="1" stop-color="#312e81"/></linearGradient>
   <linearGradient id="bkMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e5e7eb"/><stop offset="1" stop-color="#6b7280"/></linearGradient>
+  <linearGradient id="rdJersey" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fb923c"/><stop offset="1" stop-color="#e11d48"/></linearGradient>
+  <linearGradient id="rdHelm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cbd5e1"/></linearGradient>
+  <linearGradient id="rdVisor" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#67e8f9"/><stop offset=".6" stop-color="#6366f1"/><stop offset="1" stop-color="#1e1b4b"/></linearGradient>
   <radialGradient id="bkLight"><stop offset="0" stop-color="#fff9c4"/><stop offset="1" stop-color="#fde047" stop-opacity="0"/></radialGradient>
  </defs>
  <g class="bk-body">
@@ -331,6 +337,27 @@ details[open] summary::before{transform:rotate(45deg)}
   <path d="M83 22 L82 12" stroke="#374151" stroke-width="3" stroke-linecap="round"/>
   <path d="M77 12 L90 10" stroke="#111827" stroke-width="3.4" stroke-linecap="round"/>
   <circle cx="89" cy="21" r="4.2" fill="#111827"/><circle cx="90" cy="21" r="2.6" fill="#fde047"/>
+  <g class="rider">
+   <path d="M50 22 L66 25" stroke="#1f2937" stroke-width="7.5" stroke-linecap="round"/>
+   <path d="M66 25 L61 41" stroke="#1f2937" stroke-width="6.5" stroke-linecap="round"/>
+   <path d="M55 39 Q56 36 60 36 L66 37 Q69 38 68 42 L67 45 L56 45 Q54 44 55 39 Z" fill="#0f172a"/>
+   <path d="M57 40.5 H66" stroke="#e11d48" stroke-width="1.2"/>
+   <path d="M42 24 Q41 8 56 -2 Q63 -5 68 0 Q71 5 67 10 Q59 16 57 26 Z" fill="url(#rdJersey)"/>
+   <path d="M58 -1 Q64 -4 68 0 Q69 3 66 5 Q62 1 57 3 Z" fill="#0f172a" opacity=".85"/>
+   <path d="M49 17 Q53 8 61 3" stroke="#fff" stroke-opacity=".55" stroke-width="2" fill="none" stroke-linecap="round"/>
+   <text x="51" y="18" font-size="7" font-weight="900" fill="#fff" font-family="Nunito,sans-serif" transform="rotate(-38 51 18)">7</text>
+   <path d="M64 4 L73 11 L80 11" stroke="url(#rdJersey)" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+   <circle cx="80.5" cy="11" r="3" fill="#0f172a"/>
+   <path d="M63 0 L65 -4" stroke="#334155" stroke-width="4" stroke-linecap="round"/>
+   <path d="M58 -12 Q58 -24 69 -24 Q79 -24 80 -14 L80 -7 Q79 -3 74 -3 L64 -3 Q58 -5 58 -12 Z" fill="url(#rdHelm)"/>
+   <path d="M58.4 -13 Q59 -24 69 -24 Q76 -24 78.5 -18 Q70 -19 64 -12 Q61 -9 58.6 -9 Z" style="fill:var(--accent)"/>
+   <path d="M65 -23 L86 -19 Q87 -17 85 -16 L70 -17 Z" style="fill:var(--accent)"/>
+   <rect x="68.5" y="-16" width="11" height="6.5" rx="3.2" fill="#0f172a"/>
+   <rect x="70" y="-15" width="8.5" height="4.5" rx="2.2" fill="url(#rdVisor)"/>
+   <path d="M71 -14 L74 -14" stroke="#fff" stroke-width=".9" stroke-linecap="round" opacity=".9"/>
+   <path d="M73 -8 Q80 -9 82 -5 Q81 -2 77 -2 L72 -3 Z" fill="#94a3b8"/>
+   <path d="M75 -6 H80 M75 -4.2 H79" stroke="#334155" stroke-width=".8" stroke-linecap="round"/>
+  </g>
   <path d="M40 44 L48 44" stroke="#22d3ee" stroke-width="2" stroke-linecap="round" class="bk-glow"/>
  </g>
  <g class="bk-wheel" transform="translate(28 58)"><circle r="15.5" fill="#111827"/><circle r="11" fill="none" stroke="#4b5563" stroke-width="1.2"/><g class="bk-spin"><path d="M-10 0H10M0-10V10M-7-7L7 7M-7 7L7-7" stroke="#9ca3af" stroke-width="1.3"/><circle r="3.2" fill="#d1d5db"/></g><circle r="15.5" fill="none" stroke="#000" stroke-opacity=".35" stroke-width="3" stroke-dasharray="2.4 2.4"/></g>
