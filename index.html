@@ -207,6 +207,12 @@ details[open] summary::before{transform:rotate(45deg)}
 .quiz .ans button.ok{background:#00b894;color:#fff;border-color:#00b894}
 .quiz .ans button.no{background:#d63031;color:#fff;border-color:#d63031}
 .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.gr input:not([type=hidden]){font:inherit;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:12px;padding:8px 10px;outline:none;transition:border-color .15s,box-shadow .15s}
+.gr input:not([type=hidden]):focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow)}
+.gr input[type=number]{text-align:center}
+.srow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 12px;color:var(--muted);font-size:14px}
+.srow input{width:64px}
+.gr .form label{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .single .day:not(.show){display:none}
 .hl .l:not(.match){opacity:.2}
 .l.match{background:var(--glow)}
@@ -288,7 +294,7 @@ details[open] summary::before{transform:rotate(45deg)}
         <button>🏅 Створити</button></form>
       <details style="margin-top:12px"><summary>⚙️ Курс оцінок і запрошення</summary>
         <div class="rgrid" id="rEdit"></div>
-        <p class="msg">🔥 Серія: кожні <input type="number" id="stLen" min="2" max="30" style="width:64px"> оцінок поспіль ≥ <input type="number" id="stMin" min="1" max="12" style="width:64px"> дають бонус <input type="number" id="stBon" min="0" style="width:90px"> ₴</p>
+        <div class="srow">🔥 Серія: кожні <input type="number" id="stLen" min="2" max="30"> оцінок поспіль ≥ <input type="number" id="stMin" min="1" max="12"> дають бонус <input type="number" id="stBon" min="0" style="width:84px"> ₴</div>
         <button id="rSave">Зберегти курс</button> <span class="msg" id="rMsg"></span>
         <p style="margin-top:12px">Код для дитини: <b class="code" id="cChild"></b> · для другого з батьків: <b class="code" id="cPar"></b></p>
       </details>
