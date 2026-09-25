@@ -108,9 +108,15 @@ setInterval(() => {
 }, 1000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) set({ now: new Date() }); });
 
-void Promise.all([import('./views/grades'), import('./api'), import('./pwa')]).then(([g, api, pwa]) => {
+/* Модуль даних вантажимо в простої браузера, щоб не блокувати першу взаємодію (TBT/INP).
+   Одразу — якщо відкрита вкладка, якій потрібні дані, або це повернення з OAuth. */
+const loadData = () => Promise.all([import('./views/grades'), import('./api'), import('./pwa')]).then(([g, api, pwa]) => {
   G = g;
   api.watchAuth();
   void pwa.initPwa();
   draw();
 });
+if (state.tab !== 'today' || /access_token|code=/.test(location.href)) void loadData();
+else if ('requestIdleCallback' in window) requestIdleCallback(() => void loadData(), { timeout: 1500 });
+else setTimeout(() => void loadData(), 300);
+addEventListener('hashchange', () => { if (!G) void loadData(); }, { once: true });
