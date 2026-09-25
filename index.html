@@ -63,7 +63,7 @@ button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 @keyframes ring{0%,100%{transform:rotate(0)}20%{transform:rotate(18deg)}40%{transform:rotate(-16deg)}60%{transform:rotate(10deg)}80%{transform:rotate(-6deg)}}
 @keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 var(--glow)}50%{box-shadow:0 0 0 8px transparent}}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes float{0%,100%{transform:translate3d(0,0,0) rotate(-4deg)}50%{transform:translate3d(0,-8px,0) rotate(4deg)}}
 @keyframes shine{to{background-position:200% center}}
 h1{background-size:200% auto;animation:shine 6s linear infinite}
 .top>*,.day{animation:up .5s both}
@@ -71,7 +71,10 @@ h1{background-size:200% auto;animation:shine 6s linear infinite}
 .day{transition:transform .2s}.day:hover{transform:translateY(-4px)}
 .l.cur{animation:pulse 2s infinite}
 .now{cursor:pointer;position:relative;overflow:hidden}
-.now .em{position:absolute;right:16px;top:12px;font-size:44px;animation:float 3s ease-in-out infinite}
+.nowwrap{position:relative}
+.nowwrap .em{position:absolute;right:18px;top:14px;width:64px;height:64px;pointer-events:none;will-change:transform;animation:float 4s cubic-bezier(.45,0,.55,1) infinite;filter:drop-shadow(0 6px 10px rgba(0,0,0,.18));transition:opacity .3s}
+@media(max-width:520px){.nowwrap .em{width:48px;height:48px}}
+img.emo{width:1.25em;height:1.25em;vertical-align:-.28em;margin:0 .05em;display:inline-block}
 .chip{transition:transform .15s}.chip:hover{transform:scale(1.08)}
 .fun{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:20px}
 .fun .side{animation:up .5s .2s both}
@@ -131,7 +134,7 @@ summary{cursor:pointer;font-weight:700}
   </div>
 </header>
 <div class="top">
-  <section class="now" id="now"></section>
+  <div class="nowwrap"><section class="now" id="now"></section><img class="em" id="nowEm" alt="" decoding="async"></div>
   <aside class="side">
     <h4 id="bagT">Рюкзак на завтра</h4>
     <div class="chips" id="bag"></div>
@@ -196,6 +199,7 @@ summary{cursor:pointer;font-weight:700}
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js"></script>
 <script>
+const EMO=new Set(["1f1ec-1f1e7", "1f308", "1f30a", "1f30d", "1f331", "1f34c", "1f36f", "1f381", "1f389", "1f3a8", "1f3af", "1f3c6", "1f3d6-fe0f", "1f3db-fe0f", "1f40b", "1f40c", "1f419", "1f41c", "1f42c", "1f431", "1f446", "1f451", "1f468-200d-1f469-200d-1f466", "1f4af", "1f4b0", "1f4b8", "1f4bb", "1f4da", "1f4ec", "1f511", "1f522", "1f525", "1f60e", "1f680", "1f6e0-fe0f", "1f916", "1f91d", "1f973", "1f989", "1f98b", "1f992", "1f9ba", "1f9d2", "1f9ee", "1fa90", "2615", "2699-fe0f", "26a0-fe0f", "26a1", "26bd", "2705", "270d-fe0f", "2795"]);
 const T=['8:30-9:15','9:25-10:10','10:30-11:15','11:25-12:10','12:30-13:15','13:35-14:20','14:30-15:15'];
 const D=[
  ['Понеділок',['Математика','Всесв. історія','Література','Англ. мова','Укр. мова','STEM','Математика*']],
@@ -295,7 +299,7 @@ setN();
 renderGrid();renderSide();renderNow();
 setInterval(()=>renderNow(),1000);
 setInterval(()=>{renderGrid();renderSide()},20000);
-const E={'Математика':'🔢','Всесв. історія':'🏛️','Література':'📚','Англ. мова':'🇬🇧','Укр. мова':'✍️','STEM':'🤖','Інформатика':'💻','Географія':'🌍','Фіз-ра':'⚽','Технології':'🛠️','Громад. освіта':'🤝','Довкілля':'🌱','Мистецтво':'🎨','ЗБД':'🦺'};
+const E={'Математика':'🧮','Всесв. історія':'🏛️','Література':'📚','Англ. мова':'🇬🇧','Укр. мова':'✍️','STEM':'🤖','Інформатика':'💻','Географія':'🌍','Фіз-ра':'⚽','Технології':'🛠️','Громад. освіта':'🤝','Довкілля':'🌱','Мистецтво':'🎨','ЗБД':'🦺'};
 const F=['Восьминіг має три серця і блакитну кров 🐙','Мед ніколи не псується — його знаходили в єгипетських пірамідах 🍯','Равлик може спати до 3 років 🐌','У космосі неможливо заплакати — сльози не падають 🚀','Банани — це ягоди, а полуниця — ні 🍌','Серце кита розміром з автомобіль 🐋','Блискавка гарячіша за поверхню Сонця ⚡','Мурахи ніколи не сплять по-справжньому 🐜','Жирафи сплять лише 30 хвилин на добу 🦒','На Венері день довший за рік 🪐','Коти сплять близько 16 годин на день 🐱','Дельфіни дають одне одному імена 🐬','Метелики відчувають смак ногами 🦋','В Україні понад 70 000 річок 🌊'];
 let fi=Math.floor(Date.now()/864e5)%F.length;
 const showFact=()=>$('fact').textContent=F[fi%F.length];
@@ -311,7 +315,7 @@ function weekend(){const{d,wd,min}=now();
 weekend();setInterval(weekend,30000);
 // emoji on lessons
 const _rg=renderGrid;renderGrid=function(){_rg();document.querySelectorAll('.l .s').forEach(x=>{const k=x.firstChild.textContent.trim();if(E[k])x.firstChild.textContent=E[k]+' '+x.firstChild.textContent})};
-const _rn=renderNow;renderNow=function(){_rn();const h=$('now').querySelector('h2');if(!h)return;const k=Object.keys(E).find(k=>h.textContent.includes(k));$('now').insertAdjacentHTML('beforeend',`<span class="em">${k?E[k]:'🎉'}</span>`)};
+const _rn=renderNow;renderNow=function(){_rn();const h=$('now').querySelector('h2'),k=h&&Object.keys(E).find(k=>h.textContent.includes(k)),src=emoSrc(k?E[k]:'🎉'),im=$('nowEm');if(src&&im.getAttribute('src')!==src)im.src=src;im.hidden=!src};
 // confetti
 const cv=document.createElement('canvas');cv.id='cf';document.body.append(cv);const cx=cv.getContext('2d');let P=[];
 function boom(x=innerWidth/2,y=innerHeight/3,n=120){if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
@@ -452,6 +456,18 @@ else{
   let cur;
   sb.auth.onAuthStateChange((ev,s)=>{const id=s?.user?.id??null;if(id===cur)return;cur=id;setTimeout(()=>enter().catch(e=>{$('gLoad').textContent='Помилка: '+err(e);show('gLoad')}),0)});
 }
+// ===== 3D-емодзі (Microsoft Fluent Emoji, MIT) =====
+function emoSrc(e){if(!e)return null;const cp=[...e].map(c=>c.codePointAt(0).toString(16));const a=cp.join('-'),b=cp.filter(c=>c!=='fe0f').join('-');return EMO.has(a)?`assets/emoji/${a}.webp`:EMO.has(b)?`assets/emoji/${b}.webp`:null}
+const EMO_RX=/(?:[\u{1F1E6}-\u{1F1FF}]{2}|[☀-➿\u{1F300}-\u{1FAFF}]️?(?:‍[☀-➿\u{1F300}-\u{1FAFF}]️?)*)/gu;
+function emojify(root){
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentNode.closest('select,option,textarea,script,style,title,input')||!EMO_RX.test(n.data)?(EMO_RX.lastIndex=0,NodeFilter.FILTER_REJECT):(EMO_RX.lastIndex=0,NodeFilter.FILTER_ACCEPT)});
+  const ns=[];while(w.nextNode())ns.push(w.currentNode);
+  ns.forEach(n=>{const f=document.createDocumentFragment();let i=0;n.data.replace(EMO_RX,(m,o)=>{const src=emoSrc(m);if(!src)return m;f.append(n.data.slice(i,o));const im=document.createElement('img');im.className='emo';im.src=src;im.alt=m;im.draggable=false;f.append(im);i=o+m.length;return m});
+    if(i){f.append(n.data.slice(i));n.replaceWith(f)}});
+}
+let emoQ=false;const emoObs=new MutationObserver(()=>{if(emoQ)return;emoQ=true;requestAnimationFrame(()=>{emoQ=false;emoObs.disconnect();emojify(document.body);emoObs.observe(document.body,{childList:true,subtree:true,characterData:true})})});
+emojify(document.body);emoObs.observe(document.body,{childList:true,subtree:true,characterData:true});
+renderNow();
 </script>
 </body>
 </html>
