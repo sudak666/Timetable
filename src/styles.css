@@ -189,12 +189,12 @@ details[open] summary::before{transform:rotate(45deg)}
 .quiz .ans button.ok{background:#00705a;color:#fff;border-color:#00705a}
 .quiz .ans button.no{background:#c0392b;color:#fff;border-color:#c0392b}
 .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
-.gr input:not([type=hidden]){font:inherit;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:12px;padding:8px 10px;outline:none;transition:border-color .15s,box-shadow .15s}
-.gr input:not([type=hidden]):focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow)}
-.gr input[type=number]{text-align:center}
+.page input:not([type=hidden]),.md input{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:12px;padding:8px 10px;outline:none;transition:border-color .15s,box-shadow .15s}
+.page input:not([type=hidden]):focus,.md input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow)}
+.page input[type=number]{text-align:center}
 .srow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 12px;color:var(--muted);font-size:14px}
 .srow input{width:64px}
-.gr .form label{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.page .form label{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 /* профіль зверху */
 .prof{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:12px 14px;margin-bottom:16px;box-shadow:0 6px 20px var(--glow);animation:up .4s both}
 .prof .pa{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 50%,#fff));display:grid;place-items:center;flex:none;border:0;padding:0;cursor:pointer}
