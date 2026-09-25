@@ -122,6 +122,40 @@ img.emo{width:1.25em;height:1.25em;vertical-align:-.28em;margin:0 .05em;display:
 .code{font-family:monospace;font-size:18px;background:var(--brk);padding:2px 8px;border-radius:8px;letter-spacing:.1em;user-select:all}
 summary{cursor:pointer;font-weight:700}
 #pay{background:#00b894;color:#fff;border:0}
+
+/* власні вікна замість системних */
+.pick{display:inline-flex;align-items:center;gap:8px;font-weight:600;border-radius:14px;padding:9px 14px}
+.pick::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:translateY(-2px) rotate(45deg);margin-left:4px;border-radius:1px}
+.pop{position:absolute;z-index:50;background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:0 18px 50px rgba(20,20,60,.25);padding:10px;animation:popIn .18s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes popIn{from{opacity:0;transform:translateY(-6px) scale(.97)}to{opacity:1;transform:none}}
+.pop .opt{font:inherit;font-size:15px;display:flex;align-items:center;gap:8px;width:100%;border:0;background:none;padding:9px 12px;border-radius:12px;text-align:left;font-weight:600;color:var(--text)}
+.pop .opt:hover,.pop .opt.on{background:var(--glow)}
+.plist{max-height:320px;overflow:auto;min-width:220px}
+.cal{width:290px}
+.cal .hd{display:flex;align-items:center;justify-content:space-between;padding:4px 4px 8px;font-weight:800;text-transform:capitalize}
+.cal .hd button{border:0;width:36px;height:36px;border-radius:12px;padding:0;font-size:18px}
+.cal .g{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.cal .g span{font-size:12px;color:var(--muted);padding:4px 0}
+.cal .g button{border:0;height:36px;border-radius:12px;padding:0;background:none;font-weight:600}
+.cal .g button:hover{background:var(--glow)}
+.cal .g button.t{box-shadow:inset 0 0 0 2px var(--accent)}
+.cal .g button.s{background:var(--accent);color:#fff}
+.cal .g button.o{opacity:.35}
+.cal .ft{display:flex;gap:6px;margin-top:8px}
+.cal .ft button{flex:1;border-radius:12px;font-weight:600}
+.mb{position:fixed;inset:0;z-index:60;background:rgba(10,10,30,.45);backdrop-filter:blur(4px);display:grid;place-items:center;padding:16px;animation:fade .15s}
+@keyframes fade{from{opacity:0}}
+.md{background:var(--card);border-radius:24px;padding:22px;width:min(380px,100%);box-shadow:0 30px 80px rgba(0,0,0,.35);animation:popIn .2s cubic-bezier(.2,.9,.3,1.2)}
+.md p{font-size:17px;font-weight:700;margin-bottom:14px;line-height:1.4}
+.md input{width:100%;font:inherit;font-size:18px;border:1px solid var(--line);background:var(--bg);color:var(--text);border-radius:14px;padding:12px;margin-bottom:14px}
+.md .row{display:flex;gap:8px;justify-content:flex-end}
+.md .row button{border-radius:14px;padding:10px 18px;font-weight:700}
+.md .row .pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+input,select,textarea{border-radius:14px}
+input[type=number]{-moz-appearance:textfield}input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+details summary{list-style:none}details summary::-webkit-details-marker{display:none}
+details summary::before{content:"";display:inline-block;width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);margin-right:10px;transition:transform .2s;border-radius:1px}
+details[open] summary::before{transform:rotate(45deg)}
 .single .day:not(.show){display:none}
 .hl .l:not(.match){opacity:.2}
 .l.match{background:var(--glow)}
@@ -177,7 +211,7 @@ summary{cursor:pointer;font-weight:700}
     <div class="lvl" id="lvl"></div>
     <div class="badges" id="badges"></div>
     <h4 style="margin-top:16px">➕ Додати оцінку <span id="pendN" style="color:#e17055;text-transform:none;letter-spacing:0"></span></h4>
-    <div class="form"><select id="gs"></select><input type="date" id="gd"></div>
+    <div class="form"><input type="hidden" id="gs"><input type="hidden" id="gd"><button type="button" class="pick" id="gsBtn"></button><button type="button" class="pick" id="gdBtn"></button></div>
     <div class="gbtn" id="gb"></div>
     <div id="par" hidden>
       <h4 style="margin-top:12px">🎁 Бонус / штраф / виплата</h4>
@@ -205,6 +239,27 @@ summary{cursor:pointer;font-weight:700}
 // не перемальовувати DOM, якщо HTML не змінився (прибирає блимання)
 {const d=Object.getOwnPropertyDescriptor(Element.prototype,'innerHTML');Object.defineProperty(Element.prototype,'innerHTML',{get(){return d.get.call(this)},set(v){v=String(v);if(this.__h===v&&this.isConnected)return;this.__h=v;d.set.call(this,v)},configurable:true})}
 setTimeout(()=>document.body.classList.add('ready'),1500);
+// ===== Власні діалоги та пікери =====
+function uiModal(text,{input,value='',ok='OK',cancel}={}){return new Promise(res=>{
+  const b=document.createElement('div');b.className='mb';
+  b.innerHTML=`<div class="md" role="dialog"><p></p>${input?`<input type="${input}" inputmode="numeric">`:''}<div class="row">${cancel?`<button data-v="0">${cancel}</button>`:''}<button class="pri" data-v="1">${ok}</button></div></div>`;
+  b.querySelector('p').textContent=text;const inp=b.querySelector('input');if(inp)inp.value=value;
+  const done=v=>{b.remove();document.removeEventListener('keydown',kd);res(v)};
+  const kd=e=>{if(e.key==='Escape')done(input?null:false);if(e.key==='Enter')done(input?inp.value:true)};
+  b.onclick=e=>{const t=e.target.closest('[data-v]');if(t)done(t.dataset.v==='1'?(input?inp.value:true):(input?null:false));else if(e.target===b)done(input?null:false)};
+  document.addEventListener('keydown',kd);document.body.append(b);(inp||b.querySelector('.pri')).focus();inp?.select();
+})}
+const uiAlert=t=>uiModal(t,{ok:'Зрозуміло'});
+const uiConfirm=t=>uiModal(t,{ok:'Так',cancel:'Скасувати'});
+const uiPrompt=(t,v)=>uiModal(t,{input:'number',value:v,ok:'Готово',cancel:'Скасувати'});
+let popEl=null;
+function closePop(){popEl?.remove();popEl=null}
+function openPop(anchor,build){closePop();const p=document.createElement('div');p.className='pop';build(p);document.body.append(p);
+  const r=anchor.getBoundingClientRect(),w=p.offsetWidth;let x=r.left+scrollX;x=Math.min(x,scrollX+document.documentElement.clientWidth-w-12);p.style.left=Math.max(12,x)+'px';p.style.top=(r.bottom+scrollY+6)+'px';popEl=p;p._a=anchor}
+document.addEventListener('pointerdown',e=>{if(popEl&&!popEl.contains(e.target)&&!popEl._a.contains(e.target))closePop()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closePop()});
+addEventListener('resize',closePop);
+
 const EMO=new Set(["1f1ec-1f1e7", "1f308", "1f30a", "1f30d", "1f331", "1f34c", "1f36f", "1f381", "1f389", "1f3a8", "1f3af", "1f3c6", "1f3d6-fe0f", "1f3db-fe0f", "1f40b", "1f40c", "1f419", "1f41c", "1f42c", "1f431", "1f446", "1f451", "1f468-200d-1f469-200d-1f466", "1f4af", "1f4b0", "1f4b8", "1f4bb", "1f4da", "1f4ec", "1f511", "1f522", "1f525", "1f60e", "1f680", "1f6e0-fe0f", "1f916", "1f91d", "1f973", "1f989", "1f98b", "1f992", "1f9ba", "1f9d2", "1f9ee", "1fa90", "2615", "2699-fe0f", "26a0-fe0f", "26a1", "26bd", "2705", "270d-fe0f", "2795"]);
 const T=['8:30-9:15','9:25-10:10','10:30-11:15','11:25-12:10','12:30-13:15','13:35-14:20','14:30-15:15'];
 const D=[
@@ -297,7 +352,7 @@ $('theme').onclick=()=>{const r=document.documentElement,dk=r.dataset.theme?r.da
 try{if(localStorage.theme)document.documentElement.dataset.theme=localStorage.theme}catch{}
 const setN=()=>$('notif').classList.toggle('on',notifOn);
 $('notif').onclick=async()=>{
-  if(!('Notification'in window))return alert('Браузер не підтримує сповіщення');
+  if(!('Notification'in window))return uiAlert('Браузер не підтримує сповіщення');
   if(!notifOn&&Notification.permission!=='granted'&&await Notification.requestPermission()!=='granted')return;
   notifOn=!notifOn;try{localStorage.notif=notifOn?'1':'0'}catch{}setN();
 };
@@ -347,8 +402,16 @@ const err=e=>e?.message||String(e);
 let sb,me=null,fam=null,role=null,members=[],kid=null,GR=[],LG=[],RATE={...DEF_RATE},chan=null;
 const M=x=>x.amount??RATE[x.grade]??0;
 
-$('gs').innerHTML=Object.keys(C).map(k=>`<option>${k}</option>`).join('');
-$('gd').value=iso(new Date());
+const MON=['січень','лютий','березень','квітень','травень','червень','липень','серпень','вересень','жовтень','листопад','грудень'];
+function setSubj(k){$('gs').value=k;$('gsBtn').textContent=(E[k]||'')+' '+k}
+function setDate(v){$('gd').value=v;const t=iso(new Date()),y=iso(new Date(Date.now()-864e5));$('gdBtn').textContent='📅 '+(v===t?'Сьогодні':v===y?'Вчора':new Date(v+'T12:00').toLocaleDateString('uk-UA',{weekday:'short',day:'numeric',month:'short'}))}
+setSubj(Object.keys(C)[0]);setDate(iso(new Date()));
+$('gsBtn').onclick=e=>openPop(e.currentTarget,p=>{p.innerHTML=`<div class="plist">${Object.keys(C).map(k=>`<button class="opt ${k===$('gs').value?'on':''}" data-k="${k}">${E[k]||''} ${k}</button>`).join('')}</div>`;p.onclick=ev=>{const b=ev.target.closest('[data-k]');if(b){setSubj(b.dataset.k);closePop()}}});
+$('gdBtn').onclick=e=>openPop(e.currentTarget,p=>{const sel=$('gd').value;let v=new Date(sel+'T12:00');v.setDate(1);
+  const draw=()=>{const y=v.getFullYear(),m=v.getMonth(),first=(new Date(y,m,1).getDay()+6)%7,today=iso(new Date());let h='';
+    for(let i=0;i<42;i++){const d=new Date(y,m,1-first+i,12),k=iso(d);h+=`<button data-d="${k}" class="${d.getMonth()!==m?'o':''} ${k===today?'t':''} ${k===sel?'s':''}">${d.getDate()}</button>`}
+    p.innerHTML=`<div class="cal"><div class="hd"><button data-n="-1">‹</button><span>${MON[m]} ${y}</span><button data-n="1">›</button></div><div class="g">${['Пн','Вт','Ср','Чт','Пт','Сб','Нд'].map(x=>`<span>${x}</span>`).join('')}${h}</div><div class="ft"><button data-d="${iso(new Date(Date.now()-864e5))}">Вчора</button><button data-d="${today}">Сьогодні</button></div></div>`};
+  draw();p.onclick=ev=>{const n=ev.target.closest('[data-n]'),d=ev.target.closest('[data-d]');if(n){v.setMonth(v.getMonth()+ +n.dataset.n);draw()}else if(d){setDate(d.dataset.d);closePop()}}});
 $('gb').innerHTML=Array.from({length:12},(_,i)=>12-i).map(g=>`<button data-g="${g}" style="background:${GC(g)}">${g}</button>`).join('');
 
 function renderGrades(){
@@ -437,21 +500,21 @@ $('kids').onclick=e=>{const b=e.target.closest('[data-kid]');if(!b)return;kid=b.
 $('gb').onclick=async e=>{const b=e.target.closest('[data-g]');if(!b||!kid)return;const g=+b.dataset.g,par=role==='parent';
   b.disabled=true;
   const{error}=await sb.from('school_grades').insert({family_id:fam.id,child_id:kid,subject:$('gs').value,grade:g,date:$('gd').value||iso(new Date()),...(par?{status:'approved',amount:RATE[g]??0}:{})});
-  b.disabled=false;if(error)return alert('Не вдалося зберегти: '+err(error));
+  b.disabled=false;if(error)return uiAlert('Не вдалося зберегти: '+err(error));
   if(g>=10)boom(e.clientX,e.clientY,g===12?150:70);load()};
 $('gl').onclick=async e=>{
   const ok=e.target.closest('[data-ok]'),un=e.target.closest('[data-un]'),del=e.target.closest('[data-del]');
   let r;
   if(ok){const x=GR.find(g=>g.id===ok.dataset.ok);ok.disabled=true;r=await sb.from('school_grades').update({status:'approved',amount:RATE[x.grade]??0}).eq('id',x.id);if(!r.error&&x.grade>=10)boom(e.clientX,e.clientY,80)}
-  else if(un){if(!confirm('Скасувати підтвердження? Оцінка знову стане «чекає».'))return;r=await sb.from('school_grades').update({status:'pending',amount:null}).eq('id',un.dataset.un)}
-  else if(del){if(!confirm('Видалити запис?'))return;const[t,id]=del.dataset.del.split(':');r=await sb.from(t==='g'?'school_grades':'school_ledger').delete().eq('id',id)}
+  else if(un){if(!await uiConfirm('Скасувати підтвердження? Оцінка знову стане «чекає».'))return;r=await sb.from('school_grades').update({status:'pending',amount:null}).eq('id',un.dataset.un)}
+  else if(del){if(!await uiConfirm('Видалити запис?'))return;const[t,id]=del.dataset.del.split(':');r=await sb.from(t==='g'?'school_grades':'school_ledger').delete().eq('id',id)}
   else return;
-  if(r.error)alert(err(r.error));load()};
+  if(r.error)uiAlert(err(r.error));load()};
 $('bForm').onsubmit=async e=>{e.preventDefault();const n=parseInt($('bAmt').value);if(!n||!kid)return;
   const{error}=await sb.from('school_ledger').insert({family_id:fam.id,child_id:kid,kind:'bonus',amount:n,note:$('bNote').value.trim()});
-  if(error)return alert(err(error));$('bAmt').value=$('bNote').value='';if(n>0)boom();load()};
-$('pay').onclick=async()=>{const bal=parseInt($('sB').textContent.replace(/[^\d-]/g,''));const n=parseInt(prompt('Скільки виплачено, ₴?',bal));if(!(n>0))return;
-  const{error}=await sb.from('school_ledger').insert({family_id:fam.id,child_id:kid,kind:'payout',amount:n,note:'Виплачено'});error?alert(err(error)):(boom(),load())};
+  if(error)return uiAlert(err(error));$('bAmt').value=$('bNote').value='';if(n>0)boom();load()};
+$('pay').onclick=async()=>{const bal=parseInt($('sB').textContent.replace(/[^\d-]/g,''));const n=parseInt(await uiPrompt('Скільки виплачено, ₴?',bal));if(!(n>0))return;
+  const{error}=await sb.from('school_ledger').insert({family_id:fam.id,child_id:kid,kind:'payout',amount:n,note:'Виплачено'});error?uiAlert(err(error)):(boom(),load())};
 $('rSave').onclick=async()=>{const r={};document.querySelectorAll('[data-r]').forEach(i=>r[i.dataset.r]=parseInt(i.value)||0);
   const{error}=await sb.from('school_families').update({rates:r}).eq('id',fam.id);error?msg('rMsg',err(error)):(msg('rMsg','Збережено ✓ (діє для нових підтверджень)',true),load())};
 
