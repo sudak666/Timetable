@@ -281,6 +281,8 @@ details[open] summary::before{transform:rotate(45deg)}
 .lane::after{content:"";position:absolute;left:0;right:0;bottom:12px;height:3px;background:repeating-linear-gradient(90deg,var(--line) 0 22px,transparent 22px 40px);border-radius:3px}
 .lane-txt{position:absolute;left:16px;top:10px;font-weight:800;font-size:13px;color:var(--muted);z-index:1;pointer-events:none}
 .bike{position:absolute;left:0;bottom:6px;width:156px;height:94px;cursor:pointer;will-change:transform;z-index:2}
+.bk-sh{position:absolute;left:12%;right:12%;bottom:3px;height:8px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.28),transparent);transform-origin:18% 50%;transition:transform .35s cubic-bezier(.3,1.4,.5,1),opacity .35s}
+.bike.wheelie .bk-sh{transform:scaleX(.72);opacity:.8}
 .bk-in{transform-origin:34px 86px;transition:transform .35s cubic-bezier(.3,1.4,.5,1)}
 .bike.wheelie .bk-in{transform:rotate(-16deg)}
 .bk-spin{animation:spin .35s linear infinite}
@@ -307,13 +309,12 @@ details[open] summary::before{transform:rotate(45deg)}
   </div>
 </header>
 <div class="prof" id="prof" hidden></div>
-<div class="lane" id="lane"><div class="lane-txt" id="laneTxt"></div><div class="bike" id="bike" title="Натисни — буде вілі!"><div class="bk-in"><svg viewBox="0 0 130 78" width="156" height="94" aria-hidden="true">
+<div class="lane" id="lane"><div class="lane-txt" id="laneTxt"></div><div class="bike" id="bike" title="Натисни — буде вілі!"><div class="bk-sh"></div><div class="bk-in"><svg viewBox="0 0 130 78" width="156" height="94" aria-hidden="true">
  <defs>
   <linearGradient id="bkBody" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22d3ee"/><stop offset=".55" style="stop-color:var(--accent)"/><stop offset="1" stop-color="#312e81"/></linearGradient>
   <linearGradient id="bkMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e5e7eb"/><stop offset="1" stop-color="#6b7280"/></linearGradient>
   <radialGradient id="bkLight"><stop offset="0" stop-color="#fff9c4"/><stop offset="1" stop-color="#fde047" stop-opacity="0"/></radialGradient>
  </defs>
- <ellipse cx="65" cy="74" rx="52" ry="3.2" fill="#000" opacity=".18"/>
  <g class="bk-body">
   <path d="M104 26 L128 18 L128 36 Z" fill="url(#bkLight)" opacity=".75" class="bk-beam"/>
   <path d="M28 55 L60 47" stroke="#374151" stroke-width="5" stroke-linecap="round"/>
