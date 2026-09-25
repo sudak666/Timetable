@@ -308,9 +308,9 @@ table.chart .tr i{display:block;height:100%;border-radius:0 4px 4px 0}
 .md form{margin:0}
 /* ===== електробайк: лише transform/opacity (compositor), без JS-циклу ===== */
 .lane{position:relative;height:110px;margin-bottom:16px;border-radius:22px;overflow:hidden;contain:layout paint;container-type:inline-size;background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 12%,var(--card)) 0,var(--card) 70%);border:1px solid var(--line)}
-.lane::after{content:"";position:absolute;left:0;right:0;bottom:12px;height:3px;background:repeating-linear-gradient(90deg,var(--line) 0 22px,transparent 22px 40px);border-radius:3px}
+.lane::after{content:"";position:absolute;left:0;right:0;bottom:10px;height:3px;background:repeating-linear-gradient(90deg,var(--line) 0 22px,transparent 22px 40px);border-radius:3px}
 .lane-txt{position:absolute;left:16px;top:10px;font-weight:800;font-size:13px;color:var(--muted);z-index:1;pointer-events:none}
-.bike-track{position:absolute;left:0;bottom:6px;width:156px;height:94px;will-change:transform;animation:ride 16s cubic-bezier(.45,.05,.55,.95) infinite}
+.bike-track{position:absolute;left:0;bottom:7.5px;width:156px;height:94px;will-change:transform;animation:ride 16s cubic-bezier(.45,.05,.55,.95) infinite}
 @keyframes ride{0%{transform:translateX(0)}50%{transform:translateX(calc(100cqw - 156px))}100%{transform:translateX(0)}}
 .bike-dir{width:100%;height:100%;animation:turn 16s steps(1,end) infinite}
 @keyframes turn{0%{transform:scaleX(1)}50%{transform:scaleX(-1)}100%{transform:scaleX(1)}}
@@ -320,7 +320,7 @@ table.chart .tr i{display:block;height:100%;border-radius:0 4px 4px 0}
 @keyframes wheelie{0%,58%,74%,100%{transform:rotate(0)}63%,69%{transform:rotate(-16deg)}}
 .bike.pop-wheelie .bk-in{animation:wheelie-now 1.3s ease-in-out}
 @keyframes wheelie-now{0%,100%{transform:rotate(0)}20%,75%{transform:rotate(-17deg)}}
-.bk-sh{position:absolute;left:12%;right:12%;bottom:3px;height:8px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.28),transparent);transform-origin:18% 50%;animation:shadow 8s ease-in-out infinite}
+.bk-sh{position:absolute;left:12%;right:12%;bottom:1px;height:8px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.28),transparent);transform-origin:18% 50%;animation:shadow 8s ease-in-out infinite}
 @keyframes shadow{0%,58%,74%,100%{transform:scaleX(1);opacity:1}63%,69%{transform:scaleX(.72);opacity:.8}}
 .bike.pop-wheelie .bk-sh{animation:shadow-now 1.3s ease-in-out}
 @keyframes shadow-now{0%,100%{transform:scaleX(1)}20%,75%{transform:scaleX(.72)}}
