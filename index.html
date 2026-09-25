@@ -641,7 +641,7 @@ function renderKids(){
   $('kids').innerHTML=role==='parent'?(kids.length?kids.map(k=>`<button data-kid="${k.user_id}" class="${k.user_id===kid?'on':''}">🧒 ${esc(k.name||'Дитина')}</button>`).join(''):'<p class="msg">Дітей ще немає — дай дитині код запрошення з розділу «⚙️ Курс оцінок і запрошення».</p>'):'';
   const n=members.find(m=>m.user_id===me.id)?.name;
   const mm=members.find(m=>m.user_id===me.id);
-  $('who').innerHTML=`<button class="av" id="avBtn" title="Змінити аватар і тему">${mm?.avatar||(role==='parent'?'👨‍👩‍👦':'🧒')}</button>${esc(n||me.email||'')} · ${esc(fam.name)}`;
+  $('who').innerHTML=`<button class="av" id="avBtn" title="Змінити аватар і тему">${esc(mm?.avatar)||(role==='parent'?'👨‍👩‍👦':'🧒')}</button>${esc(n||me.email||'')} · ${esc(fam.name)}`;
   $('par').hidden=role!=='parent';
   document.querySelector('.gbtn').style.opacity=kid?1:.4;
 }
@@ -788,7 +788,7 @@ function renderProf(A,bal,lv,run){
   const mm=members.find(m=>m.user_id===me.id)||{},par=role==='parent',kn=kid?kidName(kid):'';
   const xp=A.reduce((a,x)=>a+x.grade,0),pend=GR.filter(x=>x.status==='pending'&&(par?true:x.child_id===me.id)).length,today=iso(new Date());
   const hw=HW.filter(x=>x.child_id===kid&&!x.done).length,late=HW.filter(x=>x.child_id===kid&&!x.done&&x.due<today).length;
-  p.innerHTML=`<button class="pa" id="paBtn" title="Аватар, колір і стиль">${mm.avatar||(par?'👨‍👩‍👦':'🧒')}</button>
+  p.innerHTML=`<button class="pa" id="paBtn" title="Аватар, колір і стиль">${esc(mm.avatar)||(par?'👨‍👩‍👦':'🧒')}</button>
    <div class="pn"><b>${esc(mm.name||me.email||'')}</b><small>${par?(kid?'👀 '+esc(kn)+' · ':'')+'Рівень '+lv:'Рівень '+lv+' · '+xp+' XP'}</small><div class="pl"><i style="width:${xp%50*2}%"></i></div></div>
    <div class="ps">
     <button class="st" data-go="gl">💰<span>${bal} ₴<small>до виплати</small></span></button>
