@@ -52,8 +52,15 @@ async function getRealtime(): Promise<RealtimeClient> {
   return realtime;
 }
 
-export const errText = (e: unknown): string =>
-  e && typeof e === 'object' && 'message' in e ? String((e as { message: unknown }).message) : String(e);
+/** Людські повідомлення замість технічних помилок мережі/БД. */
+export function errText(e: unknown): string {
+  const m = e && typeof e === 'object' && 'message' in e ? String((e as { message: unknown }).message) : String(e);
+  if (!navigator.onLine || /Failed to fetch|NetworkError|Load failed/i.test(m)) return 'Немає інтернету — спробуй ще раз, коли зʼявиться звʼязок';
+  if (/JWT|expired|invalid claim/i.test(m)) return 'Сесія застаріла — увійди ще раз';
+  if (/row-level security|permission denied|violates/i.test(m)) return 'Недостатньо прав для цієї дії';
+  if (/duplicate key/i.test(m)) return 'Такий запис уже існує';
+  return m;
+}
 
 let channel: RealtimeChannel | null = null;
 let reloadTimer: ReturnType<typeof setTimeout> | undefined;

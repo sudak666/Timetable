@@ -49,7 +49,8 @@ const NAV: { tab: Tab; label: string; icon: TemplateResult }[] = [
 let below = false;
 const showBelow = () => { below = true; draw(); };
 
-const loading = html`<section class="side card" aria-busy="true"><p class="msg" role="status">Завантаження…</p></section>`;
+const loading = html`<section class="side card" aria-busy="true" aria-label="Завантаження">
+  <div class="sk sk-h"></div><div class="sk-row"><div class="sk sk-b"></div><div class="sk sk-b"></div></div><div class="sk sk-l"></div><div class="sk sk-l short"></div></section>`;
 
 function page(): TemplateResult {
   switch (state.tab) {
@@ -74,6 +75,7 @@ const app = () => {
         <button type="button" class="ic" aria-label="Перемкнути світлу / темну тему" @click=${toggleTheme}>${sunMoon}</button>
       </div>
     </header>
+    ${state.online ? '' : html`<p class="offline" role="status">${emo('📡')} Немає інтернету — показано збережене. Зміни не збережуться, доки не зʼявиться звʼязок.</p>`}
     <nav class="bnav" aria-label="Розділи">${NAV.map((n) => {
       const b = n.tab === 'grades' ? badges.grades : n.tab === 'hw' ? badges.hw : 0;
       return html`<a href=${'#' + n.tab} class=${state.tab === n.tab ? 'on' : ''} aria-current=${state.tab === n.tab ? 'page' : 'false'}>
@@ -110,6 +112,8 @@ setInterval(() => {
   if (done && !wasDone) boom();
   wasDone = done;
 }, 1000);
+addEventListener('online', () => set({ online: true }));
+addEventListener('offline', () => set({ online: false }));
 document.addEventListener('visibilitychange', () => { if (!document.hidden) set({ now: new Date() }); });
 
 /* Модуль даних вантажимо в простої браузера, щоб не блокувати першу взаємодію (TBT/INP).

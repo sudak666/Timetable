@@ -4,7 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 const REF = 'vkwkyhjjjmcpmiakxohw';
 const today = '2026-09-22';
 
-async function mockFamily(page: Page, role: 'parent' | 'child') {
+async function mockFamily(page: Page, role: 'parent' | 'child', noKids = false) {
   const meId = role === 'parent' ? 'p1' : 'k1';
   const user = { id: meId, aud: 'authenticated', role: 'authenticated', email: `${meId}@test.ua`, user_metadata: {}, app_metadata: {} };
   const exp = Math.floor(new Date('2026-09-23').getTime() / 1000);
@@ -15,6 +15,7 @@ async function mockFamily(page: Page, role: 'parent' | 'child') {
     { user_id: 'p1', role: 'parent', name: 'Тато', goal_title: '', goal_amount: 0, avatar: '', theme: '' },
     { user_id: 'k1', role: 'child', name: 'Стас', goal_title: 'Електробайк', goal_amount: 2000, avatar: '🦊', theme: '' },
   ];
+  if (noKids) members.pop();
   const grades = [
     { id: 'g1', child_id: 'k1', subject: 'Математика', grade: 12, date: today, status: 'approved', amount: 150, created_at: today + 'T09:00' },
     { id: 'g2', child_id: 'k1', subject: 'Англ. мова', grade: 4, date: today, status: 'pending', amount: null, created_at: today + 'T10:00' },
@@ -62,3 +63,35 @@ for (const role of ['child', 'parent'] as const) {
     }
   });
 }
+
+test('батьки без дітей бачать картку запрошення з кодом', async ({ page }) => {
+  await mockFamily(page, 'parent', true);
+  await page.goto('/#grades');
+  await expect(page.getByRole('heading', { name: 'Запросіть дитину' })).toBeVisible();
+  await expect(page.locator('.invite .code')).toHaveText('ABC123');
+});
+
+test('онбординг дитини показується один раз', async ({ page }) => {
+  await mockFamily(page, 'child');
+  await page.goto('/#grades');
+  const intro = page.getByRole('heading', { name: /Як це працює/ });
+  await expect(intro).toBeVisible();
+  await page.getByRole('button', { name: /поїхали/ }).click();
+  await expect(intro).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator('.sum')).toBeVisible();
+  await expect(intro).toHaveCount(0);
+});
+
+test('офлайн-банер і тост помилки мережі', async ({ page, context }) => {
+  await mockFamily(page, 'child');
+  await page.goto('/#grades');
+  await expect(page.locator('.sum')).toBeVisible();
+  await page.route('**/rest/v1/school_grades*', (r) => (r.request().method() === 'POST' ? r.abort('internetdisconnected') : r.fallback()));
+  await context.setOffline(true);
+  await expect(page.locator('.offline')).toBeVisible();
+  await page.getByRole('button', { name: /Оцінка 12/ }).click();
+  await expect(page.getByRole('alert').locator('.toast')).toContainText('Немає інтернету');
+  await context.setOffline(false);
+  await expect(page.locator('.offline')).toHaveCount(0);
+});

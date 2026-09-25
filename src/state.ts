@@ -38,6 +38,7 @@ export interface State {
   pushMsg: { text: string; ok?: boolean } | null;
   canInstall: boolean;
   style: GameStyle;
+  online: boolean;
 }
 
 type Listener = () => void;
@@ -71,6 +72,7 @@ export const state: State = {
   pushMsg: null,
   canInstall: false,
   style: '',
+  online: typeof navigator === 'undefined' ? true : navigator.onLine,
 };
 
 /** Мутує стан і планує один рендер на кадр (батчинг). */

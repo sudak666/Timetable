@@ -14,6 +14,7 @@ import { set, state, store, type GameStyle } from '../state';
 import { applyStyle } from '../ui/theme';
 import { boom } from '../ui/confetti';
 import { alert, confirm, prompt } from '../ui/dialog';
+import { toast } from '../ui/toast';
 import { dateLabel, pickDate, pickSubject, subjLabel } from '../ui/pickers';
 import { closePop, openPop } from '../ui/popover';
 import { installApp, togglePush } from '../pwa';
@@ -25,7 +26,7 @@ const REDIRECT = () => location.origin + location.pathname;
 /** Виконує запит і перезавантажує дані; помилку показує в діалозі. */
 async function run(p: PromiseLike<{ error: unknown }>, after?: () => void): Promise<boolean> {
   const { error } = await p;
-  if (error) { await alert(errText(error)); return false; }
+  if (error) { toast(errText(error), 'err'); return false; }
   after?.();
   await loadFamily().catch(() => undefined);
   return true;
@@ -262,7 +263,7 @@ function homework(d: D): TemplateResult {
     set(() => { x.done = v; });
     if (v) boom(e.clientX, e.clientY, 40);
     const { error } = await sb.from('school_homework').update({ done: v }).eq('id', x.id);
-    if (error) { set(() => { x.done = !v; }); void alert(errText(error)); }
+    if (error) { set(() => { x.done = !v; }); toast(errText(error), 'err'); }
   };
   return html`<h3 class="h4 gap">${emo('📝')} Домашні завдання</h3>
     <form class="form" @submit=${add}>
@@ -322,9 +323,9 @@ function parentTools(d: D, part: 'money' | 'settings'): TemplateResult | typeof 
   const saveRates = async () => {
     const r: Record<string, number> = { streak_len: parseInt(val('stLen')) || 5, streak_min: parseInt(val('stMin')) || 7, streak_bonus: Math.max(0, parseInt(val('stBon')) || 0) };
     document.querySelectorAll<HTMLInputElement>('[data-rate]').forEach((i) => { r[i.dataset.rate!] = parseInt(i.value) || 0; });
-    if (await run(sb.from('school_families').update({ rates: r }).eq('id', state.family!.id))) void alert('Збережено ✓ Новий курс діє для нових підтверджень.');
+    if (await run(sb.from('school_families').update({ rates: r }).eq('id', state.family!.id))) toast('Збережено ✓ Новий курс діє для нових підтверджень.');
   };
-  const copy = (t: string) => navigator.clipboard?.writeText(t).then(() => alert('Скопійовано: ' + t), () => undefined);
+  const copy = (t: string) => navigator.clipboard?.writeText(t).then(() => toast('Скопійовано: ' + t), () => toast('Не вдалося скопіювати', 'err'));
   if (part === 'settings') return html`<section class="side card" aria-labelledby="set-h"><h2 class="h4" id="set-h">${emo('⚙️')} Курс оцінок і запрошення</h2>
       <div class="rgrid">${Array.from({ length: 12 }, (_, i) => 12 - i).map((g) => html`<label><span class="n" style=${styleMap({ background: gradeColor(g) })}>${g}</span><span class="sr-only">Оцінка ${g}, гривень</span><input type="number" data-rate=${g} .value=${live(String(state.rates[g] ?? 0))}></label>`)}</div>
       <div class="srow">${emo('🔥')} Серія: кожні <input type="number" id="stLen" min="2" max="30" aria-label="Кількість оцінок" .value=${live(String(state.streak.len))}> оцінок поспіль ≥ <input type="number" id="stMin" min="1" max="12" aria-label="Мінімальна оцінка" .value=${live(String(state.streak.min))}> дають бонус <input type="number" id="stBon" min="0" class="w84" aria-label="Бонус у гривнях" .value=${live(String(state.streak.bonus))}> ₴</div>
@@ -377,14 +378,48 @@ function kidTabs(): TemplateResult | typeof nothing {
   const kids = state.members.filter((m) => m.role === 'child');
   return html`<div class="tabs" role="tablist" aria-label="Діти">${kids.length ? kids.map((k) =>
       html`<button type="button" role="tab" aria-selected=${k.user_id === state.kid} class=${classMap({ on: k.user_id === state.kid })} @click=${() => set({ kid: k.user_id })}>${emo(k.avatar || '🧒')} ${k.name || 'Дитина'}</button>`)
-      : html`<p class="msg">Дітей ще немає — дай дитині код запрошення з вкладки «Профіль».</p>`}</div>`;
+      : nothing}</div>${kids.length ? nothing : inviteCard()}`;
+}
+
+function inviteCard(): TemplateResult {
+  const code = state.family?.invite_code ?? '';
+  const text = `Приєднуйся до нашого розкладу: ${location.origin + location.pathname} — увійди й введи код ${code}`;
+  const share = async () => {
+    if (navigator.share) { try { await navigator.share({ title: 'Розклад уроків', text }); return; } catch { return; } }
+    await navigator.clipboard?.writeText(text);
+    toast('Запрошення скопійовано — надішли його дитині');
+  };
+  return html`<section class="empty invite" aria-labelledby="inv-h">
+    <div class="empty-ic">${emo('👋')}</div>
+    <h2 id="inv-h" class="me-name">Запросіть дитину</h2>
+    <ol class="steps"><li>Дитина відкриває сайт і входить через Google або пошту</li><li>Вводить код <b class="code">${code}</b></li><li>Оцінки дитини зʼявляться тут для підтвердження ✓</li></ol>
+    <button type="button" class="pri-btn" @click=${share}>${emo('📨 Надіслати запрошення')}</button>
+  </section>`;
+}
+
+/** Короткий онбординг для дитини — показується один раз. */
+function childIntro(): TemplateResult | typeof nothing {
+  if (state.role !== 'child' || store.get('intro') === '1') return nothing;
+  const close = () => { store.set('intro', '1'); set({}); };
+  return html`<section class="side card intro" aria-labelledby="intro-h">
+    <h2 class="h4" id="intro-h">${emo('✨')} Як це працює</h2>
+    <ol class="steps">
+      <li>${emo('➕')} Отримав оцінку — постав її тут</li>
+      <li>${emo('✅')} Батьки підтверджують — і гроші йдуть у скарбничку</li>
+      <li>${emo('🔥')} Серії й ${emo('🏅')} челенджі дають бонуси</li>
+      <li>${emo('🎯')} Постав ціль — і дивись, скільки лишилось до мрії</li>
+    </ol>
+    <button type="button" class="pri-btn" @click=${close}>Зрозуміло, поїхали!</button>
+  </section>`;
 }
 
 /** Не залогінений / без сім'ї / завантаження — однаковий екран для всіх вкладок, що потребують входу. */
 function gate(title: string): TemplateResult | null {
   if (state.view === 'main') return null;
   const body = state.view === 'auth' ? authView() : state.view === 'join' ? joinView()
-    : state.view === 'offline' ? html`<p class="msg neg" role="alert">${state.authMsg?.text ?? 'Немає зʼєднання'}</p>` : html`<p class="msg" role="status">Завантаження…</p>`;
+    : state.view === 'offline' ? html`<div class="empty"><div class="empty-ic">${emo('📡')}</div><p class="msg neg" role="alert">${state.authMsg?.text ?? 'Немає зʼєднання'}</p>
+        <button type="button" @click=${() => { set({ view: 'loading', authMsg: null }); void enter().catch((e) => set({ view: 'offline', authMsg: { text: errText(e) } })); }}>Спробувати ще раз</button></div>`
+    : html`<div aria-busy="true" aria-label="Завантаження"><div class="sk sk-l"></div><div class="sk sk-b"></div><div class="sk sk-l short"></div></div>`;
   return html`<section class="side card" aria-labelledby="gate-h"><h2 class="h4" id="gate-h">${emo(title)}</h2>${body}</section>`;
 }
 
@@ -392,7 +427,7 @@ export function tabGrades(): TemplateResult {
   const g = gate('🏆 Оцінки та нагороди');
   if (g) return g;
   const d = derive();
-  return html`${kidTabs()}
+  return html`${kidTabs()}${childIntro()}
     <section class="side card" aria-labelledby="add-h"><h2 class="h4" id="add-h">${emo('➕')} Додати оцінку ${d.pend.length ? html`<span class="pend">· ${emo('⏳')} ${d.pend.length} чекає підтвердження</span>` : nothing}</h2>${gradeInput()}</section>
     <section class="side card" aria-label="Гроші">${summary(d)}${cards(d)}${parentTools(d, 'money')}</section>
     <section class="side card" aria-labelledby="hist-h"><h2 class="h4" id="hist-h">${emo('🧾')} Історія</h2>${history(d)}</section>
