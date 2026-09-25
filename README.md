@@ -1,14 +1,26 @@
-# Розклад уроків + оцінки з нагородами
+# Розклад уроків
 
-Сайт: https://sudak666.github.io/Timetable/ (деплой автоматично при кожному пуші, `.github/workflows/pages.yml`).
+Шкільний розклад з таймером уроків, домашкою, оцінками, нагородами та push-сповіщеннями для сім'ї.
 
-- Вхід: Google або пошта+пароль (Supabase Auth, проєкт Sklad).
-- Батьки створюють сім'ю, дитина приєднується за кодом.
-- Дитина додає оцінки → батьки підтверджують ✓ → гроші за курсом.
-- Курс, бонуси/штрафи, виплати — все в інтерфейсі (розділ «⚙️» для батьків).
-- Дані: таблиці `school_*` з RLS — дитина не може підтвердити оцінку, змінити курс чи додати бонус.
+**Стек:** Vite · TypeScript (strict) · lit-html · Supabase (Auth, Postgres + RLS, Realtime, Edge Functions) · PWA.
 
-Іконки: [Microsoft Fluent Emoji 3D](https://github.com/microsoft/fluentui-emoji) (MIT), `assets/emoji/`.
+## Розробка
+```bash
+npm ci
+npm run dev        # http://localhost:5173
+npm run check      # typecheck + eslint + unit-тести
+npm run build && npm run e2e   # Playwright: мобільний + десктоп, axe WCAG 2.2 AA
+```
 
-## Фічі
-Ціль-скарбничка · серії з автобонусом · челенджі від батьків · домашка з позначками в розкладі · графік середнього балу · рейтинг/порівняння з минулим місяцем · аватари й кольори за рівнями · вікторина · PWA (встановлення, офлайн) · push-сповіщення (`supabase/functions/school-push`, тригери на `school_grades`, `school_ledger`, `school_challenges`).
+## Структура
+- `src/data` — розклад і предмети
+- `src/lib` — час, емодзі (чисті функції)
+- `src/features/rewards.ts` — доменна логіка нагород (покрита тестами)
+- `src/views` — екрани (lit-html, автоекранування → без XSS)
+- `src/ui` — діалоги (`<dialog>`), поповери, конфеті, байк (CSS-анімація)
+- `supabase/functions/school-push` — web push
+
+## Безпека
+CSP у production-збірці, усі дані захищені RLS, дитина не може підтверджувати оцінки, змінювати курс чи нараховувати бонуси.
+
+Іконки: [Microsoft Fluent Emoji 3D](https://github.com/microsoft/fluentui-emoji) (MIT).

@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
+<!-- Тимчасова сумісність: деплой з гілки. Основна версія збирається Vite з app/ через GitHub Actions. -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0f1024">
 <title>Розклад уроків</title>
-<link rel="icon" type="image/webp" href="assets/icon.webp">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/webp" href="public/assets/icon.webp">
+<link rel="apple-touch-icon" href="public/assets/apple-touch-icon.png">
+<link rel="manifest" href="public/manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Розклад">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -862,11 +863,11 @@ function hwMarks(){const mon=new Date();mon.setDate(mon.getDate()-((mon.getDay()
 {const _g=renderGrid;renderGrid=function(){_g();if(typeof HW!=='undefined')hwMarks()}}
 // нагадування ввечері про домашку на завтра (поки сайт відкритий)
 setInterval(()=>{const d=new Date();if(!notifOn||d.getHours()!==19||d.getMinutes()!==0)return;const t=iso(new Date(Date.now()+864e5)),n=HW.filter(x=>x.child_id===kid&&!x.done&&x.due===t).length;
-  if(n&&lastNotif!=='hw'+t){lastNotif='hw'+t;try{new Notification('📝 Домашка на завтра',{body:`Невиконаних завдань: ${n}`,icon:'assets/icon-192.png'})}catch{}}},30000);
+  if(n&&lastNotif!=='hw'+t){lastNotif='hw'+t;try{new Notification('📝 Домашка на завтра',{body:`Невиконаних завдань: ${n}`,icon:'public/assets/icon-192.png'})}catch{}}},30000);
 
 // PWA: service worker, встановлення, push
 let swReg=null,instEv=null;
-if('serviceWorker'in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('sw.js').then(r=>swReg=r).catch(()=>{});
+if('serviceWorker'in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('public/sw.js').then(r=>swReg=r).catch(()=>{});
 addEventListener('beforeinstallprompt',e=>{e.preventDefault();instEv=e;$('instBtn').hidden=false});
 const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent),standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
 if(isIOS&&!standalone)$('instBtn').hidden=false;
@@ -904,7 +905,7 @@ else{
   sb.auth.onAuthStateChange((ev,s)=>{const id=s?.user?.id??null;if(id===cur)return;cur=id;setTimeout(()=>enter().catch(e=>{$('gLoad').textContent='Помилка: '+err(e);show('gLoad')}),0)});
 }
 // ===== 3D-емодзі (Microsoft Fluent Emoji, MIT) =====
-function emoSrc(e){if(!e)return null;const cp=[...e].map(c=>c.codePointAt(0).toString(16));const a=cp.join('-'),b=cp.filter(c=>c!=='fe0f').join('-');return EMO.has(a)?`assets/emoji/${a}.webp`:EMO.has(b)?`assets/emoji/${b}.webp`:null}
+function emoSrc(e){if(!e)return null;const cp=[...e].map(c=>c.codePointAt(0).toString(16));const a=cp.join('-'),b=cp.filter(c=>c!=='fe0f').join('-');return EMO.has(a)?`public/assets/emoji/${a}.webp`:EMO.has(b)?`public/assets/emoji/${b}.webp`:null}
 const EMO_RX=/(?:[\u{1F1E6}-\u{1F1FF}]{2}|[☀-➿⬀-⯿\u{1F300}-\u{1FAFF}]️?(?:‍[☀-➿⬀-⯿\u{1F300}-\u{1FAFF}]️?)*)/gu;
 function emojify(root){
   const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentNode.closest('select,option,textarea,script,style,title,input')||!EMO_RX.test(n.data)?(EMO_RX.lastIndex=0,NodeFilter.FILTER_REJECT):(EMO_RX.lastIndex=0,NodeFilter.FILTER_ACCEPT)});
