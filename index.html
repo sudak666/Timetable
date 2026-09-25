@@ -423,7 +423,7 @@ async function enter(){
 }
 
 const msg=(id,t,ok)=>{$(id).textContent=t;$(id).style.color=ok?'#00a383':'#d63031'};
-$('gGoogle').onclick=()=>sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}}).then(({error})=>error&&msg('gMsg',err(error)));
+$('gGoogle').onclick=()=>sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname,queryParams:{prompt:'select_account'}}}).then(({error})=>error&&msg('gMsg',err(error)));
 $('gMail').onsubmit=async e=>{e.preventDefault();const{error}=await sb.auth.signInWithPassword({email:$('gEmail').value.trim(),password:$('gPass').value});
   if(error)msg('gMsg',/invalid/i.test(error.message)?'Невірна пошта або пароль':/confirm/i.test(error.message)?'Підтверди пошту — лист уже надіслано':err(error))};
 $('gSignup').onclick=async()=>{if(!$('gMail').reportValidity())return;
