@@ -105,6 +105,8 @@ h1{background-size:200% auto;animation:shine 6s linear infinite}
 .bd{font-size:13px;padding:5px 10px;border-radius:20px;background:var(--brk);opacity:.35}
 .bd.got{opacity:1;background:linear-gradient(135deg,#fdcb6e,#fab1a0);color:#1b1c33;font-weight:700}
 .rates{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6}
+#gl .ok{border:0;background:#00b894;color:#fff;padding:4px 10px;margin-right:4px;font-weight:900}
+.gi.wait{background:var(--brk);border:1px dashed #fdcb6e}
 #pay{background:#00b894;color:#fff;border:0}
 .single .day:not(.show){display:none}
 .hl .l:not(.match){opacity:.2}
@@ -135,7 +137,7 @@ h1{background-size:200% auto;animation:shine 6s linear infinite}
 <nav class="tabs" id="tabs"></nav>
 <main class="grid" id="grid"></main>
 <section class="side gr" id="grades">
-  <h4><span>🏆 Мої оцінки та нагороди</span><span id="gmode" style="text-transform:none;letter-spacing:0"></span></h4>
+  <h4><span>🏆 Мої оцінки та нагороди</span><span style="text-transform:none;letter-spacing:0"><span id="pendN" style="color:#e17055;margin-right:8px"></span><span id="gmode"></span></span></h4>
   <div class="sum">
     <div><small>Сьогодні</small><b id="sD">0 ₴</b></div>
     <div><small>Цей тиждень</small><b id="sW">0 ₴</b></div>
@@ -290,58 +292,69 @@ const RATE={12:150,11:120,10:100,9:70,8:50,7:30,6:10,5:0,4:-20,3:-40,2:-70,1:-10
 const GC=g=>g>=10?'#00b894':g>=7?'#0984e3':g>=4?'#e1a800':'#d63031';
 const uah=v=>(v>0?'+':'')+v+' ₴';
 const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
-let G=[],PAY=[],canPay=false,store;
+let G=[],A=[],PAY=[],canPay=false,store;
 $('gs').innerHTML=Object.keys(C).map(k=>`<option>${k}</option>`).join('');
 $('gd').value=iso(new Date());
 $('gb').innerHTML=Array.from({length:12},(_,i)=>12-i).map(g=>`<button data-g="${g}" style="background:${GC(g)}" title="${uah(RATE[g])}">${g}</button>`).join('');
 $('rates').textContent='Курс: '+Object.entries(RATE).sort((a,b)=>b[0]-a[0]).map(([g,v])=>`${g} → ${uah(v)}`).join(' · ');
 // сховище: спільна БД claude.ai або localStorage як запасний варіант
 const local={
-  load(){try{const o=JSON.parse(localStorage.grades||'{}');return{g:o.g||[],p:o.p||[]}}catch{return{g:[],p:[]}}},
-  save(){try{localStorage.grades=JSON.stringify({g:G,p:PAY})}catch{}},
-  async add(col,d){const x={id:Math.random().toString(36).slice(2),...d};(col==='grades'?G:PAY).push(x);this.save();renderGrades()},
-  async del(col,id){if(col==='grades')G=G.filter(x=>x.id!==id);else PAY=PAY.filter(x=>x.id!==id);this.save();renderGrades()}
+  load(){try{const o=JSON.parse(localStorage.grades||'{}');return{g:o.g||[],a:o.a||[],p:o.p||[]}}catch{return{g:[],a:[],p:[]}}},
+  save(){try{localStorage.grades=JSON.stringify({g:G,a:A,p:PAY})}catch{}},
+  arr(c){return c==='grades'?G:c==='approved'?A:PAY},
+  async add(col,d){this.arr(col).push({id:Math.random().toString(36).slice(2),...d});this.save();renderGrades()},
+  async put(col,id,d){this.arr(col).push({id,...d});this.save();renderGrades()},
+  async del(col,id){const a=this.arr(col),i=a.findIndex(x=>x.id===id);if(i>=0)a.splice(i,1);this.save();renderGrades()}
 };
-function useLocal(){store=local;const o=local.load();G=o.g;PAY=o.p;canPay=true;$('gmode').textContent='📱 тільки на цьому пристрої';renderGrades()}
+function useLocal(){store=local;const o=local.load();G=o.g;A=o.a;PAY=o.p;canPay=true;$('gmode').textContent='📱 тільки на цьому пристрої';renderGrades()}
 function renderGrades(){
   const today=iso(new Date()),d=new Date(),mon=new Date(d);mon.setDate(d.getDate()-((d.getDay()+6)%7));
   const wk=iso(mon),mo=today.slice(0,7);
-  const sum=f=>G.filter(f).reduce((a,x)=>a+RATE[x.g],0);
+  const sum=f=>A.filter(f).reduce((a,x)=>a+RATE[x.g],0);
   const set=(id,v)=>{$(id).textContent=uah(v);$(id).className=v>0?'pos':v<0?'neg':''};
   set('sD',sum(x=>x.date===today));set('sW',sum(x=>x.date>=wk&&x.date<=today));set('sM',sum(x=>x.date.startsWith(mo)));
   const bal=sum(()=>true)-PAY.reduce((a,x)=>a+x.amount,0);set('sB',bal);
   $('pay').hidden=!(canPay&&bal>0);
   // рівень
-  const xp=G.reduce((a,x)=>a+x.g,0),lv=Math.floor(xp/50)+1,p=(xp%50)/50*100;
+  const xp=A.reduce((a,x)=>a+x.g,0),lv=Math.floor(xp/50)+1,p=(xp%50)/50*100;
   $('lvl').innerHTML=`Рівень ${lv} · ${xp} XP <small style="color:var(--muted);font-weight:600">(ще ${50-xp%50} до наступного)</small><div class="bar"><i style="width:${p}%"></i></div>`;
-  const srt=[...G].sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:(a.t||0)-(b.t||0));
+  const srt=[...A].sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:(a.t||0)-(b.t||0));
   let run=0,best=0;srt.forEach(x=>{run=x.g>=10?run+1:0;best=Math.max(best,run)});
-  const B=[['🎯 Перша оцінка',G.length>0],['👑 Перша 12',G.some(x=>x.g===12)],['🔥 3 десятки поспіль',best>=3],['🚀 5 поспіль ≥10',best>=5],['📚 20 оцінок',G.length>=20],['💯 50 оцінок',G.length>=50],['💰 Заробив 1000 ₴',sum(()=>true)>=1000],['🌈 Тиждень без мінусів',G.filter(x=>x.date>=wk).length>=3&&G.filter(x=>x.date>=wk).every(x=>RATE[x.g]>=0)]];
+  const B=[['🎯 Перша оцінка',A.length>0],['👑 Перша 12',A.some(x=>x.g===12)],['🔥 3 десятки поспіль',best>=3],['🚀 5 поспіль ≥10',best>=5],['📚 20 оцінок',A.length>=20],['💯 50 оцінок',A.length>=50],['💰 Заробив 1000 ₴',sum(()=>true)>=1000],['🌈 Тиждень без мінусів',A.filter(x=>x.date>=wk).length>=3&&A.filter(x=>x.date>=wk).every(x=>RATE[x.g]>=0)]];
   $('badges').innerHTML=B.map(([t,ok])=>`<span class="bd ${ok?'got':''}">${t}</span>`).join('');
-  const list=[...G.map(x=>({...x,k:'g'})),...PAY.map(x=>({...x,k:'p'}))].sort((a,b)=>(b.date+(b.t||0))>(a.date+(a.t||0))?1:-1).slice(0,40);
-  $('gl').innerHTML=list.length?list.map(x=>x.k==='g'
-    ?`<div class="gi"><span class="g" style="background:${GC(x.g)}">${x.g}</span><span>${E[x.s]||''} ${x.s}<small>${new Date(x.date).toLocaleDateString('uk-UA',{weekday:'short',day:'numeric',month:'short'})}</small></span><b class="${RATE[x.g]>0?'pos':RATE[x.g]<0?'neg':''}">${uah(RATE[x.g])}</b><button class="x" data-del="grades:${x.id}" title="Видалити">✕</button></div>`
+  const aid=new Set(A.map(x=>x.id)),pend=G.filter(x=>!aid.has(x.id));
+  const list=[...pend.map(x=>({...x,k:'w'})),...A.map(x=>({...x,k:'g'})),...PAY.map(x=>({...x,k:'p'}))].sort((a,b)=>(b.date+(b.t||0))>(a.date+(a.t||0))?1:-1).slice(0,40);
+  const dt=x=>new Date(x.date).toLocaleDateString('uk-UA',{weekday:'short',day:'numeric',month:'short'});
+  $('pendN').textContent=pend.length?`⏳ ${pend.length} чекає підтвердження`:'';
+  $('gl').innerHTML=list.length?list.map(x=>x.k==='w'
+    ?`<div class="gi wait"><span class="g" style="background:${GC(x.g)}">${x.g}</span><span>${E[x.s]||''} ${x.s}<small>${dt(x)} · ⏳ чекає підтвердження батьків</small></span><b style="color:var(--muted)">${uah(RATE[x.g])}</b>${canPay?`<span><button class="ok" data-ok="${x.id}" title="Підтвердити">✓</button><button class="x" data-del="grades:${x.id}" title="Відхилити">✕</button></span>`:`<button class="x" data-del="grades:${x.id}" title="Видалити">✕</button>`}</div>`
+    :x.k==='g'
+    ?`<div class="gi"><span class="g" style="background:${GC(x.g)}">${x.g}</span><span>${E[x.s]||''} ${x.s}<small>${dt(x)} · ✅ підтверджено</small></span><b class="${RATE[x.g]>0?'pos':RATE[x.g]<0?'neg':''}">${uah(RATE[x.g])}</b>${canPay?`<button class="x" data-del="approved:${x.id}" title="Скасувати підтвердження">↺</button>`:'<span></span>'}</div>`
     :`<div class="gi"><span class="g" style="background:#636e72">💸</span><span>Виплачено<small>${new Date(x.date).toLocaleDateString('uk-UA',{day:'numeric',month:'short'})}</small></span><b>−${x.amount} ₴</b>${canPay?`<button class="x" data-del="payouts:${x.id}">✕</button>`:'<span></span>'}</div>`).join('')
     :'<p style="color:var(--muted)">Ще немає оцінок — натисни на цифру вище 👆</p>';
 }
 $('gb').onclick=async e=>{const b=e.target.closest('[data-g]');if(!b||!store)return;const g=+b.dataset.g;
-  b.disabled=true;try{await store.add('grades',{s:$('gs').value,g,date:$('gd').value||iso(new Date()),t:Date.now()});if(g>=10)boom(e.clientX,e.clientY,g===12?150:70)}catch(err){alert('Не вдалося зберегти: '+(err.message||err.code))}b.disabled=false};
-$('gl').onclick=async e=>{const b=e.target.closest('[data-del]');if(!b||!confirm('Видалити запис?'))return;const[c,id]=b.dataset.del.split(':');try{await store.del(c,id)}catch(err){alert(err.message||err.code)}};
+  b.disabled=true;const d={s:$('gs').value,g,date:$('gd').value||iso(new Date()),t:Date.now()};try{const r=await store.add('grades',d);if(canPay&&store!==local)await store.put('approved',r.id,d);if(g>=10)boom(e.clientX,e.clientY,g===12?150:70)}catch(err){alert('Не вдалося зберегти: '+(err.message||err.code))}b.disabled=false};
+$('gl').onclick=async e=>{const ok=e.target.closest('[data-ok]');if(ok){const x=G.find(g=>g.id===ok.dataset.ok);ok.disabled=true;try{await store.put('approved',x.id,{s:x.s,g:x.g,date:x.date,t:x.t||Date.now()});if(x.g>=10)boom(e.clientX,e.clientY,80)}catch(err){alert(err.message||err.code);ok.disabled=false}return}
+  const b=e.target.closest('[data-del]');if(!b||!confirm(b.dataset.del.startsWith('approved')?'Скасувати підтвердження? Оцінка знову стане «чекає».':'Видалити запис?'))return;const[c,id]=b.dataset.del.split(':');try{await store.del(c,id)}catch(err){alert(err.message||err.code)}};
 $('pay').onclick=async()=>{const bal=parseInt($('sB').textContent.replace(/[^\d-]/g,''));const v=prompt('Скільки виплачено, ₴?',bal);const n=parseInt(v);if(!(n>0))return;
   try{await store.add('payouts',{amount:n,date:iso(new Date()),t:Date.now()});boom()}catch(err){alert(err.message||err.code)}};
 renderGrades();
 (async()=>{
   const db=window.claude?.use?await window.claude.use('db'):null;
   if(!db)return useLocal();
+  const P=c=>c==='grades'?'grades':'data/parent/'+c;
   const u=await window.claude.use('user');canPay=u?.isOwner()??false;
   store={
-    add:(col,d)=>db.collection(col).add(d),
-    del:(col,id)=>db.doc(col+'/'+id).delete()
+    add:(col,d)=>db.collection(P(col)).add(d),
+    put:(col,id,d)=>db.doc(P(col)+'/'+id).set(d),
+    del:(col,id)=>db.doc(P(col)+'/'+id).delete()
   };
   $('gmode').textContent='☁️ синхронізовано';
   const map=snap=>snap.docs.map(d=>({id:d.id,...d.data()}));
   db.collection('grades').onSnapshot(s=>{G=map(s);renderGrades()},()=>useLocal());
-  db.collection('payouts').onSnapshot(s=>{PAY=map(s);renderGrades()});
+  db.collection(P('approved')).onSnapshot(s=>{A=map(s);renderGrades()});
+  db.collection(P('payouts')).onSnapshot(s=>{PAY=map(s);renderGrades()});
 })();
 </script>
 </body>
