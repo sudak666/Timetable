@@ -339,7 +339,7 @@ document.addEventListener('pointerdown',e=>{if(popEl&&!popEl.contains(e.target)&
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closePop()});
 addEventListener('resize',closePop);
 
-const EMO=new Set(["1f1ec-1f1e7", "1f308", "1f30a", "1f30d", "1f331", "1f34c", "1f36f", "1f381", "1f389", "1f3a8", "1f3af", "1f3c5", "1f3c6", "1f3d6-fe0f", "1f3db-fe0f", "1f40b", "1f40c", "1f419", "1f41c", "1f427", "1f42c", "1f42f", "1f431", "1f432", "1f438", "1f43a", "1f43c", "1f446", "1f451", "1f468-200d-1f469-200d-1f466", "1f47d", "1f47e", "1f4a1", "1f4af", "1f4b0", "1f4b8", "1f4bb", "1f4c8", "1f4da", "1f4dd", "1f4ec", "1f4f1", "1f511", "1f514", "1f522", "1f525", "1f60e", "1f680", "1f6e0-fe0f", "1f916", "1f91d", "1f973", "1f981", "1f984", "1f988", "1f989", "1f98a", "1f98b", "1f992", "1f996", "1f9ba", "1f9d2", "1f9e0", "1f9ee", "1fa90", "2615", "2699-fe0f", "26a0-fe0f", "26a1", "26bd", "2705", "270d-fe0f", "2795", "2b50"]);
+const EMO=new Set(["1f1ec-1f1e7", "1f308", "1f30a", "1f30d", "1f310", "1f331", "1f34c", "1f36f", "1f381", "1f389", "1f3a8", "1f3af", "1f3c5", "1f3c6", "1f3d6-fe0f", "1f3db-fe0f", "1f40b", "1f40c", "1f419", "1f41c", "1f427", "1f42c", "1f42f", "1f431", "1f432", "1f438", "1f43a", "1f43c", "1f446", "1f44d", "1f451", "1f468-200d-1f469-200d-1f466", "1f47d", "1f47e", "1f4a1", "1f4aa", "1f4af", "1f4b0", "1f4b8", "1f4bb", "1f4c5", "1f4c8", "1f4da", "1f4dd", "1f4ec", "1f4f1", "1f511", "1f512", "1f514", "1f515", "1f522", "1f525", "1f60e", "1f680", "1f6e0-fe0f", "1f916", "1f91d", "1f947", "1f948", "1f949", "1f973", "1f981", "1f984", "1f988", "1f989", "1f98a", "1f98b", "1f992", "1f996", "1f9ba", "1f9d2", "1f9e0", "1f9ee", "1fa90", "2615", "2699-fe0f", "26a0-fe0f", "26a1", "26bd", "2705", "270d-fe0f", "2795", "2b06-fe0f", "2b50"]);
 const T=['8:30-9:15','9:25-10:10','10:30-11:15','11:25-12:10','12:30-13:15','13:35-14:20','14:30-15:15'];
 const D=[
  ['Понеділок',['Математика','Всесв. історія','Література','Англ. мова','Укр. мова','STEM','Математика*']],
@@ -750,7 +750,7 @@ else{
 }
 // ===== 3D-емодзі (Microsoft Fluent Emoji, MIT) =====
 function emoSrc(e){if(!e)return null;const cp=[...e].map(c=>c.codePointAt(0).toString(16));const a=cp.join('-'),b=cp.filter(c=>c!=='fe0f').join('-');return EMO.has(a)?`assets/emoji/${a}.webp`:EMO.has(b)?`assets/emoji/${b}.webp`:null}
-const EMO_RX=/(?:[\u{1F1E6}-\u{1F1FF}]{2}|[☀-➿\u{1F300}-\u{1FAFF}]️?(?:‍[☀-➿\u{1F300}-\u{1FAFF}]️?)*)/gu;
+const EMO_RX=/(?:[\u{1F1E6}-\u{1F1FF}]{2}|[☀-➿⬀-⯿\u{1F300}-\u{1FAFF}]️?(?:‍[☀-➿⬀-⯿\u{1F300}-\u{1FAFF}]️?)*)/gu;
 function emojify(root){
   const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentNode.closest('select,option,textarea,script,style,title,input')||!EMO_RX.test(n.data)?(EMO_RX.lastIndex=0,NodeFilter.FILTER_REJECT):(EMO_RX.lastIndex=0,NodeFilter.FILTER_ACCEPT)});
   const ns=[];while(w.nextNode())ns.push(w.currentNode);
