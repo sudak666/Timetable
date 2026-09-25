@@ -9,3 +9,6 @@
 - Дані: таблиці `school_*` з RLS — дитина не може підтвердити оцінку, змінити курс чи додати бонус.
 
 Іконки: [Microsoft Fluent Emoji 3D](https://github.com/microsoft/fluentui-emoji) (MIT), `assets/emoji/`.
+
+## Фічі
+Ціль-скарбничка · серії з автобонусом · челенджі від батьків · домашка з позначками в розкладі · графік середнього балу · рейтинг/порівняння з минулим місяцем · аватари й кольори за рівнями · вікторина · PWA (встановлення, офлайн) · push-сповіщення (`supabase/functions/school-push`, тригери на `school_grades`, `school_ledger`, `school_challenges`).
