@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f1024">
+<title>Розклад уроків</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f4fb;--card:#fff;--text:#1b1c33;--muted:#6b6f8e;--line:#e4e6f3;--accent:#6c5ce7;--accent2:#00b894;--glow:rgba(108,92,231,.25)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f1024;--card:#1a1b36;--text:#eceefe;--muted:#9a9dc2;--line:#2a2c4f;--glow:rgba(108,92,231,.45)}}
+:root[data-theme=dark]{--bg:#0f1024;--card:#1a1b36;--text:#eceefe;--muted:#9a9dc2;--line:#2a2c4f;--glow:rgba(108,92,231,.45)}
+*{box-sizing:border-box;margin:0}
+body{font-family:Manrope,system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px 16px 48px;transition:background .3s}
+.wrap{max-width:1100px;margin:auto}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+h1{font-size:clamp(24px,5vw,36px);font-weight:800;background:linear-gradient(90deg,var(--accent),#fd79a8);-webkit-background-clip:text;background-clip:text;color:transparent}
+#clock{color:var(--muted);font-weight:600}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:12px;padding:8px 12px}
+.now{background:linear-gradient(135deg,var(--accent),#a29bfe);color:#fff;border-radius:20px;padding:20px;margin-bottom:20px;box-shadow:0 10px 30px var(--glow)}
+.now small{opacity:.85;text-transform:uppercase;letter-spacing:.08em;font-size:12px}
+.now h2{font-size:clamp(22px,5vw,30px);margin:4px 0}
+.bar{height:8px;background:rgba(255,255,255,.3);border-radius:8px;overflow:hidden;margin-top:12px}
+.bar i{display:block;height:100%;background:#fff;border-radius:8px;transition:width 1s}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px}
+.tabs button{flex:0 0 auto}
+.tabs button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.day{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;transition:transform .2s}
+.day.today{border-color:var(--accent);box-shadow:0 0 0 2px var(--glow)}
+.day h3{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.badge{font-size:11px;background:var(--accent);color:#fff;padding:3px 8px;border-radius:8px}
+.l{display:grid;grid-template-columns:28px 92px 1fr;gap:8px;align-items:center;padding:9px 8px;border-radius:10px}
+.l+.l{border-top:1px dashed var(--line)}
+.n{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:13px;font-weight:800;color:#fff}
+.t{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.s{font-weight:600}
+.l.past{opacity:.45}
+.l.cur{background:var(--glow)}
+.opt{font-size:11px;color:var(--muted);font-weight:400}
+.single .day:not(.show){display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div><h1>Розклад уроків</h1><div id="clock"></div></div>
+  <button id="theme" aria-label="Тема">🌓</button>
+</header>
+<section class="now" id="now"></section>
+<nav class="tabs" id="tabs"></nav>
+<main class="grid" id="grid"></main>
+</div>
+<script>
+const T=['8:30-9:15','9:25-10:10','10:30-11:15','11:25-12:10','12:30-13:15','13:35-14:20','14:30-15:15'];
+const D=[
+ ['Понеділок',['Математика','Всесв. історія','Література','Англ. мова','Укр. мова','STEM','Математика*']],
+ ['Вівторок',['Література','Інформатика','Укр. мова','Географія','Математика','Фіз-ра']],
+ ['Середа',['Англ. мова','Математика','Технології','Укр. мова','Громад. освіта','Довкілля','STEM']],
+ ['Четвер',['Математика','Укр. мова','Географія','Фіз-ра','Англ. мова','Мистецтво','ЗБД']],
+ ['П’ятниця',['Всесв. історія','Англ. мова','Література','Фіз-ра','Довкілля','Математика']]
+];
+const C={'Математика':'#6c5ce7','Всесв. історія':'#e17055','Література':'#fd79a8','Англ. мова':'#0984e3','Укр. мова':'#fdcb6e','STEM':'#00b894','Інформатика':'#00cec9','Географія':'#55efc4','Фіз-ра':'#d63031','Технології':'#a29bfe','Громад. освіта':'#e84393','Довкілля':'#27ae60','Мистецтво':'#f39c12','ЗБД':'#636e72'};
+const m=s=>{const[h,mm]=s.split(':');return h*60+ +mm};
+const rng=i=>T[i].split('-').map(m);
+const name=s=>s.replace('*','');
+let sel=null;
+const $=id=>document.getElementById(id);
+
+function state(){
+  const d=new Date(),wd=d.getDay()-1,min=d.getHours()*60+d.getMinutes()+d.getSeconds()/60;
+  return{d,wd,min};
+}
+function render(){
+  const{d,wd,min}=state();
+  $('clock').textContent=d.toLocaleDateString('uk-UA',{weekday:'long',day:'numeric',month:'long'})+' · '+d.toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'});
+  $('grid').innerHTML=D.map(([dn,ls],i)=>`<div class="day ${i===wd?'today':''} ${i===sel?'show':''}"><h3>${dn}${i===wd?'<span class="badge">Сьогодні</span>':''}</h3>${ls.map((s,j)=>{const[a,b]=rng(j),cl=i===wd?(min>=b?'past':min>=a?'cur':''):'';return`<div class="l ${cl}"><span class="n" style="background:${C[name(s)]}">${j+1}</span><span class="t">${T[j].replace('-',' – ')}</span><span class="s">${name(s)}${s.endsWith('*')?' <span class="opt">факультатив</span>':''}</span></div>`}).join('')}</div>`).join('');
+  $('grid').classList.toggle('single',sel!==null);
+  $('now').innerHTML=nowCard(wd,min);
+}
+function nowCard(wd,min){
+  const ls=D[wd]?.[1];
+  const fmt=x=>{x=Math.ceil(x);return x>=60?`${Math.floor(x/60)} год ${x%60} хв`:`${x} хв`};
+  if(ls){
+    for(let j=0;j<ls.length;j++){
+      const[a,b]=rng(j);
+      if(min>=a&&min<b)return`<small>Зараз · ${j+1} урок</small><h2>${name(ls[j])}</h2><div>До кінця ${fmt(b-min)}${ls[j+1]?` · далі ${name(ls[j+1])}`:''}</div><div class="bar"><i style="width:${(min-a)/(b-a)*100}%"></i></div>`;
+      if(min<a)return`<small>${j?'Перерва':'Незабаром'}</small><h2>${name(ls[j])}</h2><div>Початок о ${T[j].split('-')[0]} · через ${fmt(a-min)}</div>`;
+    }
+  }
+  let n=wd+1;while(!D[n]&&n<7)n++;n=D[n]?n:0;
+  return`<small>Уроки закінчились 🎉</small><h2>Далі: ${D[n][0]}</h2><div>Перший урок — ${name(D[n][1][0])} о 8:30</div>`;
+}
+$('tabs').innerHTML=['Весь тиждень',...D.map(x=>x[0])].map((t,i)=>`<button data-i="${i-1}">${t}</button>`).join('');
+$('tabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;sel=+b.dataset.i<0?null:+b.dataset.i;[...$('tabs').children].forEach(x=>x.classList.toggle('on',x===b));render()};
+$('tabs').children[0].classList.add('on');
+$('theme').onclick=()=>{const r=document.documentElement,dk=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;r.dataset.theme=dk?'light':'dark';try{localStorage.theme=r.dataset.theme}catch{}};
+try{if(localStorage.theme)document.documentElement.dataset.theme=localStorage.theme}catch{}
+render();setInterval(render,15000);
+</script>
+</body>
+</html>
