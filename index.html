@@ -722,6 +722,7 @@ $('pushBtn').onclick=async()=>{
   if(!('PushManager'in window)||!swReg)return uiAlert(isIOS&&!standalone?'На iPhone спершу встанови застосунок на головний екран (кнопка «📱 Встановити»), а потім увімкни сповіщення звідти.':'Цей браузер не підтримує сповіщення.');
   const cur=await swReg.pushManager.getSubscription();
   if(cur){await sb.from('school_push').delete().eq('endpoint',cur.endpoint);await cur.unsubscribe();msg('pushMsg','Сповіщення вимкнено',true);return pushState()}
+  if(Notification.permission==='denied')return uiAlert('Сповіщення заблоковані для цього сайту. Натисни 🔒 (або ⋮ → ⓘ) біля адреси сайту → «Дозволи» → «Сповіщення» → «Дозволити», онови сторінку й натисни кнопку ще раз. Також перевір, що в налаштуваннях телефона сповіщення для Chrome увімкнені.');
   if(await Notification.requestPermission()!=='granted')return msg('pushMsg','Дозвіл на сповіщення не надано');
   try{const s=await swReg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(VAPID)});
     const{error}=await sb.from('school_push').upsert({endpoint:s.endpoint,user_id:me.id,sub:s.toJSON()});if(error)throw error;
