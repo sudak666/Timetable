@@ -107,6 +107,14 @@ h1{background-size:200% auto;animation:shine 6s linear infinite}
 .rates{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6}
 #gl .ok{border:0;background:#00b894;color:#fff;padding:4px 10px;margin-right:4px;font-weight:900}
 .gi.wait{background:var(--brk);border:1px dashed #fdcb6e}
+ .wide{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;max-width:360px;padding:12px;font-weight:700}
+.or{color:var(--muted);font-size:13px;margin:12px 0 8px}
+.msg{font-size:14px;margin-top:8px;color:var(--muted)}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin:10px 0}
+.rgrid label{display:flex;align-items:center;gap:6px}
+.rgrid input{width:70px;font:inherit;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;padding:6px}
+.code{font-family:monospace;font-size:18px;background:var(--brk);padding:2px 8px;border-radius:8px;letter-spacing:.1em;user-select:all}
+summary{cursor:pointer;font-weight:700}
 #pay{background:#00b894;color:#fff;border:0}
 .single .day:not(.show){display:none}
 .hl .l:not(.match){opacity:.2}
@@ -137,26 +145,56 @@ h1{background-size:200% auto;animation:shine 6s linear infinite}
 <nav class="tabs" id="tabs"></nav>
 <main class="grid" id="grid"></main>
 <section class="side gr" id="grades">
-  <h4><span>🏆 Мої оцінки та нагороди</span><span style="text-transform:none;letter-spacing:0"><span id="pendN" style="color:#e17055;margin-right:8px"></span><span id="gmode"></span></span></h4>
-  <div class="sum">
-    <div><small>Сьогодні</small><b id="sD">0 ₴</b></div>
-    <div><small>Цей тиждень</small><b id="sW">0 ₴</b></div>
-    <div><small>Цей місяць</small><b id="sM">0 ₴</b></div>
-    <div><small>До виплати</small><b id="sB">0 ₴</b></div>
+  <h4><span>🏆 Оцінки та нагороди</span><span id="who" style="text-transform:none;letter-spacing:0"></span></h4>
+  <div id="gAuth" hidden>
+    <p style="margin:6px 0 12px">Увійди, щоб записувати оцінки й отримувати нагороди.</p>
+    <button id="gGoogle" class="wide"><svg viewBox="0 0 48 48" width="18" height="18"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg> Увійти через Google</button>
+    <div class="or">або поштою</div>
+    <form class="form" id="gMail"><input type="email" id="gEmail" placeholder="пошта" required autocomplete="email"><input type="password" id="gPass" placeholder="пароль (від 6 символів)" minlength="6" required autocomplete="current-password"><button>Увійти</button><button type="button" id="gSignup">Зареєструватись</button></form>
+    <p class="msg" id="gMsg"></p>
   </div>
-  <div class="lvl" id="lvl"></div>
-  <div class="badges" id="badges"></div>
-  <h4 style="margin-top:16px">➕ Додати оцінку</h4>
-  <div class="form"><select id="gs"></select><input type="date" id="gd"><button id="pay" hidden>💸 Виплатити баланс</button></div>
-  <div class="gbtn" id="gb"></div>
-  <div class="gl" id="gl"></div>
-  <div class="rates" id="rates"></div>
+  <div id="gJoin" hidden>
+    <p style="margin:6px 0 12px">Ти ще не в сім'ї. Батьки створюють сім'ю, дитина приєднується за кодом.</p>
+    <div class="form"><input id="jName" placeholder="Твоє ім'я" maxlength="40"></div>
+    <div class="form" style="margin-top:8px"><button id="jCreate">👨‍👩‍👦 Я батько/мати — створити сім'ю</button></div>
+    <div class="form" style="margin-top:8px"><input id="jCode" placeholder="Код запрошення" maxlength="10" style="text-transform:uppercase"><button id="jJoin">🔑 Приєднатись</button></div>
+    <p class="msg" id="jMsg"></p>
+  </div>
+  <div id="gMain" hidden>
+    <div class="tabs" id="kids" style="margin:8px 0 0"></div>
+    <div class="sum">
+      <div><small>Сьогодні</small><b id="sD">0 ₴</b></div>
+      <div><small>Цей тиждень</small><b id="sW">0 ₴</b></div>
+      <div><small>Цей місяць</small><b id="sM">0 ₴</b></div>
+      <div><small>До виплати</small><b id="sB">0 ₴</b></div>
+    </div>
+    <div class="lvl" id="lvl"></div>
+    <div class="badges" id="badges"></div>
+    <h4 style="margin-top:16px">➕ Додати оцінку <span id="pendN" style="color:#e17055;text-transform:none;letter-spacing:0"></span></h4>
+    <div class="form"><select id="gs"></select><input type="date" id="gd"></div>
+    <div class="gbtn" id="gb"></div>
+    <div id="par" hidden>
+      <h4 style="margin-top:12px">🎁 Бонус / штраф / виплата</h4>
+      <form class="form" id="bForm"><input type="number" id="bAmt" placeholder="сума ₴ (мінус = штраф)" required style="width:190px"><input id="bNote" placeholder="за що" maxlength="200"><button>🎁 Нарахувати</button><button type="button" id="pay">💸 Виплатити</button></form>
+      <details style="margin-top:12px"><summary>⚙️ Курс оцінок і запрошення</summary>
+        <div class="rgrid" id="rEdit"></div>
+        <button id="rSave">Зберегти курс</button> <span class="msg" id="rMsg"></span>
+        <p style="margin-top:12px">Код для дитини: <b class="code" id="cChild"></b> · для другого з батьків: <b class="code" id="cPar"></b></p>
+      </details>
+    </div>
+    <div class="gl" id="gl"></div>
+    <div class="rates" id="rates"></div>
+    <p style="margin-top:10px"><button id="gOut">Вийти</button></p>
+  </div>
+  <p id="gLoad" class="msg">Завантаження…</p>
+</section>
 </section>
 <section class="side" style="margin-top:16px">
   <h4>Уроків на тиждень · натисни, щоб підсвітити</h4>
   <div class="chips" id="stats"></div>
 </section>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js"></script>
 <script>
 const T=['8:30-9:15','9:25-10:10','10:30-11:15','11:25-12:10','12:30-13:15','13:35-14:20','14:30-15:15'];
 const D=[
@@ -287,81 +325,133 @@ let wasDone=status(now().wd,now().min).k==='done';
 setInterval(()=>{const d=status(now().wd,now().min).k==='done';if(d&&!wasDone)boom();wasDone=d},1000);
 renderGrid();renderNow();
 
-// ===== Оцінки та нагороди =====
-let RATE={12:150,11:120,10:100,9:70,8:50,7:30,6:10,5:0,4:-20,3:-40,2:-70,1:-100},BON=[];
-const M=x=>x.m??RATE[x.g]??0;
+// ===== Оцінки та нагороди (Supabase) =====
+const SB_URL='https://vkwkyhjjjmcpmiakxohw.supabase.co',SB_KEY='sb_publishable_KV2ZYS0ELpHPO9cX10Z9Tw_veUObkM9';
+const DEF_RATE={12:150,11:120,10:100,9:70,8:50,7:30,6:10,5:0,4:-20,3:-40,2:-70,1:-100};
 const GC=g=>g>=10?'#00b894':g>=7?'#0984e3':g>=4?'#e1a800':'#d63031';
 const uah=v=>(v>0?'+':'')+v+' ₴';
 const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
-let G=[],A=[],PAY=[],canPay=false,store;
+const esc=t=>String(t??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+const show=id=>['gAuth','gJoin','gMain','gLoad'].forEach(x=>$(x).hidden=x!==id);
+const err=e=>e?.message||String(e);
+let sb,me=null,fam=null,role=null,members=[],kid=null,GR=[],LG=[],RATE={...DEF_RATE},chan=null;
+const M=x=>x.amount??RATE[x.grade]??0;
+
 $('gs').innerHTML=Object.keys(C).map(k=>`<option>${k}</option>`).join('');
 $('gd').value=iso(new Date());
-$('gb').innerHTML=Array.from({length:12},(_,i)=>12-i).map(g=>`<button data-g="${g}" style="background:${GC(g)}" title="${uah(RATE[g])}">${g}</button>`).join('');
-// сховище: спільна БД claude.ai або localStorage як запасний варіант
-const local={
-  load(){try{const o=JSON.parse(localStorage.grades||'{}');return{g:o.g||[],a:o.a||[],p:o.p||[]}}catch{return{g:[],a:[],p:[]}}},
-  save(){try{localStorage.grades=JSON.stringify({g:G,a:A,p:PAY})}catch{}},
-  arr(c){return c==='grades'?G:c==='approved'?A:PAY},
-  async add(col,d){this.arr(col).push({id:Math.random().toString(36).slice(2),...d});this.save();renderGrades()},
-  async put(col,id,d){this.arr(col).push({id,...d});this.save();renderGrades()},
-  async del(col,id){const a=this.arr(col),i=a.findIndex(x=>x.id===id);if(i>=0)a.splice(i,1);this.save();renderGrades()}
-};
-function useLocal(){store=local;const o=local.load();G=o.g;A=o.a;PAY=o.p;canPay=true;$('gmode').textContent='📱 тільки на цьому пристрої';renderGrades()}
+$('gb').innerHTML=Array.from({length:12},(_,i)=>12-i).map(g=>`<button data-g="${g}" style="background:${GC(g)}">${g}</button>`).join('');
+
 function renderGrades(){
   const today=iso(new Date()),d=new Date(),mon=new Date(d);mon.setDate(d.getDate()-((d.getDay()+6)%7));
   const wk=iso(mon),mo=today.slice(0,7);
-  const sum=f=>A.filter(f).reduce((a,x)=>a+M(x),0)+BON.filter(f).reduce((a,x)=>a+x.amount,0);
-  $('rates').textContent='Курс: '+Object.entries(RATE).sort((a,b)=>b[0]-a[0]).map(([g,v])=>`${g} → ${uah(v)}`).join(' · ');
+  const G=GR.filter(x=>x.child_id===kid),L=LG.filter(x=>x.child_id===kid);
+  const A=G.filter(x=>x.status==='approved'),pend=G.filter(x=>x.status==='pending');
+  const B=L.filter(x=>x.kind==='bonus'),P=L.filter(x=>x.kind==='payout');
+  const sum=f=>A.filter(f).reduce((a,x)=>a+M(x),0)+B.filter(f).reduce((a,x)=>a+x.amount,0);
   const set=(id,v)=>{$(id).textContent=uah(v);$(id).className=v>0?'pos':v<0?'neg':''};
   set('sD',sum(x=>x.date===today));set('sW',sum(x=>x.date>=wk&&x.date<=today));set('sM',sum(x=>x.date.slice(0,7)===mo));
-  const bal=sum(()=>true)-PAY.reduce((a,x)=>a+x.amount,0);set('sB',bal);
-  $('pay').hidden=!(canPay&&bal>0);
-  // рівень
-  const xp=A.reduce((a,x)=>a+x.g,0),lv=Math.floor(xp/50)+1,p=(xp%50)/50*100;
-  $('lvl').innerHTML=`Рівень ${lv} · ${xp} XP <small style="color:var(--muted);font-weight:600">(ще ${50-xp%50} до наступного)</small><div class="bar"><i style="width:${p}%"></i></div>`;
-  const srt=[...A].sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:(a.t||0)-(b.t||0));
-  let run=0,best=0;srt.forEach(x=>{run=x.g>=10?run+1:0;best=Math.max(best,run)});
-  const B=[['🎯 Перша оцінка',A.length>0],['👑 Перша 12',A.some(x=>x.g===12)],['🔥 3 десятки поспіль',best>=3],['🚀 5 поспіль ≥10',best>=5],['📚 20 оцінок',A.length>=20],['💯 50 оцінок',A.length>=50],['💰 Заробив 1000 ₴',sum(()=>true)>=1000],['🌈 Тиждень без мінусів',A.filter(x=>x.date>=wk).length>=3&&A.filter(x=>x.date>=wk).every(x=>M(x)>=0)]];
-  $('badges').innerHTML=B.map(([t,ok])=>`<span class="bd ${ok?'got':''}">${t}</span>`).join('');
-  const aid=new Set(A.map(x=>x.id)),pend=G.filter(x=>!aid.has(x.id));
-  const list=[...pend.map(x=>({...x,k:'w'})),...A.map(x=>({...x,k:'g'})),...PAY.map(x=>({...x,k:'p'})),...BON.map(x=>({...x,k:'b'}))].sort((a,b)=>(b.date+(b.t||0))>(a.date+(a.t||0))?1:-1).slice(0,40);
-  const dt=x=>new Date(x.date).toLocaleDateString('uk-UA',{weekday:'short',day:'numeric',month:'short'});
-  $('pendN').textContent=pend.length?`⏳ ${pend.length} чекає підтвердження`:'';
-  $('gl').innerHTML=list.length?list.map(x=>x.k==='w'
-    ?`<div class="gi wait"><span class="g" style="background:${GC(x.g)}">${x.g}</span><span>${E[x.s]||''} ${x.s}<small>${dt(x)} · ⏳ чекає підтвердження батьків</small></span><b style="color:var(--muted)">${uah(RATE[x.g])}</b>${canPay?`<span><button class="ok" data-ok="${x.id}" title="Підтвердити">✓</button><button class="x" data-del="grades:${x.id}" title="Відхилити">✕</button></span>`:`<button class="x" data-del="grades:${x.id}" title="Видалити">✕</button>`}</div>`
-    :x.k==='g'
-    ?`<div class="gi"><span class="g" style="background:${GC(x.g)}">${x.g}</span><span>${E[x.s]||''} ${x.s}<small>${dt(x)} · ✅ підтверджено</small></span><b class="${M(x)>0?'pos':M(x)<0?'neg':''}">${uah(M(x))}</b>${canPay?`<button class="x" data-del="approved:${x.id}" title="Скасувати підтвердження">↺</button>`:'<span></span>'}</div>`
-    :x.k==='b'?`<div class="gi"><span class="g" style="background:linear-gradient(135deg,#fdcb6e,#e17055)">🎁</span><span>${x.note||'Бонус'}<small>${dt(x)}</small></span><b class="${x.amount>=0?'pos':'neg'}">${uah(x.amount)}</b><span></span></div>`
-    :`<div class="gi"><span class="g" style="background:#636e72">💸</span><span>Виплачено<small>${new Date(x.date).toLocaleDateString('uk-UA',{day:'numeric',month:'short'})}</small></span><b>−${x.amount} ₴</b>${canPay?`<button class="x" data-del="payouts:${x.id}">✕</button>`:'<span></span>'}</div>`).join('')
-    :'<p style="color:var(--muted)">Ще немає оцінок — натисни на цифру вище 👆</p>';
+  const bal=sum(()=>true)-P.reduce((a,x)=>a+x.amount,0);set('sB',bal);
+  $('pay').hidden=bal<=0;
+  const xp=A.reduce((a,x)=>a+x.grade,0),lv=Math.floor(xp/50)+1;
+  $('lvl').innerHTML=`Рівень ${lv} · ${xp} XP <small style="color:var(--muted);font-weight:600">(ще ${50-xp%50} до наступного)</small><div class="bar"><i style="width:${xp%50*2}%"></i></div>`;
+  let run=0,best=0;[...A].sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:a.created_at<b.created_at?-1:1).forEach(x=>{run=x.grade>=10?run+1:0;best=Math.max(best,run)});
+  const wA=A.filter(x=>x.date>=wk);
+  const BD=[['🎯 Перша оцінка',A.length>0],['👑 Перша 12',A.some(x=>x.grade===12)],['🔥 3 десятки поспіль',best>=3],['🚀 5 поспіль ≥10',best>=5],['📚 20 оцінок',A.length>=20],['💯 50 оцінок',A.length>=50],['💰 Заробив 1000 ₴',sum(()=>true)>=1000],['🌈 Тиждень без мінусів',wA.length>=3&&wA.every(x=>M(x)>=0)]];
+  $('badges').innerHTML=BD.map(([t,ok])=>`<span class="bd ${ok?'got':''}">${t}</span>`).join('');
+  $('pendN').textContent=pend.length?`· ⏳ ${pend.length} чекає підтвердження`:'';
+  $('rates').textContent='Курс: '+Object.entries(RATE).sort((a,b)=>b[0]-a[0]).map(([g,v])=>`${g} → ${uah(v)}`).join(' · ');
+  const par=role==='parent',dt=x=>new Date(x.date).toLocaleDateString('uk-UA',{weekday:'short',day:'numeric',month:'short'});
+  const list=[...G.map(x=>({...x,k:x.status})),...L.map(x=>({...x,k:x.kind}))].sort((a,b)=>a.date===b.date?(a.created_at<b.created_at?1:-1):a.date<b.date?1:-1).slice(0,60);
+  $('gl').innerHTML=list.length?list.map(x=>{
+    if(x.k==='pending')return`<div class="gi wait"><span class="g" style="background:${GC(x.grade)}">${x.grade}</span><span>${E[x.subject]||''} ${esc(x.subject)}<small>${dt(x)} · ⏳ чекає підтвердження батьків</small></span><b style="color:var(--muted)">${uah(RATE[x.grade]??0)}</b>${par?`<span><button class="ok" data-ok="${x.id}" title="Підтвердити">✓</button><button class="x" data-del="g:${x.id}" title="Відхилити">✕</button></span>`:`<button class="x" data-del="g:${x.id}" title="Видалити">✕</button>`}</div>`;
+    if(x.k==='approved')return`<div class="gi"><span class="g" style="background:${GC(x.grade)}">${x.grade}</span><span>${E[x.subject]||''} ${esc(x.subject)}<small>${dt(x)} · ✅ підтверджено</small></span><b class="${M(x)>0?'pos':M(x)<0?'neg':''}">${uah(M(x))}</b>${par?`<button class="x" data-un="${x.id}" title="Скасувати підтвердження">↺</button>`:'<span></span>'}</div>`;
+    const b=x.k==='bonus';
+    return`<div class="gi"><span class="g" style="background:${b?'linear-gradient(135deg,#fdcb6e,#e17055)':'#636e72'}">${b?(x.amount>=0?'🎁':'⚠️'):'💸'}</span><span>${esc(x.note)||(b?'Бонус':'Виплачено')}<small>${dt(x)}</small></span><b class="${b?(x.amount>=0?'pos':'neg'):''}">${b?uah(x.amount):'−'+x.amount+' ₴'}</b>${par?`<button class="x" data-del="l:${x.id}">✕</button>`:'<span></span>'}</div>`;
+  }).join(''):'<p style="color:var(--muted)">Ще немає оцінок — натисни на цифру вище 👆</p>';
 }
-$('gb').onclick=async e=>{const b=e.target.closest('[data-g]');if(!b||!store)return;const g=+b.dataset.g;
-  b.disabled=true;const d={s:$('gs').value,g,date:$('gd').value||iso(new Date()),t:Date.now()};try{const r=await store.add('grades',d);if(canPay&&store!==local)await store.put('approved',r.id,{...d,m:RATE[g]??0});if(g>=10)boom(e.clientX,e.clientY,g===12?150:70)}catch(err){alert('Не вдалося зберегти: '+(err.message||err.code))}b.disabled=false};
-$('gl').onclick=async e=>{const ok=e.target.closest('[data-ok]');if(ok){const x=G.find(g=>g.id===ok.dataset.ok);ok.disabled=true;try{await store.put('approved',x.id,{s:x.s,g:x.g,m:RATE[x.g]??0,date:x.date,t:x.t||Date.now()});if(x.g>=10)boom(e.clientX,e.clientY,80)}catch(err){alert(err.message||err.code);ok.disabled=false}return}
-  const b=e.target.closest('[data-del]');if(!b||!confirm(b.dataset.del.startsWith('approved')?'Скасувати підтвердження? Оцінка знову стане «чекає».':'Видалити запис?'))return;const[c,id]=b.dataset.del.split(':');try{await store.del(c,id)}catch(err){alert(err.message||err.code)}};
-$('pay').onclick=async()=>{const bal=parseInt($('sB').textContent.replace(/[^\d-]/g,''));const v=prompt('Скільки виплачено, ₴?',bal);const n=parseInt(v);if(!(n>0))return;
-  try{await store.add('payouts',{amount:n,date:iso(new Date()),t:Date.now()});boom()}catch(err){alert(err.message||err.code)}};
+
+function renderKids(){
+  const kids=members.filter(m=>m.role==='child');
+  if(role==='child')kid=me.id;else if(!kids.some(k=>k.user_id===kid))kid=kids[0]?.user_id??null;
+  $('kids').innerHTML=role==='parent'?(kids.length?kids.map(k=>`<button data-kid="${k.user_id}" class="${k.user_id===kid?'on':''}">🧒 ${esc(k.name||'Дитина')}</button>`).join(''):'<p class="msg">Дітей ще немає — дай дитині код запрошення з розділу «⚙️ Курс оцінок і запрошення».</p>'):'';
+  const n=members.find(m=>m.user_id===me.id)?.name;
+  $('who').textContent=`${role==='parent'?'👨‍👩‍👦':'🧒'} ${n||me.email||''} · ${esc(fam.name)}`;
+  $('par').hidden=role!=='parent';
+  document.querySelector('.gbtn').style.opacity=kid?1:.4;
+}
+
+function renderRates(){
+  $('rEdit').innerHTML=Array.from({length:12},(_,i)=>12-i).map(g=>`<label><span class="n" style="background:${GC(g)}">${g}</span><input type="number" data-r="${g}" value="${RATE[g]??0}"></label>`).join('');
+}
+
+async function load(){
+  const[{data:f},{data:m},{data:g},{data:l}]=await Promise.all([
+    sb.from('school_families').select('id,name,invite_code,rates').eq('id',fam.id).single(),
+    sb.from('school_members').select('user_id,role,name').eq('family_id',fam.id),
+    sb.from('school_grades').select('*').eq('family_id',fam.id).order('date',{ascending:false}).limit(2000),
+    sb.from('school_ledger').select('*').eq('family_id',fam.id).order('date',{ascending:false}).limit(2000)]);
+  if(f){fam=f;RATE={...DEF_RATE,...Object.fromEntries(Object.entries(f.rates||{}).map(([k,v])=>[k,+v||0]))}}
+  members=m||[];GR=g||[];LG=l||[];
+  renderKids();renderGrades();
+  if(!$('rEdit').contains(document.activeElement))renderRates();
+  $('cChild').textContent=fam.invite_code;
+}
+let tmr;const reload=()=>{clearTimeout(tmr);tmr=setTimeout(load,300)};
+
+async function enter(){
+  const{data:{user}}=await sb.auth.getUser();me=user;
+  if(!me){show('gAuth');return}
+  const{data:mem}=await sb.from('school_members').select('family_id,role').eq('user_id',me.id).limit(1);
+  if(!mem?.length){$('jName').value=me.user_metadata?.full_name||'';show('gJoin');return}
+  fam={id:mem[0].family_id};role=mem[0].role;
+  await load();show('gMain');
+  if(role==='parent')sb.rpc('school_parent_code',{fid:fam.id}).then(({data})=>$('cPar').textContent=data||'');
+  if(chan)sb.removeChannel(chan);
+  chan=sb.channel('fam-'+fam.id);
+  ['school_grades','school_ledger','school_members','school_families'].forEach(t=>chan.on('postgres_changes',{event:'*',schema:'public',table:t,filter:(t==='school_families'?'id=eq.':'family_id=eq.')+fam.id},reload));
+  chan.subscribe();
+}
+
+const msg=(id,t,ok)=>{$(id).textContent=t;$(id).style.color=ok?'#00a383':'#d63031'};
+$('gGoogle').onclick=()=>sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}}).then(({error})=>error&&msg('gMsg',err(error)));
+$('gMail').onsubmit=async e=>{e.preventDefault();const{error}=await sb.auth.signInWithPassword({email:$('gEmail').value.trim(),password:$('gPass').value});
+  if(error)msg('gMsg',/invalid/i.test(error.message)?'Невірна пошта або пароль':/confirm/i.test(error.message)?'Підтверди пошту — лист уже надіслано':err(error))};
+$('gSignup').onclick=async()=>{if(!$('gMail').reportValidity())return;
+  const{data,error}=await sb.auth.signUp({email:$('gEmail').value.trim(),password:$('gPass').value,options:{emailRedirectTo:location.origin+location.pathname}});
+  if(error)return msg('gMsg',err(error));
+  if(!data.session)msg('gMsg','Готово! Перевір пошту й натисни посилання для підтвердження 📬',true)};
+$('gOut').onclick=async()=>{if(chan)sb.removeChannel(chan);chan=null;await sb.auth.signOut();fam=role=null;GR=LG=members=[];show('gAuth')};
+$('jCreate').onclick=async()=>{const{error}=await sb.rpc('school_create_family',{p_name:'Сім’я '+($('jName').value.trim()||''),p_parent_name:$('jName').value});error?msg('jMsg',err(error)):enter()};
+$('jJoin').onclick=async()=>{if(!$('jCode').value.trim())return msg('jMsg','Введи код');const{error}=await sb.rpc('school_join_family',{p_code:$('jCode').value,p_name:$('jName').value});error?msg('jMsg',/Невірний/.test(error.message)?'Невірний код':err(error)):enter()};
+$('kids').onclick=e=>{const b=e.target.closest('[data-kid]');if(!b)return;kid=b.dataset.kid;renderKids();renderGrades()};
+$('gb').onclick=async e=>{const b=e.target.closest('[data-g]');if(!b||!kid)return;const g=+b.dataset.g,par=role==='parent';
+  b.disabled=true;
+  const{error}=await sb.from('school_grades').insert({family_id:fam.id,child_id:kid,subject:$('gs').value,grade:g,date:$('gd').value||iso(new Date()),...(par?{status:'approved',amount:RATE[g]??0}:{})});
+  b.disabled=false;if(error)return alert('Не вдалося зберегти: '+err(error));
+  if(g>=10)boom(e.clientX,e.clientY,g===12?150:70);load()};
+$('gl').onclick=async e=>{
+  const ok=e.target.closest('[data-ok]'),un=e.target.closest('[data-un]'),del=e.target.closest('[data-del]');
+  let r;
+  if(ok){const x=GR.find(g=>g.id===ok.dataset.ok);ok.disabled=true;r=await sb.from('school_grades').update({status:'approved',amount:RATE[x.grade]??0}).eq('id',x.id);if(!r.error&&x.grade>=10)boom(e.clientX,e.clientY,80)}
+  else if(un){if(!confirm('Скасувати підтвердження? Оцінка знову стане «чекає».'))return;r=await sb.from('school_grades').update({status:'pending',amount:null}).eq('id',un.dataset.un)}
+  else if(del){if(!confirm('Видалити запис?'))return;const[t,id]=del.dataset.del.split(':');r=await sb.from(t==='g'?'school_grades':'school_ledger').delete().eq('id',id)}
+  else return;
+  if(r.error)alert(err(r.error));load()};
+$('bForm').onsubmit=async e=>{e.preventDefault();const n=parseInt($('bAmt').value);if(!n||!kid)return;
+  const{error}=await sb.from('school_ledger').insert({family_id:fam.id,child_id:kid,kind:'bonus',amount:n,note:$('bNote').value.trim()});
+  if(error)return alert(err(error));$('bAmt').value=$('bNote').value='';if(n>0)boom();load()};
+$('pay').onclick=async()=>{const bal=parseInt($('sB').textContent.replace(/[^\d-]/g,''));const n=parseInt(prompt('Скільки виплачено, ₴?',bal));if(!(n>0))return;
+  const{error}=await sb.from('school_ledger').insert({family_id:fam.id,child_id:kid,kind:'payout',amount:n,note:'Виплачено'});error?alert(err(error)):(boom(),load())};
+$('rSave').onclick=async()=>{const r={};document.querySelectorAll('[data-r]').forEach(i=>r[i.dataset.r]=parseInt(i.value)||0);
+  const{error}=await sb.from('school_families').update({rates:r}).eq('id',fam.id);error?msg('rMsg',err(error)):(msg('rMsg','Збережено ✓ (діє для нових підтверджень)',true),load())};
+
 renderGrades();
-fetch('config.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(c=>{if(!c)return;
-  if(c.rates)RATE={...RATE,...Object.fromEntries(Object.entries(c.rates).map(([k,v])=>[k,+v||0]))};
-  if(Array.isArray(c.bonuses))BON=c.bonuses.filter(b=>b&&/^\d{4}-\d\d-\d\d$/.test(b.date)&&Number.isFinite(+b.amount)).map((b,i)=>({id:'b'+i,date:b.date,amount:+b.amount,note:String(b.note||''),t:0}));
-  renderGrades()}).catch(()=>{});
-(async()=>{
-  const db=window.claude?.use?await window.claude.use('db'):null;
-  if(!db)return useLocal();
-  const P=c=>c==='grades'?'grades':'data/parent/'+c;
-  const u=await window.claude.use('user');canPay=u?.isOwner()??false;
-  store={
-    add:(col,d)=>db.collection(P(col)).add(d),
-    put:(col,id,d)=>db.doc(P(col)+'/'+id).set(d),
-    del:(col,id)=>db.doc(P(col)+'/'+id).delete()
-  };
-  $('gmode').textContent='☁️ синхронізовано';
-  const map=snap=>snap.docs.map(d=>({id:d.id,...d.data()}));
-  db.collection('grades').onSnapshot(s=>{G=map(s);renderGrades()},()=>useLocal());
-  db.collection(P('approved')).onSnapshot(s=>{A=map(s);renderGrades()});
-  db.collection(P('payouts')).onSnapshot(s=>{PAY=map(s);renderGrades()});
-})();
+if(!window.supabase){$('gLoad').textContent='Не вдалося завантажити модуль входу. Перевір інтернет.'}
+else{
+  sb=window.supabase.createClient(SB_URL,SB_KEY);
+  let cur;
+  sb.auth.onAuthStateChange((ev,s)=>{const id=s?.user?.id??null;if(id===cur)return;cur=id;setTimeout(()=>enter().catch(e=>{$('gLoad').textContent='Помилка: '+err(e);show('gLoad')}),0)});
+}
 </script>
 </body>
 </html>
