@@ -367,3 +367,12 @@ table.chart .tr i{display:block;height:100%;border-radius:0 4px 4px 0}
 .pa.big{width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 50%,#fff));display:grid;place-items:center;border:0;padding:0;cursor:pointer;box-shadow:0 8px 24px var(--glow)}
 .pa.big img.emo{width:60px;height:60px;margin:0}
 @media (prefers-reduced-motion:reduce){.page{animation:none}}
+/* браузер не рахує розкладку/відмальовку секцій поза екраном */
+.day,.fun>.side,.st-sec{content-visibility:auto;contain-intrinsic-size:auto 380px}
+.fun>.side{contain-intrinsic-size:auto 220px}
+.below-ph{min-height:1200px}
+/* шапка не переноситься при підміні шрифту → CLS 0 */
+header{flex-wrap:nowrap}
+header>div:first-child{min-width:0;flex:1}
+header .tools{flex:none}
+.clock,h1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.clock{font-variant-numeric:tabular-nums}

@@ -1,4 +1,6 @@
-import { createClient, type RealtimeChannel } from '@supabase/supabase-js';
+import { AuthClient } from '@supabase/auth-js';
+import { PostgrestClient } from '@supabase/postgrest-js';
+import type { RealtimeChannel, RealtimeClient } from '@supabase/realtime-js';
 import { parseSettings, type Challenge, type Grade, type Homework, type Ledger, type Member, type Role } from './features/rewards';
 import { set, state, store } from './state';
 import { applyAccent } from './ui/theme';
@@ -7,7 +9,48 @@ const URL = 'https://vkwkyhjjjmcpmiakxohw.supabase.co';
 /** Публічний (publishable) ключ — безпечний на клієнті; доступ до даних обмежує RLS. */
 const KEY = 'sb_publishable_KV2ZYS0ELpHPO9cX10Z9Tw_veUObkM9';
 
-export const sb = createClient(URL, KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+const REF = new globalThis.URL(URL).hostname.split('.')[0]!;
+
+/**
+ * Модульний клієнт замість повного @supabase/supabase-js (58 → 30 КБ gzip):
+ * лише auth + PostgREST; realtime довантажується окремим чанком після входу.
+ * storageKey збігається з supabase-js — наявні сесії користувачів зберігаються.
+ */
+const auth = new AuthClient({
+  url: `${URL}/auth/v1`,
+  headers: { apikey: KEY, Authorization: `Bearer ${KEY}` },
+  storageKey: `sb-${REF}-auth-token`,
+  persistSession: true,
+  autoRefreshToken: true,
+  detectSessionInUrl: true,
+  flowType: 'implicit',
+});
+
+const authedFetch: typeof fetch = async (input, init) => {
+  const { data } = await auth.getSession();
+  const headers = new Headers(init?.headers);
+  headers.set('apikey', KEY);
+  headers.set('Authorization', `Bearer ${data.session?.access_token ?? KEY}`);
+  return fetch(input, { ...init, headers });
+};
+const rest = new PostgrestClient(`${URL}/rest/v1`, { fetch: authedFetch });
+
+export const sb = {
+  auth,
+  from: (table: string) => rest.from(table),
+  rpc: (fn: string, args: Record<string, unknown>) => rest.rpc(fn, args),
+};
+
+let realtime: RealtimeClient | null = null;
+async function getRealtime(): Promise<RealtimeClient> {
+  if (!realtime) {
+    const { RealtimeClient: RC } = await import('@supabase/realtime-js');
+    realtime = new RC(`${URL.replace('https', 'wss')}/realtime/v1`, { params: { apikey: KEY } });
+  }
+  const { data } = await auth.getSession();
+  if (data.session) realtime.setAuth(data.session.access_token);
+  return realtime;
+}
 
 export const errText = (e: unknown): string =>
   e && typeof e === 'object' && 'message' in e ? String((e as { message: unknown }).message) : String(e);
@@ -69,9 +112,10 @@ export async function enter(): Promise<void> {
     const { data } = await sb.rpc('school_parent_code', { fid: row.family_id });
     set({ parentCode: (data as string | null) ?? '' });
   }
-  if (channel) await sb.removeChannel(channel);
+  const rt = await getRealtime();
+  if (channel) await rt.removeChannel(channel);
   const fid = row.family_id as string;
-  channel = sb.channel('fam-' + fid);
+  channel = rt.channel('fam-' + fid);
   for (const t of ['school_grades', 'school_ledger', 'school_members', 'school_challenges', 'school_homework'])
     channel.on('postgres_changes', { event: '*', schema: 'public', table: t, filter: `family_id=eq.${fid}` }, scheduleReload);
   channel.on('postgres_changes', { event: '*', schema: 'public', table: 'school_families', filter: `id=eq.${fid}` }, scheduleReload);
@@ -79,7 +123,7 @@ export async function enter(): Promise<void> {
 }
 
 export async function signOut(): Promise<void> {
-  if (channel) await sb.removeChannel(channel);
+  if (channel && realtime) await realtime.removeChannel(channel);
   channel = null;
   await sb.auth.signOut();
   set({ view: 'auth', me: null, family: null, role: null, members: [], grades: [], ledger: [], challenges: [], homework: [], kid: null });
@@ -88,6 +132,7 @@ export async function signOut(): Promise<void> {
 export function watchAuth(): void {
   let cur: string | null | undefined;
   sb.auth.onAuthStateChange((_ev, session) => {
+    if (session && realtime) realtime.setAuth(session.access_token);
     const id = session?.user.id ?? null;
     if (id === cur) return;
     cur = id;

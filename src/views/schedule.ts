@@ -123,7 +123,7 @@ export function weekStats(): TemplateResult {
   const cnt = new Map<string, number>();
   WEEK.forEach((d) => d.lessons.forEach((l) => cnt.set(l.subject, (cnt.get(l.subject) ?? 0) + 1)));
   const rows = [...cnt].sort((a, b) => b[1] - a[1]);
-  return html`<section class="side" style="margin-top:16px" aria-labelledby="st-h">
+  return html`<section class="side st-sec" aria-labelledby="st-h">
     <h2 class="h4" id="st-h">Уроків на тиждень · натисни, щоб підсвітити</h2>
     <div class="chips">${rows.map(([k, v]) => html`<button type="button" class="chip" aria-pressed=${state.highlight === k}
       style=${styleMap({ background: subjColor(k), opacity: state.highlight && state.highlight !== k ? '.4' : '1' })}

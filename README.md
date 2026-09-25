@@ -2,7 +2,7 @@
 
 Шкільний розклад з таймером уроків, домашкою, оцінками, нагородами та push-сповіщеннями для сім'ї.
 
-**Стек:** Vite · TypeScript (strict) · lit-html · Supabase (Auth, Postgres + RLS, Realtime, Edge Functions) · PWA.
+**Стек:** Vite · TypeScript (strict) · lit-html · Supabase (модульно: auth-js + postgrest-js, realtime-js — lazy; Postgres + RLS, Edge Functions) · PWA.
 
 ## Розробка
 ```bash

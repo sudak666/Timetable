@@ -45,6 +45,10 @@ const NAV: { tab: Tab; label: string; icon: TemplateResult }[] = [
   { tab: 'me', label: 'Профіль', icon: html`<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>` },
 ];
 
+/** Перший кадр — лише верх сторінки; решта домальовується в простої (коротший long task → нижчий TBT). */
+let below = false;
+const showBelow = () => { below = true; draw(); };
+
 const loading = html`<section class="side card" aria-busy="true"><p class="msg" role="status">Завантаження…</p></section>`;
 
 function page(): TemplateResult {
@@ -55,9 +59,7 @@ function page(): TemplateResult {
     default: return html`${G?.profileBar() ?? ''}
       ${bikeLane(G ? G.laneLabel() : emo('⚡ Електробайк мрії'))}
       <div class="top">${nowCard()}${sidePanel()}</div>
-      ${funCards(quizView())}
-      ${weekGrid()}
-      ${weekStats()}`;
+      ${below ? html`${funCards(quizView())}${weekGrid()}${weekStats()}` : html`<div class="below-ph" aria-hidden="true"></div>`}`;
   }
 }
 
@@ -96,6 +98,8 @@ mount.textContent = '';
 const draw = () => render(app(), mount);
 subscribe(draw);
 draw();
+if ('requestIdleCallback' in window) requestIdleCallback(showBelow, { timeout: 600 });
+else setTimeout(showBelow, 50);
 
 /* ---- годинник: 1 оновлення стану за секунду ---- */
 let wasDone = statusAt(clockOf(new Date())).kind === 'done';
