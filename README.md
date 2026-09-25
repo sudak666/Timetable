@@ -13,6 +13,7 @@ npm run build && npm run e2e   # Playwright: мобільний + десктоп
 ```
 
 ## Структура
+- `app/index.html` — HTML-оболонка (Vite root)
 - `src/data` — розклад і предмети
 - `src/lib` — час, емодзі (чисті функції)
 - `src/features/rewards.ts` — доменна логіка нагород (покрита тестами)

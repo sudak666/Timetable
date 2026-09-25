@@ -41,19 +41,24 @@ for (const role of ['child', 'parent'] as const) {
     await mockFamily(page, role);
     await page.goto('/');
     await expect(page.locator('.prof')).toBeVisible();
+    await expect(page.locator('.day.today')).toContainText('ДЗ');
+    await expect(page.locator('.bnav .nb')).toHaveCount(2);
+    await page.goto('/#grades');
     await expect(page.locator('.sum')).toContainText('+200 ₴');
     await expect(page.locator('.gi.wait')).toContainText('чекає підтвердження');
-    await expect(page.locator('.day.today')).toContainText('ДЗ');
     if (role === 'parent') {
       await expect(page.getByRole('button', { name: 'Підтвердити', exact: true })).toBeVisible();
       await expect(page.getByRole('tab', { name: /Стас/ })).toHaveAttribute('aria-selected', 'true');
     } else {
       await expect(page.getByRole('button', { name: 'Підтвердити', exact: true })).toHaveCount(0);
     }
+    for (const tab of ['today', 'grades', 'hw', 'me'])
     for (const scheme of ['light', 'dark'] as const) {
+      await page.goto('/#' + tab);
+      await expect(page.locator('main')).not.toContainText('Завантаження');
       await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
       const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
-      expect(r.violations.map((v) => `${scheme} ${v.id}: ${v.nodes.map((n) => n.target.join(' ') + ' ' + (n.any[0]?.message ?? '')).join(' | ')}`)).toEqual([]);
+      expect(r.violations.map((v) => `${tab} ${scheme} ${v.id}: ${v.nodes.map((n) => n.target.join(' ') + ' ' + (n.any[0]?.message ?? '')).join(' | ')}`)).toEqual([]);
     }
   });
 }

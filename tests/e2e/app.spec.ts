@@ -15,7 +15,8 @@ test('розклад рендериться без помилок і поруш�
   await expect(page.locator('.now h2')).toHaveText('Інформатика');
   await expect(page.locator('.day')).toHaveCount(5);
   await expect(page.locator('.day.today h3')).toContainText('Вівторок');
-  await expect(page.locator('#grades')).toContainText('Увійти через Google');
+  await page.getByRole('link', { name: 'Оцінки' }).click();
+  await expect(page.locator('main')).toContainText('Увійти через Google');
   expect(errors).toEqual([]);
 });
 
@@ -55,9 +56,23 @@ test('немає горизонтального скролу', async ({ page }) 
 for (const theme of ['light', 'dark'] as const) {
   test(`WCAG 2.2 AA (axe), ${theme}`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
-    await page.goto('/');
-    await expect(page.locator('#grades')).toContainText('Увійти');
+    for (const tab of ['today', 'grades']) {
+    await page.goto('/#' + tab);
+    await expect(page.locator('main')).toContainText(tab === 'today' ? 'Понеділок' : 'Увійти');
     const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
     expect(r.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ') + ' ' + (n.any[0]?.message ?? '')).join(' | ')}`)).toEqual([]);
+    }
   });
 }
+
+test('нижня навігація: вкладки, hash і кнопка «назад»', async ({ page }) => {
+  await page.goto('/');
+  const nav = page.getByRole('navigation', { name: 'Розділи' });
+  await expect(nav.getByRole('link', { name: 'Сьогодні' })).toHaveAttribute('aria-current', 'page');
+  await nav.getByRole('link', { name: 'Домашка' }).click();
+  await expect(page).toHaveURL(/#hw$/);
+  await expect(nav.getByRole('link', { name: 'Домашка' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('.day')).toHaveCount(0);
+  await page.goBack();
+  await expect(page.locator('.day')).toHaveCount(5);
+});

@@ -1,8 +1,8 @@
 import '@fontsource-variable/nunito/wght.css';
 import './styles.css';
-import { html, render } from 'lit-html';
+import { html, render, type TemplateResult } from 'lit-html';
 import { iso } from './lib/time';
-import { set, state, store, subscribe, type GameStyle } from './state';
+import { set, state, store, subscribe, TABS, type GameStyle, type Tab } from './state';
 import { bikeLane } from './ui/bike';
 import { boom } from './ui/confetti';
 import { applyAccent, applyStyle } from './ui/theme';
@@ -38,9 +38,32 @@ const sunMoon = html`<svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><ci
 /** Модуль оцінок (Supabase ~70 КБ gzip) вантажиться окремим чанком після першого рендера розкладу. */
 let G: typeof import('./views/grades') | null = null;
 
+const NAV: { tab: Tab; label: string; icon: TemplateResult }[] = [
+  { tab: 'today', label: 'Сьогодні', icon: html`<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/><circle cx="12" cy="15" r="2.2"/></svg>` },
+  { tab: 'grades', label: 'Оцінки', icon: html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3a3 3 0 0 1-3 4M7 5H4a3 3 0 0 0 3 4"/></svg>` },
+  { tab: 'hw', label: 'Домашка', icon: html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5M9 8h7M9 12h5"/></svg>` },
+  { tab: 'me', label: 'Профіль', icon: html`<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>` },
+];
+
+const loading = html`<section class="side card" aria-busy="true"><p class="msg" role="status">Завантаження…</p></section>`;
+
+function page(): TemplateResult {
+  switch (state.tab) {
+    case 'grades': return G ? G.tabGrades() : loading;
+    case 'hw': return G ? G.tabHomework() : loading;
+    case 'me': return G ? G.tabProfile() : loading;
+    default: return html`${G?.profileBar() ?? ''}
+      ${bikeLane(G ? G.laneLabel() : emo('⚡ Електробайк мрії'))}
+      <div class="top">${nowCard()}${sidePanel()}</div>
+      ${funCards(quizView())}
+      ${weekGrid()}
+      ${weekStats()}`;
+  }
+}
+
 const app = () => {
-  const d = state.now;
-  return html`<a class="skip" href="#main">Перейти до розкладу</a>
+  const d = state.now, badges = G?.navBadges() ?? { grades: 0, hw: 0 };
+  return html`<a class="skip" href="#main-content">Перейти до вмісту</a>
   <div class="wrap">
     <header>
       <div><h1>Розклад уроків</h1><p class="clock"><time datetime=${d.toISOString()}>${d.toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' })} · ${d.toLocaleTimeString('uk-UA')}</time></p></div>
@@ -49,15 +72,24 @@ const app = () => {
         <button type="button" class="ic" aria-label="Перемкнути світлу / темну тему" @click=${toggleTheme}>${sunMoon}</button>
       </div>
     </header>
-    ${G?.profileBar() ?? ''}
-    ${bikeLane(G ? G.laneLabel() : emo('⚡ Електробайк мрії'))}
-    <div class="top">${nowCard()}${sidePanel()}</div>
-    ${funCards(quizView())}
-    <main id="main" tabindex="-1">${weekGrid()}</main>
-    ${G ? G.gradesSection() : html`<section class="side gr" aria-busy="true"><p class="msg" role="status">Завантаження…</p></section>`}
-    ${weekStats()}
+    <nav class="bnav" aria-label="Розділи">${NAV.map((n) => {
+      const b = n.tab === 'grades' ? badges.grades : n.tab === 'hw' ? badges.hw : 0;
+      return html`<a href=${'#' + n.tab} class=${state.tab === n.tab ? 'on' : ''} aria-current=${state.tab === n.tab ? 'page' : 'false'}>
+        ${n.icon}<span>${n.label}</span>${b ? html`<b class="nb" aria-label=${`${b} нових`}>${b}</b>` : ''}</a>`;
+    })}</nav>
+    <main id="main-content" tabindex="-1" class="page" data-tab=${state.tab}>${page()}</main>
   </div>`;
 };
+
+/* ---- маршрутизація через hash: працює кнопка «назад», можна ділитися посиланням на вкладку ---- */
+const readTab = (): Tab => { const h = location.hash.slice(1) as Tab; return TABS.includes(h) ? h : 'today'; };
+state.tab = readTab();
+addEventListener('hashchange', () => {
+  if (location.hash.includes('access_token')) return; // OAuth-редирект Supabase
+  set({ tab: readTab() });
+  scrollTo({ top: 0 });
+  requestAnimationFrame(() => document.getElementById('main-content')?.focus({ preventScroll: true }));
+});
 
 const mount = document.getElementById('app')!;
 mount.textContent = '';

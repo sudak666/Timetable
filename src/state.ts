@@ -3,10 +3,13 @@ import { DEFAULT_RATES, DEFAULT_STREAK } from './features/rewards';
 
 export type AuthView = 'loading' | 'auth' | 'join' | 'main' | 'offline';
 export type GameStyle = '' | 'arena' | 'blocks';
+export type Tab = 'today' | 'grades' | 'hw' | 'me';
+export const TABS: Tab[] = ['today', 'grades', 'hw', 'me'];
 
 export interface Family { id: string; name: string; invite_code: string }
 
 export interface State {
+  tab: Tab;
   now: Date;
   /** Вкладка розкладу: null = весь тиждень, 0..4 = день */
   day: number | null;
@@ -42,6 +45,7 @@ const listeners = new Set<Listener>();
 let scheduled = false;
 
 export const state: State = {
+  tab: 'today',
   now: new Date(),
   day: null,
   highlight: null,

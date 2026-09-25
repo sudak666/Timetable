@@ -56,17 +56,17 @@ export function profileBar(): TemplateResult | typeof nothing {
   const hw = state.homework.filter((h) => h.child_id === state.kid && !h.done);
   const late = hw.filter((h) => h.due < d.today).length;
   const pend = state.grades.filter((g) => g.status === 'pending' && (par || g.child_id === state.me!.id)).length;
-  const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const go = (tab: 'grades' | 'hw') => { location.hash = tab; };
   return html`<section class="prof" aria-label="Профіль">
     <button type="button" class="pa" aria-haspopup="dialog" aria-label="Аватар, колір і стиль" @click=${avatarPop}>${emo(m?.avatar || (par ? '👨‍👩‍👦' : '🧒'))}</button>
     <div class="pn"><b>${m?.name || state.me.email}</b>
       <small>${par && state.kid ? html`${emo('👀')} ${kidMember()?.name || 'Дитина'} · ` : nothing}Рівень ${d.lv} · ${d.xp} XP</small>
       <div class="pl" role="progressbar" aria-label="Прогрес рівня" aria-valuemin="0" aria-valuemax=${XP_PER_LEVEL} aria-valuenow=${d.xp % XP_PER_LEVEL}><i style=${styleMap({ width: (d.xp % XP_PER_LEVEL) * (100 / XP_PER_LEVEL) + '%' })}></i></div></div>
     <div class="ps">
-      <button type="button" class="st" @click=${() => go('gl')}>${emo('💰')}<span>${d.t.balance} ₴<small>до виплати</small></span></button>
-      <button type="button" class="st" @click=${() => go('streak')}>${emo('🔥')}<span>${d.run}<small>серія</small></span></button>
-      <button type="button" class=${classMap({ st: true, alert: late > 0 })} @click=${() => go('hwl')}>${emo('📝')}<span>${hw.length}<small>${late ? 'є борги!' : 'домашка'}</small></span></button>
-      ${pend ? html`<button type="button" class="st alert" @click=${() => go('gl')}>${emo('⏳')}<span>${pend}<small>${par ? 'підтвердити' : 'чекає'}</small></span></button>` : nothing}
+      <button type="button" class="st" @click=${() => go('grades')}>${emo('💰')}<span>${d.t.balance} ₴<small>до виплати</small></span></button>
+      <button type="button" class="st" @click=${() => go('grades')}>${emo('🔥')}<span>${d.run}<small>серія</small></span></button>
+      <button type="button" class=${classMap({ st: true, alert: late > 0 })} @click=${() => go('hw')}>${emo('📝')}<span>${hw.length}<small>${late ? 'є борги!' : 'домашка'}</small></span></button>
+      ${pend ? html`<button type="button" class="st alert" @click=${() => go('grades')}>${emo('⏳')}<span>${pend}<small>${par ? 'підтвердити' : 'чекає'}</small></span></button>` : nothing}
     </div>
   </section>`;
 }
@@ -166,11 +166,14 @@ const del = async (table: 'school_grades' | 'school_ledger' | 'school_homework' 
 
 function summary(d: D): TemplateResult {
   const cell = (l: string, v: number) => html`<div><small>${l}</small><b class=${tone(v)}>${uah(v)}</b></div>`;
+  return html`<div class="sum">${cell('Сьогодні', d.t.today)}${cell('Цей тиждень', d.t.week)}${cell('Цей місяць', d.t.month)}${cell('До виплати', d.t.balance)}</div>`;
+}
+
+function progress(d: D): TemplateResult {
   const wA = d.A.filter((g) => g.date >= iso(mondayOf(state.now)));
   const best = bestTenRun(d.A);
   const badges: [string, boolean][] = [['🎯 Перша оцінка', d.A.length > 0], ['👑 Перша 12', d.A.some((g) => g.grade === 12)], ['🔥 3 десятки поспіль', best >= 3], ['🚀 5 поспіль ≥10', best >= 5], ['📚 20 оцінок', d.A.length >= 20], ['💯 50 оцінок', d.A.length >= 50], ['💰 Заробив 1000 ₴', d.t.earned >= 1000], ['🌈 Тиждень без мінусів', wA.length >= 3 && wA.every((g) => gradeValue(g, state.rates) >= 0)]];
-  return html`<div class="sum">${cell('Сьогодні', d.t.today)}${cell('Цей тиждень', d.t.week)}${cell('Цей місяць', d.t.month)}${cell('До виплати', d.t.balance)}</div>
-    <div class="lvl">Рівень ${d.lv} · ${d.xp} XP <small>(ще ${XP_PER_LEVEL - (d.xp % XP_PER_LEVEL)} до наступного)</small>
+  return html`<div class="lvl">Рівень ${d.lv} · ${d.xp} XP <small>(ще ${XP_PER_LEVEL - (d.xp % XP_PER_LEVEL)} до наступного)</small>
       <div class="bar" role="progressbar" aria-label="Прогрес рівня" aria-valuemin="0" aria-valuemax=${XP_PER_LEVEL} aria-valuenow=${d.xp % XP_PER_LEVEL}><i style=${styleMap({ width: (d.xp % XP_PER_LEVEL) * 2 + '%' })}></i></div></div>
     ${road(d.lv)}
     <ul class="badges" aria-label="Досягнення">${badges.map(([t, ok]) => html`<li class=${classMap({ bd: true, got: ok })}>${emo(t)}<span class="sr-only">${ok ? ' — отримано' : ' — ще ні'}</span></li>`)}</ul>`;
@@ -287,7 +290,7 @@ function chart(d: D): TemplateResult {
       : html`<p class="msg">Графік з’явиться після перших підтверджених оцінок.</p>`}`;
 }
 
-function parentTools(d: D): TemplateResult | typeof nothing {
+function parentTools(d: D, part: 'money' | 'settings'): TemplateResult | typeof nothing {
   if (state.role !== 'parent') return nothing;
   const f = state.form;
   const val = (id: string) => (document.getElementById(id) as HTMLInputElement).value;
@@ -322,6 +325,13 @@ function parentTools(d: D): TemplateResult | typeof nothing {
     if (await run(sb.from('school_families').update({ rates: r }).eq('id', state.family!.id))) void alert('Збережено ✓ Новий курс діє для нових підтверджень.');
   };
   const copy = (t: string) => navigator.clipboard?.writeText(t).then(() => alert('Скопійовано: ' + t), () => undefined);
+  if (part === 'settings') return html`<section class="side card" aria-labelledby="set-h"><h2 class="h4" id="set-h">${emo('⚙️')} Курс оцінок і запрошення</h2>
+      <div class="rgrid">${Array.from({ length: 12 }, (_, i) => 12 - i).map((g) => html`<label><span class="n" style=${styleMap({ background: gradeColor(g) })}>${g}</span><span class="sr-only">Оцінка ${g}, гривень</span><input type="number" data-rate=${g} .value=${live(String(state.rates[g] ?? 0))}></label>`)}</div>
+      <div class="srow">${emo('🔥')} Серія: кожні <input type="number" id="stLen" min="2" max="30" aria-label="Кількість оцінок" .value=${live(String(state.streak.len))}> оцінок поспіль ≥ <input type="number" id="stMin" min="1" max="12" aria-label="Мінімальна оцінка" .value=${live(String(state.streak.min))}> дають бонус <input type="number" id="stBon" min="0" class="w84" aria-label="Бонус у гривнях" .value=${live(String(state.streak.bonus))}> ₴</div>
+      <button type="button" @click=${saveRates}>Зберегти курс</button>
+      <p class="gap">Код для дитини: <button type="button" class="code" title="Скопіювати" @click=${() => copy(state.family!.invite_code)}>${state.family!.invite_code}</button>
+        · для другого з батьків: <button type="button" class="code" title="Скопіювати" @click=${() => copy(state.parentCode)}>${state.parentCode}</button></p>
+    </section>`;
   return html`<h3 class="h4 gap">${emo('🎁')} Бонус / штраф / виплата</h3>
     <form class="form" @submit=${bonus}>
       <label class="sr-only" for="bAmt">Сума</label><input type="number" id="bAmt" inputmode="numeric" placeholder="сума ₴ (мінус = штраф)" required class="w190">
@@ -338,14 +348,7 @@ function parentTools(d: D): TemplateResult | typeof nothing {
       <label>днів <input type="number" id="cDays" value="7" min="1" max="90" class="w64"></label>
       <label>нагорода ₴ <input type="number" id="cRew" value="100" min="0" class="w90"></label>
       <button>${emo('🏅 Створити')}</button>
-    </form>
-    <details class="gap"><summary>${emo('⚙️ Курс оцінок і запрошення')}</summary>
-      <div class="rgrid">${Array.from({ length: 12 }, (_, i) => 12 - i).map((g) => html`<label><span class="n" style=${styleMap({ background: gradeColor(g) })}>${g}</span><span class="sr-only">Оцінка ${g}, гривень</span><input type="number" data-rate=${g} .value=${live(String(state.rates[g] ?? 0))}></label>`)}</div>
-      <div class="srow">${emo('🔥')} Серія: кожні <input type="number" id="stLen" min="2" max="30" aria-label="Кількість оцінок" .value=${live(String(state.streak.len))}> оцінок поспіль ≥ <input type="number" id="stMin" min="1" max="12" aria-label="Мінімальна оцінка" .value=${live(String(state.streak.min))}> дають бонус <input type="number" id="stBon" min="0" class="w84" aria-label="Бонус у гривнях" .value=${live(String(state.streak.bonus))}> ₴</div>
-      <button type="button" @click=${saveRates}>Зберегти курс</button>
-      <p class="gap">Код для дитини: <button type="button" class="code" title="Скопіювати" @click=${() => copy(state.family!.invite_code)}>${state.family!.invite_code}</button>
-        · для другого з батьків: <button type="button" class="code" title="Скопіювати" @click=${() => copy(state.parentCode)}>${state.parentCode}</button></p>
-    </details>`;
+    </form>`;
 }
 
 function history(d: D): TemplateResult {
@@ -369,30 +372,64 @@ function history(d: D): TemplateResult {
     <p class="rates">Курс: ${Object.entries(state.rates).sort((a, b) => Number(b[0]) - Number(a[0])).map(([g, v]) => `${g} → ${uah(v)}`).join(' · ')}</p>`;
 }
 
-function mainView(): TemplateResult {
-  const d = derive(), par = state.role === 'parent';
+function kidTabs(): TemplateResult | typeof nothing {
+  if (state.role !== 'parent') return nothing;
   const kids = state.members.filter((m) => m.role === 'child');
-  return html`${par ? html`<div class="tabs" role="tablist" aria-label="Діти">${kids.length ? kids.map((k) =>
+  return html`<div class="tabs" role="tablist" aria-label="Діти">${kids.length ? kids.map((k) =>
       html`<button type="button" role="tab" aria-selected=${k.user_id === state.kid} class=${classMap({ on: k.user_id === state.kid })} @click=${() => set({ kid: k.user_id })}>${emo(k.avatar || '🧒')} ${k.name || 'Дитина'}</button>`)
-      : html`<p class="msg">Дітей ще немає — дай дитині код запрошення з розділу «Курс оцінок і запрошення».</p>`}</div>` : nothing}
-    ${summary(d)}${cards(d)}
-    <h3 class="h4 gap">${emo('➕')} Додати оцінку ${d.pend.length ? html`<span class="pend">· ${emo('⏳')} ${d.pend.length} чекає підтвердження</span>` : nothing}</h3>
-    ${gradeInput()}${homework(d)}${chart(d)}${parentTools(d)}${history(d)}
-    <div class="acts">
+      : html`<p class="msg">Дітей ще немає — дай дитині код запрошення з вкладки «Профіль».</p>`}</div>`;
+}
+
+/** Не залогінений / без сім'ї / завантаження — однаковий екран для всіх вкладок, що потребують входу. */
+function gate(title: string): TemplateResult | null {
+  if (state.view === 'main') return null;
+  const body = state.view === 'auth' ? authView() : state.view === 'join' ? joinView()
+    : state.view === 'offline' ? html`<p class="msg neg" role="alert">${state.authMsg?.text ?? 'Немає зʼєднання'}</p>` : html`<p class="msg" role="status">Завантаження…</p>`;
+  return html`<section class="side card" aria-labelledby="gate-h"><h2 class="h4" id="gate-h">${emo(title)}</h2>${body}</section>`;
+}
+
+export function tabGrades(): TemplateResult {
+  const g = gate('🏆 Оцінки та нагороди');
+  if (g) return g;
+  const d = derive();
+  return html`${kidTabs()}
+    <section class="side card" aria-labelledby="add-h"><h2 class="h4" id="add-h">${emo('➕')} Додати оцінку ${d.pend.length ? html`<span class="pend">· ${emo('⏳')} ${d.pend.length} чекає підтвердження</span>` : nothing}</h2>${gradeInput()}</section>
+    <section class="side card" aria-label="Гроші">${summary(d)}${cards(d)}${parentTools(d, 'money')}</section>
+    <section class="side card" aria-labelledby="hist-h"><h2 class="h4" id="hist-h">${emo('🧾')} Історія</h2>${history(d)}</section>
+    <section class="side card">${chart(d)}</section>`;
+}
+
+export function tabHomework(): TemplateResult {
+  const g = gate('📝 Домашні завдання');
+  if (g) return g;
+  return html`${kidTabs()}<section class="side card">${homework(derive())}</section>`;
+}
+
+export function tabProfile(): TemplateResult {
+  const g = gate('👤 Профіль');
+  if (g) return g;
+  const d = derive(), m = me(), par = state.role === 'parent';
+  return html`<section class="side card me-card" aria-label="Профіль">
+      <div class="me-head"><button type="button" class="pa big" aria-haspopup="dialog" aria-label="Змінити аватар, колір і стиль" @click=${avatarPop}>${emo(m?.avatar || (par ? '👨‍👩‍👦' : '🧒'))}</button>
+        <div><h2 class="me-name">${m?.name || state.me!.email}</h2><p class="msg">${par ? 'Батьки' : 'Учень'} · ${state.family?.name}</p>
+        <button type="button" class="pick" @click=${avatarPop}>${emo('🎨 Аватар, колір і стиль')}</button></div></div>
+      ${kidTabs()}${progress(d)}
+    </section>
+    ${parentTools(d, 'settings')}
+    <section class="side card" aria-label="Налаштування застосунку"><div class="acts">
       <button type="button" @click=${togglePush}>${emo(state.pushOn ? '🔕 Вимкнути сповіщення' : '🔔 Сповіщення на телефон')}</button>
       ${state.canInstall ? html`<button type="button" @click=${installApp}>${emo('📱 Встановити застосунок')}</button>` : nothing}
       <button type="button" @click=${() => void signOut()}>Вийти</button>
     </div>
-    ${state.pushMsg ? html`<p class=${classMap({ msg: true, pos: !!state.pushMsg.ok, neg: !state.pushMsg.ok })} role="status">${emo(state.pushMsg.text)}</p>` : nothing}`;
+    ${state.pushMsg ? html`<p class=${classMap({ msg: true, pos: !!state.pushMsg.ok, neg: !state.pushMsg.ok })} role="status">${emo(state.pushMsg.text)}</p>` : nothing}</section>`;
 }
 
-export function gradesSection(): TemplateResult {
-  const m = me();
-  const body = state.view === 'auth' ? authView() : state.view === 'join' ? joinView() : state.view === 'main' ? mainView()
-    : state.view === 'offline' ? html`<p class="msg neg" role="alert">${state.authMsg?.text ?? 'Немає зʼєднання'}</p>` : html`<p class="msg" role="status">Завантаження…</p>`;
-  return html`<section class="side gr" id="grades" aria-labelledby="gr-h">
-    <div class="gr-h"><h2 class="h4" id="gr-h">${emo('🏆')} Оцінки та нагороди</h2>
-      ${state.view === 'main' && state.me ? html`<span class="who"><button type="button" class="av" aria-label="Аватар, колір і стиль" @click=${avatarPop}>${emo(m?.avatar || (state.role === 'parent' ? '👨‍👩‍👦' : '🧒'))}</button>${m?.name || state.me.email} · ${state.family?.name}</span>` : nothing}</div>
-    ${body}
-  </section>`;
+/** Бейдж для нижньої навігації: скільки дій чекає. */
+export function navBadges(): { grades: number; hw: number } {
+  if (state.view !== 'main') return { grades: 0, hw: 0 };
+  const today = iso(state.now);
+  return {
+    grades: state.grades.filter((g) => g.status === 'pending' && (state.role === 'parent' || g.child_id === state.me?.id)).length,
+    hw: state.homework.filter((h) => h.child_id === state.kid && !h.done && h.due <= iso(addDays(new Date(today + 'T12:00'), 1))).length,
+  };
 }
