@@ -11,7 +11,10 @@
 :root{--bg:#f3f4fb;--card:#fff;--text:#1b1c33;--muted:#6b6f8e;--line:#e4e6f3;--accent:#6c5ce7;--glow:rgba(108,92,231,.22);--brk:#f0f1fa}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f1024;--card:#1a1b36;--text:#eceefe;--muted:#9a9dc2;--line:#2a2c4f;--glow:rgba(108,92,231,.45);--brk:#15162d}}
 :root[data-theme=dark]{--bg:#0f1024;--card:#1a1b36;--text:#eceefe;--muted:#9a9dc2;--line:#2a2c4f;--glow:rgba(108,92,231,.45);--brk:#15162d}
-*{box-sizing:border-box;margin:0}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+button,a,summary,label,.chip{touch-action:manipulation;user-select:none;-webkit-user-select:none}
+:focus:not(:focus-visible){outline:none}
+.ready .top>*,.ready .day,.ready .fun .side,.ready .gr{animation:none}
 body{font-family:Nunito,system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px 16px 48px;transition:background .3s}
 .wrap{max-width:1100px;margin:auto}
 header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px}
@@ -199,6 +202,9 @@ summary{cursor:pointer;font-weight:700}
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js"></script>
 <script>
+// не перемальовувати DOM, якщо HTML не змінився (прибирає блимання)
+{const d=Object.getOwnPropertyDescriptor(Element.prototype,'innerHTML');Object.defineProperty(Element.prototype,'innerHTML',{get(){return d.get.call(this)},set(v){v=String(v);if(this.__h===v&&this.isConnected)return;this.__h=v;d.set.call(this,v)},configurable:true})}
+setTimeout(()=>document.body.classList.add('ready'),1500);
 const EMO=new Set(["1f1ec-1f1e7", "1f308", "1f30a", "1f30d", "1f331", "1f34c", "1f36f", "1f381", "1f389", "1f3a8", "1f3af", "1f3c6", "1f3d6-fe0f", "1f3db-fe0f", "1f40b", "1f40c", "1f419", "1f41c", "1f42c", "1f431", "1f446", "1f451", "1f468-200d-1f469-200d-1f466", "1f4af", "1f4b0", "1f4b8", "1f4bb", "1f4da", "1f4ec", "1f511", "1f522", "1f525", "1f60e", "1f680", "1f6e0-fe0f", "1f916", "1f91d", "1f973", "1f989", "1f98b", "1f992", "1f9ba", "1f9d2", "1f9ee", "1fa90", "2615", "2699-fe0f", "26a0-fe0f", "26a1", "26bd", "2705", "270d-fe0f", "2795"]);
 const T=['8:30-9:15','9:25-10:10','10:30-11:15','11:25-12:10','12:30-13:15','13:35-14:20','14:30-15:15'];
 const D=[
