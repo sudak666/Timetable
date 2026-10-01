@@ -8,7 +8,7 @@ const g = (grade: number, date: string, subject = 'Математика', status
 describe('gradeValue', () => {
   it('використовує зафіксовану суму, інакше курс', () => {
     expect(gradeValue({ grade: 12, amount: 999 }, DEFAULT_RATES)).toBe(999);
-    expect(gradeValue({ grade: 12, amount: null }, DEFAULT_RATES)).toBe(150);
+    expect(gradeValue({ grade: 12, amount: null }, DEFAULT_RATES)).toBe(250);
     expect(gradeValue({ grade: 13, amount: null }, DEFAULT_RATES)).toBe(0);
   });
 });
@@ -62,9 +62,9 @@ describe('totals', () => {
     ];
     const t = totals(a, l, [], DEFAULT_RATES, '2026-09-25', '2026-09-21');
     expect(t.today).toBe(-20 + 50);
-    expect(t.week).toBe(150 - 20 + 50);
-    expect(t.month).toBe(150 - 20 + 50);
-    expect(t.earned).toBe(150 - 20 + 50 + 100);
+    expect(t.week).toBe(250 - 20 + 50);
+    expect(t.month).toBe(250 - 20 + 50);
+    expect(t.earned).toBe(250 - 20 + 50 + 150);
     expect(t.balance).toBe(t.earned - 100);
   });
 });
