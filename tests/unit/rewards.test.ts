@@ -8,7 +8,7 @@ const g = (grade: number, date: string, subject = 'Математика', status
 describe('gradeValue', () => {
   it('використовує зафіксовану суму, інакше курс', () => {
     expect(gradeValue({ grade: 12, amount: 999 }, DEFAULT_RATES)).toBe(999);
-    expect(gradeValue({ grade: 12, amount: null }, DEFAULT_RATES)).toBe(150);
+    expect(gradeValue({ grade: 12, amount: null }, DEFAULT_RATES)).toBe(300);
     expect(gradeValue({ grade: 13, amount: null }, DEFAULT_RATES)).toBe(0);
   });
 });
@@ -17,7 +17,7 @@ describe('parseSettings', () => {
   it('ігнорує сміття і затискає межі', () => {
     const s = parseSettings({ 12: '200', x: 5, streak_len: 1, streak_min: 99, streak_bonus: -5 });
     expect(s.rates[12]).toBe(200);
-    expect(s.rates[1]).toBe(-100);
+    expect(s.rates[1]).toBe(-150);
     expect(s.streak).toEqual({ len: 2, min: 12, bonus: 0 });
   });
   it('повертає дефолти для null', () => {
@@ -61,10 +61,10 @@ describe('totals', () => {
       { id: 'l2', child_id: 'k', kind: 'payout', amount: 100, note: '', date: '2026-09-25', created_at: 'y' },
     ];
     const t = totals(a, l, [], DEFAULT_RATES, '2026-09-25', '2026-09-21');
-    expect(t.today).toBe(-20 + 50);
-    expect(t.week).toBe(150 - 20 + 50);
-    expect(t.month).toBe(150 - 20 + 50);
-    expect(t.earned).toBe(150 - 20 + 50 + 100);
+    expect(t.today).toBe(-50 + 50);
+    expect(t.week).toBe(300 - 50 + 50);
+    expect(t.month).toBe(300 - 50 + 50);
+    expect(t.earned).toBe(300 - 50 + 50 + 200);
     expect(t.balance).toBe(t.earned - 100);
   });
 });
