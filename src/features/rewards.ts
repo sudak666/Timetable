@@ -9,7 +9,7 @@ export interface Homework { id: string; child_id: string; subject: string; due: 
 export interface Streak { len: number; min: number; bonus: number }
 export type Rates = Record<number, number>;
 
-export const DEFAULT_RATES: Rates = { 12: 250, 11: 200, 10: 150, 9: 100, 8: 70, 7: 40, 6: 15, 5: 0, 4: -50, 3: -80, 2: -120, 1: -150 };
+export const DEFAULT_RATES: Rates = { 12: 250, 11: 200, 10: 150, 9: 120, 8: 100, 7: 70, 6: 30, 5: 0, 4: -50, 3: -80, 2: -120, 1: -150 };
 export const DEFAULT_STREAK: Streak = { len: 5, min: 7, bonus: 50 };
 export const XP_PER_LEVEL = 50;
 
