@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_RATES, autoRewards, currentRun, gradeValue, levelOf, parseSettings, totals, type Challenge, type Grade, type Ledger } from '../../src/features/rewards';
+import { DEFAULT_RATES, autoRewards, bestTenRun, currentRun, gradeValue, PASS, levelOf, parseSettings, totals, type Challenge, type Grade, type Ledger } from '../../src/features/rewards';
 
 let n = 0;
 const g = (grade: number, date: string, subject = 'Математика', status: Grade['status'] = 'approved', amount: number | null = null): Grade =>
@@ -73,4 +73,15 @@ it('рівні по 50 XP', () => {
   expect(levelOf(0)).toBe(1);
   expect(levelOf(49)).toBe(1);
   expect(levelOf(50)).toBe(2);
+});
+
+describe('зараховано', () => {
+  it('платиться як 7 і не рве серію', () => {
+    const s = { len: 3, min: 10, bonus: 50 };
+    const a = [g(10, '2026-10-01'), g(PASS, '2026-10-02'), g(11, '2026-10-03'), g(12, '2026-10-04')];
+    expect(gradeValue(g(PASS, '2026-10-02'), DEFAULT_RATES)).toBe(DEFAULT_RATES[7]);
+    expect(autoRewards(a, [], s)).toHaveLength(1);
+    expect(currentRun(a, s)).toBe(0);
+    expect(bestTenRun(a)).toBe(3);
+  });
 });

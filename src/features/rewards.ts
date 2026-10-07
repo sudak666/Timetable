@@ -18,8 +18,15 @@ export interface AutoReward { id: string; date: string; created_at: string; amou
 export const byTime = <T extends { date: string; created_at: string }>(a: T, b: T): number =>
   a.date === b.date ? (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0) : a.date < b.date ? -1 : 1;
 
+/** «Зараховано» (grade = 0): платиться як 7, у середній бал, XP, серії та челенджі не входить. */
+export const PASS = 0;
+export const PASS_AS = 7;
+export const isScored = (g: Pick<Grade, 'grade'>): boolean => g.grade !== PASS;
+export const rateOf = (g: number, rates: Rates): number => rates[g === PASS ? PASS_AS : g] ?? 0;
+export const gradeLabel = (g: number): string => (g === PASS ? 'Зар.' : String(g));
+
 /** Сума за оцінку: зафіксована при підтвердженні, інакше — поточний курс. */
-export const gradeValue = (g: Pick<Grade, 'amount' | 'grade'>, rates: Rates): number => g.amount ?? rates[g.grade] ?? 0;
+export const gradeValue = (g: Pick<Grade, 'amount' | 'grade'>, rates: Rates): number => g.amount ?? rateOf(g.grade, rates);
 
 export function parseSettings(raw: unknown): { rates: Rates; streak: Streak } {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
@@ -37,15 +44,16 @@ export function parseSettings(raw: unknown): { rates: Rates; streak: Streak } {
 }
 
 export const challengeHits = (c: Challenge, approvedSorted: Grade[]): Grade[] =>
-  approvedSorted.filter((g) => g.date >= c.start_date && g.date <= c.end_date && g.grade >= c.min_grade && (!c.subject || g.subject === c.subject));
+  approvedSorted.filter((g) => isScored(g) && g.date >= c.start_date && g.date <= c.end_date && g.grade >= c.min_grade && (!c.subject || g.subject === c.subject));
 
 /** Автоматичні нагороди за серії та виконані челенджі (детерміновано з підтверджених оцінок). */
 export function autoRewards(approved: Grade[], challenges: Challenge[], streak: Streak): AutoReward[] {
   const s = [...approved].sort(byTime);
+  const scored = s.filter(isScored);
   const out: AutoReward[] = [];
   if (streak.bonus > 0) {
     let run = 0;
-    for (const g of s) {
+    for (const g of scored) {
       run = g.grade >= streak.min ? run + 1 : 0;
       if (run === streak.len) {
         out.push({ id: 's' + g.id, date: g.date, created_at: g.created_at, amount: streak.bonus, note: `Серія: ${streak.len} оцінок поспіль ≥ ${streak.min}`, icon: '🔥' });
@@ -63,7 +71,7 @@ export function autoRewards(approved: Grade[], challenges: Challenge[], streak: 
 /** Поточна серія (скидається після нарахування бонусу). */
 export function currentRun(approved: Grade[], streak: Streak): number {
   let run = 0;
-  for (const g of [...approved].sort(byTime)) {
+  for (const g of approved.filter(isScored).sort(byTime)) {
     run = g.grade >= streak.min ? run + 1 : 0;
     if (run === streak.len) run = 0;
   }
@@ -72,7 +80,7 @@ export function currentRun(approved: Grade[], streak: Streak): number {
 
 export function bestTenRun(approved: Grade[]): number {
   let run = 0, best = 0;
-  for (const g of [...approved].sort(byTime)) {
+  for (const g of approved.filter(isScored).sort(byTime)) {
     run = g.grade >= 10 ? run + 1 : 0;
     best = Math.max(best, run);
   }
@@ -103,7 +111,7 @@ export function totals(approved: Grade[], ledger: Ledger[], auto: AutoReward[], 
 export const xpOf = (approved: Grade[]): number => approved.reduce((t, g) => t + g.grade, 0);
 export const levelOf = (xp: number): number => Math.floor(xp / XP_PER_LEVEL) + 1;
 
-export const gradeColor = (g: number): string => (g >= 10 ? '#00866b' : g >= 7 ? '#0869b5' : g >= 4 ? '#8a5c00' : '#c62828');
+export const gradeColor = (g: number): string => (g === PASS ? '#5b6472' : g >= 10 ? '#00866b' : g >= 7 ? '#0869b5' : g >= 4 ? '#8a5c00' : '#c62828');
 
 export const AVATARS: readonly [string, number][] = [['🦊', 1], ['🐼', 1], ['🐸', 1], ['🐙', 2], ['🐯', 2], ['🦁', 3], ['🐺', 3], ['🦉', 4], ['🐧', 4], ['🦄', 5], ['🤖', 6], ['👽', 7], ['🦖', 8], ['🐲', 10], ['👾', 12], ['🦈', 15]];
 export const THEMES: readonly [string, number][] = [['#6c5ce7', 1], ['#0869b5', 1], ['#00866b', 2], ['#c2185b', 3], ['#b84a00', 4], ['#8a5c00', 5], ['#c62828', 6], ['#2d3436', 8]];

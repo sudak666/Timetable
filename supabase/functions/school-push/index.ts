@@ -39,9 +39,9 @@ Deno.serve(async (req) => {
   if (req.headers.get("x-hook-secret") !== c.hook_secret) return new Response("forbidden", { status: 403 });
   const { table, type, record: r, old_record: o } = await req.json();
   if (table === "school_grades" && type === "INSERT" && r.status === "pending") {
-    await send(await parents(r.family_id), `📝 ${await name(r.family_id, r.child_id)}: ${r.subject} — ${r.grade}`, "Нова оцінка чекає підтвердження ✓", "g" + r.id);
+    await send(await parents(r.family_id), `📝 ${await name(r.family_id, r.child_id)}: ${r.subject} — ${r.grade === 0 ? "Зар." : r.grade}`, "Нова оцінка чекає підтвердження ✓", "g" + r.id);
   } else if (table === "school_grades" && type === "UPDATE" && o?.status === "pending" && r.status === "approved") {
-    await send([r.child_id], `✅ ${r.subject}: ${r.grade} підтверджено`, `Нараховано ${uah(r.amount ?? 0)}`, "g" + r.id);
+    await send([r.child_id], `✅ ${r.subject}: ${r.grade === 0 ? "Зар." : r.grade} підтверджено`, `Нараховано ${uah(r.amount ?? 0)}`, "g" + r.id);
   } else if (table === "school_ledger" && type === "INSERT") {
     await send([r.child_id], r.kind === "payout" ? `💸 Виплачено ${r.amount} ₴` : r.amount >= 0 ? `🎁 Бонус ${uah(r.amount)}` : `⚠️ Штраф ${r.amount} ₴`, r.note || "", "l" + r.id);
   } else if (table === "school_challenges" && type === "INSERT") {
