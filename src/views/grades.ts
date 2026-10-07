@@ -5,7 +5,7 @@ import { styleMap } from 'lit-html/directives/style-map.js';
 import { enter, errText, loadFamily, sb, signOut } from '../api';
 import { subjEmoji } from '../data/schedule';
 import {
-  AVATARS, THEMES, XP_PER_LEVEL, autoRewards, bestTenRun, byTime, challengeHits, currentRun, gradeColor, gradeValue, levelOf, totals, xpOf,
+  AVATARS, THEMES, XP_PER_LEVEL, autoRewards, bestTenRun, byTime, challengeHits, currentRun, PASS, gradeColor, gradeLabel, gradeValue, isScored, rateOf, levelOf, totals, xpOf,
   type Grade,
 } from '../features/rewards';
 import { emo } from '../lib/emoji';
@@ -157,11 +157,11 @@ async function addGrade(g: number, e: MouseEvent) {
   const par = state.role === 'parent';
   const ok = await run(sb.from('school_grades').insert({
     family_id: state.family!.id, child_id: state.kid, subject: state.form.subject, grade: g, date: state.form.date || iso(new Date()),
-    ...(par ? { status: 'approved', amount: state.rates[g] ?? 0 } : {}),
+    ...(par ? { status: 'approved', amount: rateOf(g, state.rates) } : {}),
   }));
   if (ok && g >= 10) boom(e.clientX, e.clientY, g === 12 ? 150 : 70);
 }
-const approve = (x: Grade, e: MouseEvent) => run(sb.from('school_grades').update({ status: 'approved', amount: state.rates[x.grade] ?? 0 }).eq('id', x.id), () => x.grade >= 10 && boom(e.clientX, e.clientY, 80));
+const approve = (x: Grade, e: MouseEvent) => run(sb.from('school_grades').update({ status: 'approved', amount: rateOf(x.grade, state.rates) }).eq('id', x.id), () => x.grade >= 10 && boom(e.clientX, e.clientY, 80));
 const unapprove = async (x: Grade) => (await confirm('Скасувати підтвердження? Оцінка знову стане «чекає».')) && run(sb.from('school_grades').update({ status: 'pending', amount: null }).eq('id', x.id));
 const del = async (table: 'school_grades' | 'school_ledger' | 'school_homework' | 'school_challenges', id: string, q = 'Видалити запис?') => (await confirm(q)) && run(sb.from(table).delete().eq('id', id));
 
@@ -206,7 +206,7 @@ function cards(d: D): TemplateResult {
     return [...a.map((g) => [g.date, gradeValue(g, state.rates)] as const), ...state.ledger.filter((l) => l.child_id === cid && l.kind === 'bonus').map((l) => [l.date, l.amount] as const), ...au.map((x) => [x.date, x.amount] as const)]
       .reduce((t, [dt, v]) => (dt.startsWith(m) ? t + v : t), 0);
   };
-  const avg = (m: string) => { const a = d.A.filter((g) => g.date.startsWith(m)); return a.length ? a.reduce((t, g) => t + g.grade, 0) / a.length : 0; };
+  const avg = (m: string) => { const a = d.A.filter((g) => isScored(g) && g.date.startsWith(m)); return a.length ? a.reduce((t, g) => t + g.grade, 0) / a.length : 0; };
   const kids = state.members.filter((x) => x.role === 'child');
   const arrow = (x: number, y: number) => (x > y ? html`<span class="pos" aria-label="краще">▲</span>` : x < y ? html`<span class="neg" aria-label="гірше">▼</span>` : nothing);
   let rank: TemplateResult;
@@ -243,8 +243,8 @@ function gradeInput(): TemplateResult {
       <button type="button" class="pick" aria-haspopup="listbox" aria-label="Предмет" @click=${(e: Event) => pickSubject(e, f.subject, (s) => set((st) => { st.form.subject = s; }))}>${subjLabel(f.subject)}</button>
       <button type="button" class="pick" aria-haspopup="dialog" aria-label="Дата оцінки" @click=${(e: Event) => pickDate(e, f.date, (v) => set((st) => { st.form.date = v; }), [['Вчора', iso(addDays(new Date(), -1))], ['Сьогодні', iso(new Date())]])}>${dateLabel(f.date)}</button>
     </div>
-    <div class="gbtn" role="group" aria-label="Поставити оцінку" style=${styleMap({ opacity: state.kid ? '1' : '.4' })}>${Array.from({ length: 12 }, (_, i) => 12 - i).map((g) =>
-      html`<button type="button" ?disabled=${!state.kid} style=${styleMap({ background: gradeColor(g) })} aria-label=${`Оцінка ${g}, ${uah(state.rates[g] ?? 0)}`} @click=${(e: MouseEvent) => addGrade(g, e)}>${g}</button>`)}</div>`;
+    <div class="gbtn" role="group" aria-label="Поставити оцінку" style=${styleMap({ opacity: state.kid ? '1' : '.4' })}>${[...Array.from({ length: 12 }, (_, i) => 12 - i), PASS].map((g) =>
+      html`<button type="button" ?disabled=${!state.kid} style=${styleMap({ background: gradeColor(g) })} aria-label=${g === PASS ? `Зараховано, ${uah(rateOf(g, state.rates))}` : `Оцінка ${g}, ${uah(rateOf(g, state.rates))}`} @click=${(e: MouseEvent) => addGrade(g, e)}>${gradeLabel(g)}</button>`)}</div>`;
 }
 
 function homework(d: D): TemplateResult {
@@ -281,7 +281,7 @@ function homework(d: D): TemplateResult {
 
 function chart(d: D): TemplateResult {
   const by = new Map<string, number[]>();
-  for (const g of d.A) by.set(g.subject, [...(by.get(g.subject) ?? []), g.grade]);
+  for (const g of d.A.filter(isScored)) by.set(g.subject, [...(by.get(g.subject) ?? []), g.grade]);
   const rows = [...by].map(([k, v]) => [k, v.reduce((a, b) => a + b, 0) / v.length, v.length] as const).sort((a, b) => b[1] - a[1]);
   return html`<h3 class="h4 gap">${emo('📈')} Середній бал за предметами</h3>
     ${rows.length ? html`<table class="chart"><caption class="sr-only">Середній бал за предметами (шкала 1–12)</caption>
@@ -357,10 +357,10 @@ function history(d: D): TemplateResult {
   type Row = { key: string; date: string; created_at: string; t: TemplateResult };
   const rows: Row[] = [
     ...d.G.map((x): Row => ({ key: x.id, date: x.date, created_at: x.created_at, t: x.status === 'pending'
-      ? html`<li class="gi wait"><span class="g" style=${styleMap({ background: gradeColor(x.grade) })}>${x.grade}</span><span>${emo(subjEmoji(x.subject))} ${x.subject}<small>${fmtDay(x.date)} · ${emo('⏳')} чекає підтвердження батьків</small></span><b class="muted">${uah(state.rates[x.grade] ?? 0)}</b>
+      ? html`<li class="gi wait"><span class="g" style=${styleMap({ background: gradeColor(x.grade) })}>${gradeLabel(x.grade)}</span><span>${emo(subjEmoji(x.subject))} ${x.subject}<small>${fmtDay(x.date)} · ${emo('⏳')} чекає підтвердження батьків</small></span><b class="muted">${uah(rateOf(x.grade, state.rates))}</b>
           ${par ? html`<span class="acts2"><button type="button" class="ok" aria-label="Підтвердити" @click=${(e: MouseEvent) => approve(x, e)}>✓</button><button type="button" class="x" aria-label="Відхилити" @click=${() => del('school_grades', x.id)}>✕</button></span>`
             : html`<button type="button" class="x" aria-label="Видалити" @click=${() => del('school_grades', x.id)}>✕</button>`}</li>`
-      : html`<li class="gi"><span class="g" style=${styleMap({ background: gradeColor(x.grade) })}>${x.grade}</span><span>${emo(subjEmoji(x.subject))} ${x.subject}<small>${fmtDay(x.date)} · ${emo('✅')} підтверджено</small></span><b class=${tone(gradeValue(x, state.rates))}>${uah(gradeValue(x, state.rates))}</b>
+      : html`<li class="gi"><span class="g" style=${styleMap({ background: gradeColor(x.grade) })}>${gradeLabel(x.grade)}</span><span>${emo(subjEmoji(x.subject))} ${x.subject}<small>${fmtDay(x.date)} · ${emo('✅')} підтверджено</small></span><b class=${tone(gradeValue(x, state.rates))}>${uah(gradeValue(x, state.rates))}</b>
           ${par ? html`<button type="button" class="x" aria-label="Скасувати підтвердження" @click=${() => unapprove(x)}>↺</button>` : html`<span></span>`}</li>` })),
     ...d.L.map((x): Row => {
       const b = x.kind === 'bonus';
