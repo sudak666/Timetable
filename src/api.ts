@@ -1,9 +1,11 @@
 import { AuthClient } from '@supabase/auth-js';
 import { PostgrestClient } from '@supabase/postgrest-js';
 import type { RealtimeChannel, RealtimeClient } from '@supabase/realtime-js';
+import { enqueue, isOp, overlay, type Op } from './features/outbox';
 import { parseSettings, type Challenge, type Grade, type Homework, type Ledger, type Member, type Role } from './features/rewards';
 import { set, state, store } from './state';
 import { applyAccent } from './ui/theme';
+import { toast } from './ui/toast';
 
 const URL = 'https://vkwkyhjjjmcpmiakxohw.supabase.co';
 /** Публічний (publishable) ключ — безпечний на клієнті; доступ до даних обмежує RLS. */
@@ -78,25 +80,101 @@ export async function loadFamily(): Promise<void> {
   ]);
   const firstErr = [f, m, g, l, c, h].find((r) => r.error)?.error;
   if (firstErr) throw firstErr;
-  const { rates, streak } = parseSettings(f.data?.rates);
-  set((s) => {
-    if (f.data) s.family = { id: f.data.id, name: f.data.name, invite_code: f.data.invite_code };
-    s.rates = rates;
-    s.streak = streak;
-    s.members = (m.data ?? []) as Member[];
-    s.grades = (g.data ?? []) as Grade[];
-    s.ledger = (l.data ?? []) as Ledger[];
-    s.challenges = (c.data ?? []) as Challenge[];
-    s.homework = (h.data ?? []) as Homework[];
-    const kids = s.members.filter((x) => x.role === 'child');
-    if (s.role === 'child') s.kid = s.me!.id;
-    else if (!kids.some((k) => k.user_id === s.kid)) s.kid = kids[0]?.user_id ?? null;
-  });
+  const snap: Snapshot = {
+    family: f.data ? { id: f.data.id, name: f.data.name, invite_code: f.data.invite_code } : state.family!,
+    role: state.role!, rates: f.data?.rates,
+    members: (m.data ?? []) as Member[], grades: (g.data ?? []) as Grade[], ledger: (l.data ?? []) as Ledger[],
+    challenges: (c.data ?? []) as Challenge[], homework: (h.data ?? []) as Homework[],
+  };
+  if (state.me) store.set(SNAP + state.me.id, JSON.stringify(snap));
+  applySnapshot(snap, false);
   // Колір акценту — персональний; кешуємо, щоб наступне відкриття було без миготіння.
   const theme = state.members.find((x) => x.user_id === state.me?.id)?.theme || null;
   store.set('accent', theme);
   applyAccent(theme);
 }
+
+/* ---------------- офлайн: знімок даних + черга змін ---------------- */
+const SNAP = 'snap:', OUTBOX = 'outbox:';
+interface Snapshot {
+  family: { id: string; name: string; invite_code: string }; role: Role; rates: unknown;
+  members: Member[]; grades: Grade[]; ledger: Ledger[]; challenges: Challenge[]; homework: Homework[];
+}
+let server: Pick<Snapshot, 'grades' | 'homework'> = { grades: [], homework: [] };
+
+const readQueue = (): Op[] => {
+  if (!state.me) return [];
+  try { const v: unknown = JSON.parse(store.get(OUTBOX + state.me.id) ?? '[]'); return Array.isArray(v) ? v.filter(isOp) : []; } catch { return []; }
+};
+const writeQueue = (q: Op[]) => { if (state.me) store.set(OUTBOX + state.me.id, q.length ? JSON.stringify(q) : null); };
+
+function applySnapshot(x: Snapshot, stale: boolean): void {
+  server = { grades: x.grades, homework: x.homework };
+  const q = readQueue(), o = overlay(q, x.grades, x.homework);
+  const { rates, streak } = parseSettings(x.rates);
+  set((s) => {
+    s.family = x.family;
+    s.role = x.role;
+    s.rates = rates;
+    s.streak = streak;
+    s.members = x.members;
+    s.grades = o.grades;
+    s.ledger = x.ledger;
+    s.challenges = x.challenges;
+    s.homework = o.homework;
+    s.queued = q.length;
+    s.stale = stale;
+    const kids = s.members.filter((k) => k.role === 'child');
+    if (s.role === 'child') s.kid = s.me!.id;
+    else if (!kids.some((k) => k.user_id === s.kid)) s.kid = kids[0]?.user_id ?? null;
+  });
+}
+
+/** Офлайн-старт: показуємо останні збережені дані цього користувача. */
+function restoreSnapshot(u: { id: string; email?: string | undefined; user_metadata?: { full_name?: string } }): boolean {
+  const userId = u.id;
+  try {
+    if (!state.me) set({ me: { id: u.id, email: u.email ?? '', fullName: u.user_metadata?.full_name ?? '' } });
+    const x = JSON.parse(store.get(SNAP + userId) ?? 'null') as Snapshot | null;
+    if (!x?.family?.id || !Array.isArray(x.grades)) return false;
+    applySnapshot(x, true);
+    set({ view: 'main' });
+    return true;
+  } catch { return false; }
+}
+
+const isNetErr = (e: unknown) => !navigator.onLine || /Failed to fetch|NetworkError|Load failed|fetch failed/i.test(errText(e) + String((e as { message?: unknown })?.message ?? ''));
+
+/** Зміна, що переживає відсутність мережі: одразу видно в UI, на сервер іде при першій нагоді. */
+export async function mutate(op: Op): Promise<void> {
+  const q = enqueue(readQueue(), op);
+  writeQueue(q);
+  const o = overlay(q, server.grades, server.homework);
+  set({ grades: o.grades, homework: o.homework, queued: q.length });
+  await flush();
+}
+
+let flushing: Promise<void> | null = null;
+export function flush(): Promise<void> {
+  flushing ??= (async () => {
+    let q = readQueue(), changed = false;
+    while (q.length && navigator.onLine) {
+      const op = q[0]!;
+      const { error } = op.kind === 'insert'
+        ? await sb.from(op.t).upsert({ ...op.row }, { onConflict: 'id', ignoreDuplicates: true })
+        : await sb.from(op.t).update(op.patch).eq('id', op.id);
+      if (error && isNetErr(error)) break;
+      if (error) toast('Зміну не збережено: ' + errText(error), 'err');
+      q = q.slice(1);
+      writeQueue(q);
+      changed = true;
+    }
+    set({ queued: q.length });
+    if (changed) await loadFamily().catch(() => undefined);
+  })().finally(() => { flushing = null; });
+  return flushing;
+}
+addEventListener('online', () => void flush());
 
 const scheduleReload = () => {
   clearTimeout(reloadTimer);
@@ -104,7 +182,8 @@ const scheduleReload = () => {
 };
 
 export async function enter(): Promise<void> {
-  const { data: { user } } = await sb.auth.getUser();
+  const { data: { user }, error: uErr } = await sb.auth.getUser();
+  if (uErr && isNetErr(uErr)) throw uErr;
   if (!user) return set({ view: 'auth', me: null, family: null, role: null });
   const meta = user.user_metadata as { full_name?: string } | undefined;
   set({ me: { id: user.id, email: user.email ?? '', fullName: meta?.full_name ?? '' } });
@@ -133,7 +212,8 @@ export async function signOut(): Promise<void> {
   if (channel && realtime) await realtime.removeChannel(channel);
   channel = null;
   await sb.auth.signOut();
-  set({ view: 'auth', me: null, family: null, role: null, members: [], grades: [], ledger: [], challenges: [], homework: [], kid: null });
+  if (state.me) { store.set(SNAP + state.me.id, null); store.set(OUTBOX + state.me.id, null); }
+  set({ view: 'auth', me: null, family: null, role: null, queued: 0, stale: false, members: [], grades: [], ledger: [], challenges: [], homework: [], kid: null });
 }
 
 export function watchAuth(): void {
@@ -143,7 +223,10 @@ export function watchAuth(): void {
     const id = session?.user.id ?? null;
     if (id === cur) return;
     cur = id;
-    setTimeout(() => void enter().catch((e) => set({ view: 'offline', authMsg: { text: 'Помилка: ' + errText(e) } })), 0);
+    setTimeout(() => void enter().then(flush).catch((e) => {
+      if (session && isNetErr(e) && restoreSnapshot(session.user)) return;
+      set({ view: 'offline', authMsg: { text: 'Помилка: ' + errText(e) } });
+    }), 0);
   });
 }
 

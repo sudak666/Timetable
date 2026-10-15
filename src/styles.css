@@ -402,3 +402,13 @@ header .tools{flex:none}
 .pri-btn{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:800;padding:12px 18px;border-radius:14px}
 .intro{background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 14%,var(--card)),var(--card))}
 @media (prefers-reduced-motion:reduce){.sk{animation:none}}
+.offline.sync{background:var(--brk);color:var(--muted)}
+.cmdk{width:min(560px,100%);padding:var(--s-2);margin-top:12vh;border:1px solid var(--line);box-shadow:var(--shadow-2),0 0 0 1px var(--line)}
+.cmdk input{margin:0 0 var(--s-2);font-size:17px;border:0;border-bottom:1px solid var(--line);border-radius:var(--r-md) var(--r-md) 0 0;background:transparent}
+.cmdk input:focus{box-shadow:none}
+.cmdk ul{list-style:none;padding:0;max-height:min(360px,55vh);overflow-y:auto}
+.cmdk li{display:flex;justify-content:space-between;align-items:center;gap:var(--s-3);padding:var(--s-2) var(--s-3);border-radius:var(--r-sm);cursor:pointer;font-weight:600}
+.cmdk li.on{background:color-mix(in srgb,var(--accent) 12%,var(--card))}
+.cmdk li small{color:var(--muted);font-weight:500;font-size:var(--fs-sm)}
+.cmdk li.msg{color:var(--muted);cursor:default}
+kbd{font:600 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;padding:4px 6px;border:1px solid var(--line);border-bottom-width:2px;border-radius:6px;color:var(--muted);background:var(--bg)}

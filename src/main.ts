@@ -2,6 +2,12 @@ import '@fontsource-variable/nunito/wght.css';
 import './styles.css';
 import { html, render, type TemplateResult } from 'lit-html';
 import { iso } from './lib/time';
+import { PASS } from './features/rewards';
+import { formatRoute, parseRoute } from './lib/route';
+import { parseQuickGrade } from './lib/command';
+import { addDays } from './lib/time';
+import { SUBJECT_LIST, WEEK } from './data/schedule';
+import { openPalette, type Cmd } from './ui/palette';
 import { set, state, store, subscribe, TABS, type GameStyle, type Tab } from './state';
 import { bikeLane } from './ui/bike';
 import { boom } from './ui/confetti';
@@ -26,14 +32,63 @@ state.lessonAlerts = store.get('notif') === '1' && typeof Notification !== 'unde
 state.form.date = iso(new Date());
 state.form.hwDate = nextLessonDate(state.form.hwSubject, new Date());
 
+/** theme-color у браузері має збігатися з обраною вручну темою, а не лише з системною. */
+const syncThemeColor = () => {
+  const t = root.dataset.theme;
+  for (const m of document.querySelectorAll<HTMLMetaElement>('meta[name=theme-color]')) {
+    if (!m.dataset.media) m.dataset.media = m.media;
+    m.media = t ? (m.dataset.media.includes(t) ? 'all' : 'not all') : m.dataset.media;
+  }
+};
+syncThemeColor();
 const toggleTheme = () => {
   const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
   root.dataset.theme = dark ? 'light' : 'dark';
   store.set('theme', root.dataset.theme);
+  syncThemeColor();
 };
 
 const bell = html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>`;
 const sunMoon = html`<svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>`;
+
+const searchIc = html`<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>`;
+
+/* ---- Command Palette + гарячі клавіші ---- */
+const go = (tab: Tab) => { location.hash = tab; };
+const baseCmds = (): Cmd[] => {
+  const kids = state.role === 'parent' ? state.members.filter((m) => m.role === 'child') : [];
+  return [
+    ...NAV.map((n, i): Cmd => ({ id: 'tab-' + n.tab, label: n.label, hint: 'Перейти', keys: String(i + 1), run: () => go(n.tab) })),
+    ...WEEK.map((d, i): Cmd => ({ id: 'day-' + i, label: '📅 ' + d.name, hint: 'Розклад на день', run: () => { set({ day: i }); go('today'); } })),
+    { id: 'week', label: '🗓️ Весь тиждень', hint: 'Розклад', run: () => { set({ day: null }); go('today'); } },
+    ...kids.map((k): Cmd => ({ id: 'kid-' + k.user_id, label: `${k.avatar || '🧒'} ${k.name || 'Дитина'}`, hint: 'Обрати дитину', run: () => set({ kid: k.user_id }) })),
+    { id: 'theme', label: '🌗 Світла / темна тема', keys: 'T', run: toggleTheme },
+    { id: 'alerts', label: state.lessonAlerts ? '🔕 Вимкнути нагадування про уроки' : '🔔 Нагадування за 2 хв до уроку', run: toggleLessonAlerts },
+  ];
+};
+const DAY_WORD = ['сьогодні', 'вчора', 'позавчора'];
+const quickCmds = (q: string): Cmd[] => {
+  if (!G || state.view !== 'main' || !state.kid) return [];
+  const r = parseQuickGrade(q, SUBJECT_LIST, PASS);
+  if (!r) return [];
+  const date = iso(addDays(new Date(), r.offset));
+  const who = state.members.find((m) => m.user_id === state.kid)?.name;
+  return [{
+    id: 'quick', label: `➕ ${r.grade === PASS ? 'Зараховано' : r.grade} · ${r.subject}`, hint: `${DAY_WORD[-r.offset]}${who && state.role === 'parent' ? ' · ' + who : ''}`,
+    run: () => { go('grades'); return G!.quickGrade(r.grade, r.subject, date); },
+  }];
+};
+const palette = () => openPalette(baseCmds, quickCmds);
+
+addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); palette(); return; }
+  const t = e.target as HTMLElement;
+  if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented || t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || document.querySelector('dialog[open]')) return;
+  const n = NAV[Number(e.key) - 1];
+  if (n) go(n.tab);
+  else if (e.key === '/') { e.preventDefault(); palette(); }
+  else if (e.key === 't' || e.key === 'T' || e.key === 'е' || e.key === 'Е') toggleTheme();
+});
 
 /** Модуль оцінок (Supabase ~70 КБ gzip) вантажиться окремим чанком після першого рендера розкладу. */
 let G: typeof import('./views/grades') | null = null;
@@ -73,9 +128,11 @@ const app = () => {
       <div class="tools">
         <button type="button" class=${state.lessonAlerts ? 'ic on' : 'ic'} aria-pressed=${state.lessonAlerts} aria-label="Нагадування за 2 хвилини до уроку" @click=${toggleLessonAlerts}>${bell}</button>
         <button type="button" class="ic" aria-label="Перемкнути світлу / темну тему" @click=${toggleTheme}>${sunMoon}</button>
+        <button type="button" class="ic" aria-label="Команди" aria-keyshortcuts="Control+K Meta+K" title="Команди (Ctrl+K)" @click=${palette}>${searchIc}</button>
       </div>
     </header>
-    ${state.online ? '' : html`<p class="offline" role="status">${emo('📡')} Немає інтернету — показано збережене. Зміни не збережуться, доки не зʼявиться звʼязок.</p>`}
+    ${state.online ? state.queued ? html`<p class="offline sync" role="status">${emo('🔄')} Синхронізація: ${state.queued} змін…</p>` : ''
+      : html`<p class="offline" role="status">${emo('📡')} Немає інтернету — показано збережене. Оцінки й домашка ${state.queued ? html`(<b>${state.queued}</b> у черзі) ` : ''}відправляться, щойно зʼявиться звʼязок.</p>`}
     <nav class="bnav" aria-label="Розділи">${NAV.map((n) => {
       const b = n.tab === 'grades' ? badges.grades : n.tab === 'hw' ? badges.hw : 0;
       return html`<a href=${'#' + n.tab} class=${state.tab === n.tab ? 'on' : ''} aria-current=${state.tab === n.tab ? 'page' : 'false'}>
@@ -86,18 +143,27 @@ const app = () => {
 };
 
 /* ---- маршрутизація через hash: працює кнопка «назад», можна ділитися посиланням на вкладку ---- */
-const readTab = (): Tab => { const h = location.hash.slice(1) as Tab; return TABS.includes(h) ? h : 'today'; };
-state.tab = readTab();
+const isAuthHash = () => /access_token|error_description/.test(location.hash); // OAuth-редирект Supabase
+const readRoute = () => parseRoute<Tab>(location.hash, TABS, 'today');
+if (!isAuthHash()) { const r = readRoute(); state.tab = r.tab; state.day = r.day; state.kid = r.kid; }
+/** Фільтри (день, дитина) — у URL без нових записів в історії. */
+const syncUrl = () => {
+  if (isAuthHash()) return;
+  const h = formatRoute<Tab>({ tab: state.tab, day: state.day, kid: state.kid });
+  if (h !== location.hash && !(h === '#today' && !location.hash)) history.replaceState(history.state, '', h);
+};
 addEventListener('hashchange', () => {
-  if (location.hash.includes('access_token')) return; // OAuth-редирект Supabase
-  set({ tab: readTab() });
+  if (isAuthHash()) return;
+  const r = readRoute(), prev = state.tab;
+  set({ tab: r.tab, day: r.day, ...(r.kid ? { kid: r.kid } : {}) });
+  if (r.tab === prev) return;
   scrollTo({ top: 0 });
   requestAnimationFrame(() => document.getElementById('main-content')?.focus({ preventScroll: true }));
 });
 
 const mount = document.getElementById('app')!;
 mount.textContent = '';
-const draw = () => render(app(), mount);
+const draw = () => { render(app(), mount); syncUrl(); };
 subscribe(draw);
 draw();
 if ('requestIdleCallback' in window) requestIdleCallback(showBelow, { timeout: 600 });
