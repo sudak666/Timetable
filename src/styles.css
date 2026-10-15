@@ -412,3 +412,4 @@ header .tools{flex:none}
 .cmdk li small{color:var(--muted);font-weight:500;font-size:var(--fs-sm)}
 .cmdk li.msg{color:var(--muted);cursor:default}
 kbd{font:600 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;padding:4px 6px;border:1px solid var(--line);border-bottom-width:2px;border-radius:6px;color:var(--muted);background:var(--bg)}
+.live{display:inline-block;width:8px;height:8px;margin-left:6px;border-radius:50%;background:var(--good);box-shadow:0 0 0 2px var(--card);vertical-align:middle}

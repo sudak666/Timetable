@@ -41,6 +41,8 @@ export interface State {
   online: boolean;
   /** Змін у черзі на відправку */
   queued: number;
+  /** Хто з сім'ї зараз у застосунку (Realtime presence) */
+  present: string[];
   /** Показано знімок з пристрою, а не свіжі дані сервера */
   stale: boolean;
 }
@@ -78,6 +80,7 @@ export const state: State = {
   style: '',
   online: typeof navigator === 'undefined' ? true : navigator.onLine,
   queued: 0,
+  present: [],
   stale: false,
 };
 

@@ -383,7 +383,7 @@ function kidTabs(): TemplateResult | typeof nothing {
   if (state.role !== 'parent') return nothing;
   const kids = state.members.filter((m) => m.role === 'child');
   return html`<div class="tabs" role="tablist" aria-label="Діти">${kids.length ? kids.map((k) =>
-      html`<button type="button" role="tab" aria-selected=${k.user_id === state.kid} class=${classMap({ on: k.user_id === state.kid })} @click=${() => set({ kid: k.user_id })}>${emo(k.avatar || '🧒')} ${k.name || 'Дитина'}</button>`)
+      html`<button type="button" role="tab" aria-selected=${k.user_id === state.kid} class=${classMap({ on: k.user_id === state.kid })} @click=${() => set({ kid: k.user_id })}>${emo(k.avatar || '🧒')} ${k.name || 'Дитина'}${state.present.includes(k.user_id) ? html`<i class="live" title="Зараз онлайн"></i><span class="sr-only">, онлайн</span>` : nothing}</button>`)
       : nothing}</div>${kids.length ? nothing : inviteCard()}`;
 }
 

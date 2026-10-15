@@ -34,10 +34,25 @@ async function name(fid: string, uid: string) {
   return data?.name || "Дитина";
 }
 
+/** Щовечора: дитині — невиконана домашка на завтра (дата за Києвом). */
+async function remindHomework() {
+  const kyiv = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Kyiv" }).format(d);
+  const tomorrow = kyiv(new Date(Date.now() + 864e5));
+  const { data } = await sb.from("school_homework").select("child_id,subject").eq("due", tomorrow).eq("done", false);
+  const by = new Map<string, string[]>();
+  for (const h of data ?? []) by.set(h.child_id, [...(by.get(h.child_id) ?? []), h.subject]);
+  await Promise.all([...by].map(([kid, subj]) =>
+    send([kid], `📝 На завтра ${subj.length} ${subj.length < 5 ? "завдання" : "завдань"}`, [...new Set(subj)].join(", "), "hw" + tomorrow, "#hw")));
+}
+
 Deno.serve(async (req) => {
   const c = await secrets();
   if (req.headers.get("x-hook-secret") !== c.hook_secret) return new Response("forbidden", { status: 403 });
   const { table, type, record: r, old_record: o } = await req.json();
+  if (type === "CRON" && table === "hw_remind") {
+    await remindHomework();
+    return new Response("ok");
+  }
   if (table === "school_grades" && type === "INSERT" && r.status === "pending") {
     await send(await parents(r.family_id), `📝 ${await name(r.family_id, r.child_id)}: ${r.subject} — ${r.grade === 0 ? "Зар." : r.grade}`, "Нова оцінка чекає підтвердження ✓", "g" + r.id, `#grades?kid=${r.child_id}`);
   } else if (table === "school_grades" && type === "UPDATE" && o?.status === "pending" && r.status === "approved") {

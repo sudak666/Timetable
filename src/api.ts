@@ -201,11 +201,13 @@ export async function enter(): Promise<void> {
   const rt = await getRealtime();
   if (channel) await rt.removeChannel(channel);
   const fid = row.family_id as string;
-  channel = rt.channel('fam-' + fid);
+  channel = rt.channel('fam-' + fid, { config: { presence: { key: user.id } } });
+  const ch = channel;
+  ch.on('presence', { event: 'sync' }, () => set({ present: Object.keys(ch.presenceState()) }));
   for (const t of ['school_grades', 'school_ledger', 'school_members', 'school_challenges', 'school_homework'])
     channel.on('postgres_changes', { event: '*', schema: 'public', table: t, filter: `family_id=eq.${fid}` }, scheduleReload);
   channel.on('postgres_changes', { event: '*', schema: 'public', table: 'school_families', filter: `id=eq.${fid}` }, scheduleReload);
-  channel.subscribe();
+  channel.subscribe((status) => { if (status === 'SUBSCRIBED') void ch.track({ at: Date.now() }); });
 }
 
 export async function signOut(): Promise<void> {
@@ -213,7 +215,7 @@ export async function signOut(): Promise<void> {
   channel = null;
   await sb.auth.signOut();
   if (state.me) { store.set(SNAP + state.me.id, null); store.set(OUTBOX + state.me.id, null); }
-  set({ view: 'auth', me: null, family: null, role: null, queued: 0, stale: false, members: [], grades: [], ledger: [], challenges: [], homework: [], kid: null });
+  set({ view: 'auth', me: null, family: null, role: null, present: [], queued: 0, stale: false, members: [], grades: [], ledger: [], challenges: [], homework: [], kid: null });
 }
 
 export function watchAuth(): void {
