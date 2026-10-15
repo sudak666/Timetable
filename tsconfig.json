@@ -8,7 +8,7 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
-    "exactOptionalPropertyTypes": false,
+    "exactOptionalPropertyTypes": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,

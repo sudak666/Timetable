@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "e2e": "playwright test",
+    "size": "node scripts/size-check.mjs",
     "check": "npm run typecheck && npm run lint && npm run test"
   },
   "dependencies": {
