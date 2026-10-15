@@ -148,7 +148,8 @@ const readRoute = () => parseRoute<Tab>(location.hash, TABS, 'today');
 if (!isAuthHash()) { const r = readRoute(); state.tab = r.tab; state.day = r.day; state.kid = r.kid; }
 /** Фільтри (день, дитина) — у URL без нових записів в історії. */
 const syncUrl = () => {
-  if (isAuthHash()) return;
+  // Навігація, ще не оброблена hashchange, має пріоритет над станом.
+  if (isAuthHash() || (location.hash && readRoute().tab !== state.tab)) return;
   const h = formatRoute<Tab>({ tab: state.tab, day: state.day, kid: state.kid });
   if (h !== location.hash && !(h === '#today' && !location.hash)) history.replaceState(history.state, '', h);
 };
