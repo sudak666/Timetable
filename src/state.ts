@@ -39,6 +39,12 @@ export interface State {
   canInstall: boolean;
   style: GameStyle;
   online: boolean;
+  /** Змін у черзі на відправку */
+  queued: number;
+  /** Хто з сім'ї зараз у застосунку (Realtime presence) */
+  present: string[];
+  /** Показано знімок з пристрою, а не свіжі дані сервера */
+  stale: boolean;
 }
 
 type Listener = () => void;
@@ -73,6 +79,9 @@ export const state: State = {
   canInstall: false,
   style: '',
   online: typeof navigator === 'undefined' ? true : navigator.onLine,
+  queued: 0,
+  present: [],
+  stale: false,
 };
 
 /** Мутує стан і планує один рендер на кадр (батчинг). */

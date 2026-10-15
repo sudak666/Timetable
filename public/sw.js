@@ -23,12 +23,15 @@ self.addEventListener('fetch', (e) => {
 self.addEventListener('push', (e) => {
   let d = {};
   try { d = e.data.json(); } catch { d = { title: 'Розклад', body: e.data ? e.data.text() : '' }; }
-  e.waitUntil(self.registration.showNotification(d.title || 'Розклад', { body: d.body || '', tag: d.tag, icon: 'assets/icon-192.png', badge: 'assets/icon-192.png' }));
+  e.waitUntil(self.registration.showNotification(d.title || 'Розклад', { body: d.body || '', tag: d.tag, data: { url: typeof d.url === 'string' && d.url.startsWith('#') ? d.url : '#grades' }, icon: 'assets/icon-192.png', badge: 'assets/icon-192.png' }));
 });
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || '#grades';
   e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then((ws) => {
     const w = ws.find((x) => x.url.startsWith(self.registration.scope));
-    return w ? w.focus() : clients.openWindow('./#grades');
+    if (!w) return clients.openWindow('./' + url);
+    w.postMessage({ nav: url });
+    return w.focus();
   }));
 });

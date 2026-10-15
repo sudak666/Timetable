@@ -83,15 +83,52 @@ test('онбординг дитини показується один раз', a
   await expect(intro).toHaveCount(0);
 });
 
-test('офлайн-банер і тост помилки мережі', async ({ page, context }) => {
+test('офлайн: оцінка стає в чергу, видна одразу й відправляється після підключення', async ({ page, context }) => {
   await mockFamily(page, 'child');
   await page.goto('/#grades');
   await expect(page.locator('.sum')).toBeVisible();
-  await page.route('**/rest/v1/school_grades*', (r) => (r.request().method() === 'POST' ? r.abort('internetdisconnected') : r.fallback()));
+  const posts: unknown[] = [];
+  await page.route('**/rest/v1/school_grades*', (r) => {
+    if (r.request().method() !== 'POST') return r.fallback();
+    posts.push(r.request().postDataJSON());
+    return r.fulfill({ status: 201, body: '' });
+  });
   await context.setOffline(true);
   await expect(page.locator('.offline')).toBeVisible();
-  await page.getByRole('button', { name: /Оцінка 12/ }).click();
-  await expect(page.getByRole('alert').locator('.toast')).toContainText('Немає інтернету');
+  await page.getByRole('button', { name: /Оцінка 11/ }).click();
+  await expect(page.locator('.offline')).toContainText('1');
+  expect(posts).toHaveLength(0);
   await context.setOffline(false);
   await expect(page.locator('.offline')).toHaveCount(0);
+  expect(posts).toHaveLength(1);
+  expect(posts[0]).toMatchObject({ child_id: 'k1', grade: 11, status: 'pending', amount: null });
+  expect(await page.evaluate(() => localStorage.getItem('outbox:k1'))).toBeNull();
+});
+
+test('без мережі при старті показує збережені дані', async ({ page }) => {
+  await mockFamily(page, 'child');
+  await page.goto('/#hw');
+  await expect(page.getByText('Презентація')).toBeVisible();
+  await page.route(`https://${REF}.supabase.co/**`, (r) => r.abort('internetdisconnected'));
+  await page.reload();
+  await expect(page.getByText('Презентація')).toBeVisible();
+});
+
+test('Command Palette: Ctrl+K, навігація й швидка оцінка', async ({ page }) => {
+  await mockFamily(page, 'parent');
+  await page.goto('/#grades');
+  await expect(page.locator('.sum')).toBeVisible();
+  const post = page.waitForRequest((r) => r.method() === 'POST' && r.url().includes('school_grades'));
+  await page.keyboard.press('Control+k');
+  const box = page.getByRole('combobox');
+  await expect(box).toBeFocused();
+  await box.fill('11 матем вчора');
+  await expect(page.getByRole('option').first()).toContainText('11 · Математика');
+  const a11y = await new AxeBuilder({ page }).include('dialog').withTags(['wcag2a', 'wcag2aa', 'wcag22aa']).analyze();
+  expect(a11y.violations.map((v) => v.id)).toEqual([]);
+  await page.keyboard.press('Enter');
+  expect((await post).postDataJSON()).toMatchObject({ grade: 11, subject: 'Математика', child_id: 'k1', status: 'approved', date: '2026-09-21' });
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.keyboard.press('3');
+  await expect(page).toHaveURL(/#hw\?kid=k1$/);
 });

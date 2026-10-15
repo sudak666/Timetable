@@ -14,6 +14,11 @@ export async function initPwa(): Promise<void> {
   addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEv = e as InstallEvent; set({ canInstall: true }); });
   if (isIOS && !standalone) set({ canInstall: true });
   if (!('serviceWorker' in navigator) || import.meta.env.DEV) return;
+  // Клік по push-сповіщенню у вже відкритому вікні → перехід на потрібну вкладку.
+  navigator.serviceWorker.addEventListener('message', (e: MessageEvent<unknown>) => {
+    const nav = (e.data as { nav?: unknown } | null)?.nav;
+    if (typeof nav === 'string' && /^#[a-z]+(\?[\w=&-]*)?$/.test(nav)) location.hash = nav;
+  });
   try {
     reg = await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL });
     const sub = await reg.pushManager?.getSubscription();

@@ -2,7 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit-html';
 import { classMap } from 'lit-html/directives/class-map.js';
 import { live } from 'lit-html/directives/live.js';
 import { styleMap } from 'lit-html/directives/style-map.js';
-import { enter, errText, loadFamily, sb, signOut } from '../api';
+import { enter, errText, loadFamily, mutate, sb, signOut } from '../api';
 import { subjEmoji } from '../data/schedule';
 import {
   AVATARS, THEMES, XP_PER_LEVEL, autoRewards, bestTenRun, byTime, challengeHits, currentRun, PASS, gradeColor, gradeLabel, gradeValue, isScored, rateOf, levelOf, totals, xpOf,
@@ -153,13 +153,19 @@ function joinView(): TemplateResult {
 
 /* ---------------- головна ---------------- */
 async function addGrade(g: number, e: MouseEvent) {
-  if (!state.kid) return;
+  if (g >= 10) boom(e.clientX, e.clientY, g === 12 ? 150 : 70);
+  await quickGrade(g, state.form.subject, state.form.date || iso(new Date()));
+}
+/** Оцінка поточній дитині (з форми або з Command Palette). */
+export async function quickGrade(g: number, subject: string, date: string): Promise<boolean> {
+  if (!state.kid || state.view !== 'main') return false;
   const par = state.role === 'parent';
-  const ok = await run(sb.from('school_grades').insert({
-    family_id: state.family!.id, child_id: state.kid, subject: state.form.subject, grade: g, date: state.form.date || iso(new Date()),
-    ...(par ? { status: 'approved', amount: rateOf(g, state.rates) } : {}),
-  }));
-  if (ok && g >= 10) boom(e.clientX, e.clientY, g === 12 ? 150 : 70);
+  await mutate({ t: 'school_grades', kind: 'insert', row: {
+    id: crypto.randomUUID(), family_id: state.family!.id, child_id: state.kid, subject, grade: g,
+    date, created_at: new Date().toISOString(),
+    status: par ? 'approved' : 'pending', amount: par ? rateOf(g, state.rates) : null,
+  } });
+  return true;
 }
 const approve = (x: Grade, e: MouseEvent) => run(sb.from('school_grades').update({ status: 'approved', amount: rateOf(x.grade, state.rates) }).eq('id', x.id), () => x.grade >= 10 && boom(e.clientX, e.clientY, 80));
 const unapprove = async (x: Grade) => (await confirm('Скасувати підтвердження? Оцінка знову стане «чекає».')) && run(sb.from('school_grades').update({ status: 'pending', amount: null }).eq('id', x.id));
@@ -256,14 +262,14 @@ function homework(d: D): TemplateResult {
     e.preventDefault();
     const inp = document.getElementById('hText') as HTMLInputElement;
     if (!state.kid || !inp.value.trim()) return;
-    await run(sb.from('school_homework').insert({ family_id: state.family!.id, child_id: state.kid, subject: f.hwSubject, due: f.hwDate, text: inp.value.trim() }), () => { inp.value = ''; });
+    const text = inp.value.trim();
+    inp.value = '';
+    await mutate({ t: 'school_homework', kind: 'insert', row: { id: crypto.randomUUID(), family_id: state.family!.id, child_id: state.kid, subject: f.hwSubject, due: f.hwDate, text, done: false } });
   };
   const toggle = async (x: (typeof h)[number], e: MouseEvent) => {
     const v = !x.done;
-    set(() => { x.done = v; });
     if (v) boom(e.clientX, e.clientY, 40);
-    const { error } = await sb.from('school_homework').update({ done: v }).eq('id', x.id);
-    if (error) { set(() => { x.done = !v; }); toast(errText(error), 'err'); }
+    await mutate({ t: 'school_homework', kind: 'update', id: x.id, patch: { done: v } });
   };
   return html`<h3 class="h4 gap">${emo('📝')} Домашні завдання</h3>
     <form class="form" @submit=${add}>
@@ -377,7 +383,7 @@ function kidTabs(): TemplateResult | typeof nothing {
   if (state.role !== 'parent') return nothing;
   const kids = state.members.filter((m) => m.role === 'child');
   return html`<div class="tabs" role="tablist" aria-label="Діти">${kids.length ? kids.map((k) =>
-      html`<button type="button" role="tab" aria-selected=${k.user_id === state.kid} class=${classMap({ on: k.user_id === state.kid })} @click=${() => set({ kid: k.user_id })}>${emo(k.avatar || '🧒')} ${k.name || 'Дитина'}</button>`)
+      html`<button type="button" role="tab" aria-selected=${k.user_id === state.kid} class=${classMap({ on: k.user_id === state.kid })} @click=${() => set({ kid: k.user_id })}>${emo(k.avatar || '🧒')} ${k.name || 'Дитина'}${state.present.includes(k.user_id) ? html`<i class="live" title="Зараз онлайн"></i><span class="sr-only">, онлайн</span>` : nothing}</button>`)
       : nothing}</div>${kids.length ? nothing : inviteCard()}`;
 }
 
