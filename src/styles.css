@@ -39,6 +39,7 @@ button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
 .day{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px}
 .day.today{border-color:var(--accent);box-shadow:0 0 0 2px var(--glow)}
+.day.off{opacity:.55}
 .day h3{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .day h3 span.end{font-size:12px;color:var(--muted);font-weight:600}
 .badge{font-size:11px;background:var(--accent);color:#fff;padding:3px 8px;border-radius:8px;margin-left:6px}
