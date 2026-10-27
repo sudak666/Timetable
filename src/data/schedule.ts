@@ -29,8 +29,13 @@ export const WEEK: Day[] = [
   { name: 'П’ятниця', lessons: L('Всесв. історія', 'Англ. мова', 'Література', 'Фіз-ра', 'Довкілля', 'Математика') },
 ];
 
-/** Канікули: [перший, останній] день включно, YYYY-MM-DD. */
-export const HOLIDAYS: readonly (readonly [string, string])[] = [['2026-10-26', '2026-10-30']];
+/** Канікули: [перший, останній] день включно, YYYY-MM-DD. Київ 2026/2027 (рекомендації ДОН КМДА). */
+export const HOLIDAYS: readonly (readonly [string, string])[] = [
+  ['2026-10-26', '2026-11-01'],
+  ['2026-12-24', '2027-01-10'],
+  ['2027-03-22', '2027-03-28'],
+  ['2027-05-29', '2027-08-31'],
+];
 
 export const SUBJECTS: Record<Subject, { color: string; emoji: string }> = {
   'Математика': { color: '#6c5ce7', emoji: '🧮' },

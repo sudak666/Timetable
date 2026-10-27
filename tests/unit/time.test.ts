@@ -19,6 +19,7 @@ describe('дати', () => {
   it('канікули: уроків немає', () => expect(statusAt(at('2026-10-27T09:00')).kind).toBe('done'));
   it('після канікул — понеділок 2.11', () => expect(iso(nextSchoolDate(new Date(2026, 9, 23, 12)))).toBe('2026-11-02'));
   it('домашка не припадає на канікули', () => expect(nextLessonDate('ЗБД', new Date(2026, 9, 23))).toBe('2026-11-05'));
+  it('зимові: після 23.12 — 11.01', () => expect(iso(nextSchoolDate(new Date(2026, 11, 23, 12)))).toBe('2027-01-11'));
   it('наступний урок ЗБД — четвер', () => expect(nextLessonDate('ЗБД', new Date(2026, 8, 21))).toBe('2026-09-24'));
 });
 
