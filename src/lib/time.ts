@@ -1,4 +1,4 @@
-import { RANGES, WEEK, type Lesson } from '../data/schedule';
+import { HOLIDAYS, RANGES, WEEK, type Lesson } from '../data/schedule';
 
 export const DAY_MS = 864e5;
 
@@ -11,6 +11,14 @@ export const mondayOf = (d: Date): Date => {
   m.setDate(m.getDate() - ((m.getDay() + 6) % 7));
   return m;
 };
+
+/** Діапазон канікул, у який потрапляє дата. */
+export const holidayOf = (d: Date): readonly [string, string] | undefined => {
+  const k = iso(d);
+  return HOLIDAYS.find(([a, b]) => k >= a && k <= b);
+};
+/** Уроки на конкретну дату (без вихідних і канікул). */
+export const lessonsOn = (d: Date): Lesson[] | undefined => (holidayOf(d) ? undefined : WEEK[(d.getDay() + 6) % 7]?.lessons);
 
 export interface Clock { date: Date; weekday: number; min: number }
 /** weekday: 0 = понеділок … 6 = неділя; min: хвилини від опівночі з дробовими секундами. */
@@ -27,7 +35,7 @@ export type Status =
   | { kind: 'done' };
 
 export function statusAt(c: Clock): Status {
-  const lessons = WEEK[c.weekday]?.lessons;
+  const lessons = lessonsOn(c.date);
   if (!lessons) return { kind: 'done' };
   for (let i = 0; i < lessons.length; i++) {
     const [a, b] = RANGES[i]!;
@@ -37,11 +45,14 @@ export function statusAt(c: Clock): Status {
   return { kind: 'done' };
 }
 
-/** Наступний навчальний день після weekday (0..6). */
-export const nextSchoolDay = (weekday: number): number => {
-  for (let i = weekday + 1; i < 7; i++) if (WEEK[i]) return i;
-  return 0;
-};
+/** Наступна навчальна дата після from (з урахуванням канікул). */
+export function nextSchoolDate(from: Date): Date {
+  for (let i = 1; i <= 366; i++) {
+    const d = addDays(from, i);
+    if (lessonsOn(d)) return d;
+  }
+  return addDays(from, 1);
+}
 
 /** Хвилини → «h:mm:ss» або «m:ss». */
 export const hms = (minutes: number): string => {
@@ -56,9 +67,9 @@ export const fmtDay = (isoDate: string): string =>
 
 /** Найближча дата (після сьогодні), коли є урок предмета. */
 export function nextLessonDate(subject: string, from: Date): string {
-  for (let i = 1; i <= 14; i++) {
+  for (let i = 1; i <= 366; i++) {
     const d = addDays(from, i);
-    if (WEEK[(d.getDay() + 6) % 7]?.lessons.some((l) => l.subject === subject)) return iso(d);
+    if (lessonsOn(d)?.some((l) => l.subject === subject)) return iso(d);
   }
   return iso(addDays(from, 1));
 }

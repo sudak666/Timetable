@@ -3,7 +3,7 @@ import { classMap } from 'lit-html/directives/class-map.js';
 import { styleMap } from 'lit-html/directives/style-map.js';
 import { BELLS, RANGES, SUBJECTS, WEEK, bellEnd, bellStart, isSubject } from '../data/schedule';
 import { emo, emojiSrc } from '../lib/emoji';
-import { addDays, clockOf, hms, iso, mondayOf, nextSchoolDay, statusAt } from '../lib/time';
+import { addDays, clockOf, fmtDay, hms, holidayOf, iso, lessonsOn, mondayOf, nextSchoolDate, statusAt } from '../lib/time';
 import { set, state, store } from '../state';
 import { boom } from '../ui/confetti';
 import { alert } from '../ui/dialog';
@@ -31,8 +31,8 @@ export function nowCard(): TemplateResult {
     subject = s.lessons[0]!.subject;
     body = html`<small>Сьогодні ${s.lessons.length} уроків</small><h2>Перший: ${subject}</h2><div class="big" role="timer">${hms(s.start - c.min)}</div><div>до початку о ${bellStart(0)}</div>`;
   } else {
-    const n = nextSchoolDay(c.weekday), d = WEEK[n]!;
-    body = html`<small>Уроки закінчились ${emo('🎉')}</small><h2>Далі: ${d.name}</h2><div>Перший урок — ${d.lessons[0]!.subject} о ${bellStart(0)}</div>`;
+    const nd = nextSchoolDate(c.date), d = WEEK[clockOf(nd).weekday]!, h = holidayOf(c.date);
+    body = html`<small>${h ? html`Канікули до ${fmtDay(h[1])} ${emo('🏖️')}` : html`Уроки закінчились ${emo('🎉')}`}</small><h2>Далі: ${d.name}${h ? ', ' + fmtDay(iso(nd)) : ''}</h2><div>Перший урок — ${d.lessons[0]!.subject} о ${bellStart(0)}</div>`;
   }
   const src = emojiSrc(subject ? subjEmoji(subject) : '🎉');
   return html`<div class="nowwrap">
@@ -43,15 +43,15 @@ export function nowCard(): TemplateResult {
 
 export function sidePanel(): TemplateResult {
   const c = clockOf(state.now), s = statusAt(c);
-  const target = s.kind === 'done' || !WEEK[c.weekday] ? nextSchoolDay(c.weekday) : c.weekday;
+  const lessons = lessonsOn(c.date);
+  const target = s.kind === 'done' || !lessons ? clockOf(nextSchoolDate(c.date)).weekday : c.weekday;
   const day = WEEK[target]!;
   const bag = [...new Set(day.lessons.map((l) => l.subject))];
-  const lessons = WEEK[c.weekday]?.lessons;
   let prog: TemplateResult;
   if (lessons) {
     const a = RANGES[0]![0], b = RANGES[lessons.length - 1]![1], p = Math.min(1, Math.max(0, (c.min - a) / (b - a)));
     prog = html`Навчальний день: ${Math.round(p * 100)}%<div class="bar"><i style=${styleMap({ width: p * 100 + '%' })}></i></div>`;
-  } else prog = html`Вихідний ${emo('😎')}`;
+  } else prog = holidayOf(c.date) ? html`Канікули ${emo('🏖️')}` : html`Вихідний ${emo('😎')}`;
   return html`<aside class="side">
     <h2 class="h4">${target === c.weekday ? 'Рюкзак на сьогодні' : 'Рюкзак на ' + day.name.toLowerCase()}</h2>
     <ul class="chips">${bag.map((x) => html`<li class="chip" style=${styleMap({ background: subjColor(x) })}>${x}</li>`)}</ul>
@@ -60,7 +60,8 @@ export function sidePanel(): TemplateResult {
 }
 
 function weekendText(): TemplateResult {
-  const c = clockOf(state.now);
+  const c = clockOf(state.now), h = holidayOf(c.date);
+  if (h) return html`Канікули до ${fmtDay(h[1])}! Відпочивай ${emo('🏖️')}`;
   if (c.weekday > 4) return html`Ура, вихідні! Відпочивай ${emo('🎉')}`;
   const left = (4 - c.weekday) * 1440 + (RANGES[WEEK[4]!.lessons.length - 1]![1] - c.min);
   return left <= 0 ? html`Вихідні вже тут! ${emo('🥳')}` : html`Ще <b>${Math.floor(left / 1440)} д ${Math.floor((left % 1440) / 60)} год</b> — і вихідні! ${emo('🏖️')}`;
@@ -103,10 +104,10 @@ export function weekGrid(): TemplateResult {
     })}</nav>
     <div class=${classMap({ grid: true, hl: !!state.highlight })}>${WEEK.map((d, i) => {
       if (state.day !== null && state.day !== i) return nothing;
-      const today = i === c.weekday, date = iso(addDays(mon, i));
-      const st = (a: number, b: number) => (today ? (c.min >= b ? 'past' : c.min >= a ? 'cur' : '') : '');
-      return html`<section class=${classMap({ day: true, today })} aria-label=${d.name}>
-        <h3><span>${d.name}${today ? html`<span class="badge">Сьогодні</span>` : nothing}</span><span class="end">${d.lessons.length} ур. · до ${bellEnd(d.lessons.length - 1)}</span></h3>
+      const today = i === c.weekday, date = iso(addDays(mon, i)), off = !!holidayOf(addDays(mon, i));
+      const st = (a: number, b: number) => (today && !off ? (c.min >= b ? 'past' : c.min >= a ? 'cur' : '') : '');
+      return html`<section class=${classMap({ day: true, today, off })} aria-label=${d.name}>
+        <h3><span>${d.name}${today ? html`<span class="badge">Сьогодні</span>` : nothing}${off ? html`<span class="badge">Канікули</span>` : nothing}</span><span class="end">${d.lessons.length} ур. · до ${bellEnd(d.lessons.length - 1)}</span></h3>
         <ol class="lessons">${d.lessons.map((l, j) => {
           const [a, b] = RANGES[j]!, nx = RANGES[j + 1], k = st(a, b);
           return html`<li class=${classMap({ l: true, [k]: !!k, match: state.highlight === l.subject })} aria-current=${k === 'cur' ? 'time' : nothing}>
