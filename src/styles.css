@@ -8,10 +8,10 @@ button,a,summary,label,.chip{touch-action:manipulation;user-select:none;-webkit-
 :focus:not(:focus-visible){outline:none}
 body{font-family:"Nunito Variable",Nunito,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px 16px 48px;transition:background .3s;isolation:isolate}
 /* Декоративна арена залишається позаду непрозорих, читабельних карток. */
-body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(rgb(33 16 83/.12),rgb(33 16 83/.3)),url('../public/assets/arena-wallpaper.webp') center/cover no-repeat,#4930a0}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(rgb(33 16 83/.12),rgb(33 16 83/.3)),url('./assets/arena-wallpaper.webp') center/cover no-repeat,#4930a0}
 :root[data-theme=dark] body::before{filter:brightness(.6) saturate(.85)}
 @media(prefers-color-scheme:dark){:root:not([data-theme=light]) body::before{filter:brightness(.6) saturate(.85)}}
-@media(max-width:720px){body::before{background-image:linear-gradient(rgb(33 16 83/.12),rgb(33 16 83/.3)),url('../public/assets/arena-wallpaper-mobile.webp');background-position:center top}}
+@media(max-width:720px){body::before{background-image:linear-gradient(rgb(33 16 83/.12),rgb(33 16 83/.3)),url('./assets/arena-wallpaper-mobile.webp');background-position:center top}}
 .wrap{max-width:1100px;margin:auto}
 header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:var(--shadow-2)}
 h1{font-size:clamp(24px,5vw,36px);font-weight:800;background:linear-gradient(90deg,var(--accent),#fd79a8);-webkit-background-clip:text;background-clip:text;color:transparent}
