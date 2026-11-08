@@ -27,7 +27,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Rozklad"
+rootProject.name = "Dvanadtsiatka"
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 

@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -52,10 +53,15 @@ internal fun AuthScreen(
     modifier: Modifier = Modifier,
 ) {
     CenteredForm(modifier) {
-        Text("📅", style = MaterialTheme.typography.displayLarge)
-        Text("Розклад", style = MaterialTheme.typography.headlineMedium)
         Text(
-            "Уроки, оцінки й домашка — для всієї сім’ї",
+            "12",
+            style = MaterialTheme.typography.displayLarge,
+            fontWeight = FontWeight.Black,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Text("Дванадцятка", style = MaterialTheme.typography.headlineMedium)
+        Text(
+            "Оцінки, кишенькові й розклад — для всієї сім’ї",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

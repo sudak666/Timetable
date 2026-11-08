@@ -17,7 +17,8 @@ android {
     namespace = "com.gifwarno.rozklad"
 
     defaultConfig {
-        applicationId = "com.gifwarno.rozklad"
+        // Публічний ID у Google Play — після першої публікації змінити неможливо.
+        applicationId = "com.gifwarno.dvanadtsiatka"
         versionCode = 1
         versionName = "0.1.0"
         androidResources.localeFilters += listOf("uk")
