@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Календар із галочкою; безпечна зона адаптивної іконки — центральні 66dp із 108. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,34h32a6,6 0,0 1,6 6v30a6,6 0,0 1,-6 6H38a6,6 0,0 1,-6 -6V40a6,6 0,0 1,6 -6z" />
+    <path
+        android:fillColor="#FFD54F"
+        android:pathData="M38,34h32a6,6 0,0 1,6 6v6H32v-6a6,6 0,0 1,6 -6z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M42,29h4v10h-4zM62,29h4v10h-4z" />
+    <path
+        android:fillColor="#6C5CE7"
+        android:pathData="M47.5,63.5l-6,-6l3,-3l3,3l12,-12l3,3z" />
+</vector>
