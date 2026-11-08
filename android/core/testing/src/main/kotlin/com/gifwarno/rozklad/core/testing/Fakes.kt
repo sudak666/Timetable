@@ -11,6 +11,7 @@ import com.gifwarno.rozklad.core.model.Grade
 import com.gifwarno.rozklad.core.model.GradeStatus
 import com.gifwarno.rozklad.core.model.Homework
 import com.gifwarno.rozklad.core.model.LedgerKind
+import com.gifwarno.rozklad.core.model.SchoolSchedule
 import com.gifwarno.rozklad.core.model.SessionState
 import com.gifwarno.rozklad.core.model.SyncStatus
 import java.time.Instant
@@ -114,6 +115,13 @@ class FakeFamilyRepository(initial: FamilyData?) : FamilyRepository {
     override suspend fun addLedger(familyId: String, childId: String, kind: LedgerKind, amount: Int, note: String) = Unit
 
     override suspend fun parentInviteCode(familyId: String) = Result.success<String?>("PARENT1")
+
+    val savedSchedules = mutableMapOf<String, SchoolSchedule>()
+
+    override suspend fun saveSchedule(familyId: String, childId: String, schedule: SchoolSchedule) {
+        savedSchedules[childId] = schedule
+        data.update { it?.copy(timetables = it.timetables + (childId to schedule)) }
+    }
 
     override fun dismissSyncError() = sync.update { it.copy(lastError = null) }
 }

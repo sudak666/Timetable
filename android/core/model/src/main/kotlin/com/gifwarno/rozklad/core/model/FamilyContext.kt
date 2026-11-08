@@ -12,4 +12,10 @@ data class FamilyContext(
 ) {
     val isParent: Boolean get() = role == Role.PARENT
     val me: Member? get() = data.members.firstOrNull { it.userId == user.id }
+
+    /** Розклад вибраної дитини; null — ще не заповнено. */
+    val schedule: SchoolSchedule? get() = child?.let { data.timetables[it.userId] }
+
+    /** Редагувати розклад можуть батьки та сама дитина (так само дозволяє RLS). */
+    val canEditSchedule: Boolean get() = child != null && (isParent || child.userId == user.id)
 }

@@ -3,6 +3,7 @@ package com.gifwarno.rozklad.core.data.repository
 import com.gifwarno.rozklad.core.model.FamilyData
 import com.gifwarno.rozklad.core.model.Grade
 import com.gifwarno.rozklad.core.model.LedgerKind
+import com.gifwarno.rozklad.core.model.SchoolSchedule
 import com.gifwarno.rozklad.core.model.SyncStatus
 import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
@@ -36,6 +37,9 @@ interface FamilyRepository {
     suspend fun addLedger(familyId: String, childId: String, kind: LedgerKind, amount: Int, note: String)
 
     suspend fun parentInviteCode(familyId: String): Result<String?>
+
+    /** Зберегти розклад дитини (офлайн-черга, повна заміна на сервері). */
+    suspend fun saveSchedule(familyId: String, childId: String, schedule: SchoolSchedule)
 
     fun dismissSyncError()
 }

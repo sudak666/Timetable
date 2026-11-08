@@ -23,6 +23,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable data object ProfileKey : NavKey
 
+/** Редактор розкладу — відкривається поверх вкладки. */
+@Serializable data object ScheduleEditorKey : NavKey
+
 enum class TopLevelDestination(val key: NavKey, val label: String, val selectedIcon: ImageVector, val icon: ImageVector) {
     TODAY(TodayKey, "Сьогодні", Icons.Filled.Today, Icons.Outlined.Today),
     GRADES(GradesKey, "Оцінки", Icons.Filled.Star, Icons.Outlined.StarOutline),

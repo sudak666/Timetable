@@ -8,7 +8,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SchoolCalendarTest {
-    private val cal = SchoolCalendar()
+    private val cal = SchoolCalendar(Timetable.EXAMPLE)
 
     // 2026-11-09 — понеділок, не канікули
     private fun at(time: String) = LocalDateTime.parse("2026-11-09T$time")
@@ -59,5 +59,12 @@ class SchoolCalendarTest {
     @Test
     fun `понеділок тижня`() {
         assertEquals(LocalDate.parse("2026-11-09"), SchoolCalendar.mondayOf(LocalDate.parse("2026-11-13")))
+    }
+
+    @Test
+    fun `порожній розклад — жодного навчального дня`() {
+        val empty = SchoolCalendar(Timetable.BLANK)
+        assertNull(empty.nextSchoolDate(LocalDate.parse("2026-11-09")))
+        assertEquals(SchoolStatus.Done, empty.statusAt(at("10:00")))
     }
 }

@@ -43,4 +43,18 @@ class MappersTest {
         val s = FamilyEntity("f1", "", "", "{не json").settings(json)
         assertEquals(300, s.rates[12])
     }
+
+    @Test
+    fun `розклад — модель, мережа, БД і назад без втрат`() {
+        val original = com.gifwarno.rozklad.core.domain.Timetable.EXAMPLE
+        val back = original.asNetwork("k1").asEntity("f1", json).asModel(json)
+        assertEquals(original, back)
+        assertEquals("8:30", original.asNetwork("k1").bells.first().first())
+    }
+
+    @Test
+    fun `пошкоджений розклад у БД — null, а не падіння`() {
+        val broken = com.gifwarno.rozklad.core.database.TimetableEntity("k1", "f1", "[[\"25:99\"]]", "[]", "[]")
+        assertEquals(null, broken.asModel(json))
+    }
 }

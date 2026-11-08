@@ -82,7 +82,21 @@ data class NetworkSnapshot(
     val ledger: List<NetworkLedger>,
     val challenges: List<NetworkChallenge>,
     val homework: List<NetworkHomework>,
+    val timetables: List<NetworkTimetable> = emptyList(),
 )
+
+/** Розклад дитини (school_timetables). Формат — див. supabase/migrations/20261108_school_timetables.sql. */
+@Serializable
+data class NetworkTimetable(
+    @SerialName("child_id") val childId: String,
+    val bells: List<List<String>>,
+    val week: List<List<NetworkLesson>>,
+    val holidays: List<List<String>> = emptyList(),
+    @SerialName("updated_at") val updatedAt: String? = null,
+)
+
+@Serializable
+data class NetworkLesson(@SerialName("s") val subject: String, @SerialName("o") val optional: Boolean = false)
 
 data class NetworkUser(val id: String, val email: String, val fullName: String)
 
@@ -94,10 +108,18 @@ sealed interface NetworkAuthState {
     data class SignedIn(val user: NetworkUser) : NetworkAuthState
 }
 
-enum class WriteKind { INSERT, UPDATE, DELETE }
+/** INSERT — створити, якщо немає (ідемпотентно); UPSERT — створити або повністю замінити. */
+enum class WriteKind { INSERT, UPSERT, UPDATE, DELETE }
 
 /** Одна зміна для сервера; вставки ідемпотентні за клієнтським id. */
-data class NetworkWrite(val table: String, val kind: WriteKind, val rowId: String, val body: JsonObject)
+data class NetworkWrite(
+    val table: String,
+    val kind: WriteKind,
+    val rowId: String,
+    val body: JsonObject,
+    /** Колонка-ключ рядка: для більшості таблиць `id`, для розкладу — `child_id`. */
+    val key: String = "id",
+)
 
 sealed interface WriteResult {
     data object Ok : WriteResult

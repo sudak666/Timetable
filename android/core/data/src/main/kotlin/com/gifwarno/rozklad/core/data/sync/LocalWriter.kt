@@ -9,6 +9,7 @@ import com.gifwarno.rozklad.core.database.RozkladDatabase
 import com.gifwarno.rozklad.core.network.model.NetworkGrade
 import com.gifwarno.rozklad.core.network.model.NetworkHomework
 import com.gifwarno.rozklad.core.network.model.NetworkLedger
+import com.gifwarno.rozklad.core.network.model.NetworkTimetable
 import com.gifwarno.rozklad.core.network.model.NetworkWrite
 import com.gifwarno.rozklad.core.network.model.WriteKind
 import java.time.Clock
@@ -26,6 +27,10 @@ internal object Tables {
     const val GRADES = "school_grades"
     const val HOMEWORK = "school_homework"
     const val LEDGER = "school_ledger"
+    const val TIMETABLES = "school_timetables"
+
+    /** Колонка-ключ рядка (для upsert/update/delete). */
+    fun keyOf(table: String): String = if (table == TIMETABLES) "child_id" else "id"
 }
 
 /**
@@ -88,6 +93,11 @@ internal class LocalWriter @Inject constructor(
             Tables.LEDGER to WriteKind.INSERT ->
                 familyDao.upsertLedger(listOf(json.decodeFromJsonElement(NetworkLedger.serializer(), w.body).asEntity(familyId)))
 
+            Tables.TIMETABLES to WriteKind.UPSERT ->
+                familyDao.upsertTimetables(
+                    listOf(json.decodeFromJsonElement(NetworkTimetable.serializer(), w.body).asEntity(familyId, json)),
+                )
+
             else -> error("Непідтримувана локальна зміна: ${w.table} ${w.kind}")
         }
     }
@@ -98,6 +108,7 @@ internal fun OutboxEntity.toWrite(json: Json) = NetworkWrite(
     kind = WriteKind.valueOf(kind),
     rowId = rowId,
     body = json.parseToJsonElement(payload).jsonObject,
+    key = Tables.keyOf(tableName),
 )
 
 internal fun JsonObject.with(extra: Map<String, JsonElement>): JsonObject {

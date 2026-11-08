@@ -61,8 +61,11 @@ private fun secondsBetween(a: LocalTime, b: LocalTime) = Duration.between(a, b).
 private fun progress(start: LocalTime, end: LocalTime, now: LocalTime): Float =
     (secondsBetween(start, now).toFloat() / secondsBetween(start, end)).coerceIn(0f, 1f)
 
-/** Чиста функція: час + розклад → стан екрана. Тестується без Android. */
-fun buildTodayState(now: LocalDateTime, cal: SchoolCalendar): TodayUiState {
+/**
+ * Чиста функція: час + розклад → стан екрана. Тестується без Android.
+ * null — у розкладі немає жодного уроку (ще не заповнено).
+ */
+fun buildTodayState(now: LocalDateTime, cal: SchoolCalendar): TodayUiState? {
     val t = now.toLocalTime()
     val today = now.toLocalDate()
     val status = cal.statusAt(now)
@@ -94,21 +97,21 @@ fun buildTodayState(now: LocalDateTime, cal: SchoolCalendar): TodayUiState {
         )
 
         SchoolStatus.Done -> {
-            val next = cal.nextSchoolDate(today)
+            val next = cal.nextSchoolDate(today) ?: return null
             val day = cal.dayOf(next)
             NowCard.Done(
                 nextDayName = day?.name.orEmpty(),
                 nextDate = next,
                 firstSubject = day?.lessons?.firstOrNull()?.subject.orEmpty(),
                 startsAt = HM.format(cal.bell(0).start),
-                holidayUntil = cal.holidayOf(today)?.endInclusive,
+                holidayUntil = cal.holidayOf(today)?.end,
             )
         }
     }
 
     // Після уроків показуємо розклад наступного навчального дня — «що збирати в рюкзак».
     val showToday = status !is SchoolStatus.Done
-    val shownDate = if (showToday) today else cal.nextSchoolDate(today)
+    val shownDate = if (showToday) today else cal.nextSchoolDate(today) ?: return null
     val day = cal.dayOf(shownDate)
     val lessons = cal.lessonsOn(shownDate).orEmpty()
     val rows = lessons.mapIndexed { i, l ->

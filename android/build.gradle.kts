@@ -11,16 +11,21 @@ plugins {
 }
 
 // Форматування для всього репо: ./gradlew spotlessApply
+// fileTree з exclude не заходить у build/ і .gradle/ взагалі — інакше паралельна збірка ламає обхід файлів.
+val sourceTree = { pattern: String ->
+    fileTree(rootDir) {
+        include(pattern)
+        exclude("**/build/**", "**/.gradle/**", "**/.kotlin/**")
+    }
+}
 spotless {
     val ktlintVersion = libs.versions.ktlint.get()
     kotlin {
-        target("**/*.kt")
-        targetExclude("**/build/**")
+        target(sourceTree("**/src/**/*.kt"))
         ktlint(ktlintVersion)
     }
     kotlinGradle {
-        target("**/*.gradle.kts")
-        targetExclude("**/build/**")
+        target(sourceTree("**/*.gradle.kts"))
         ktlint(ktlintVersion)
     }
 }

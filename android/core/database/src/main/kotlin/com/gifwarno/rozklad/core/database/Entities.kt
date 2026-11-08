@@ -80,6 +80,16 @@ data class ChallengeEntity(
     val endDate: String,
 )
 
+/** Розклад дитини. Частини зберігаються як JSON у форматі сервера (school_timetables). */
+@Entity(tableName = "timetables", indices = [Index("familyId")])
+data class TimetableEntity(
+    @PrimaryKey val childId: String,
+    val familyId: String,
+    val bellsJson: String,
+    val weekJson: String,
+    val holidaysJson: String,
+)
+
 /**
  * Офлайн-черга змін. Кожна зміна має клієнтський UUID рядка → повторна відправка ідемпотентна.
  * [payload] — JSON тіла запиту (формує core:data).

@@ -28,10 +28,12 @@ import com.gifwarno.rozklad.feature.auth.UnavailableScreen
 import com.gifwarno.rozklad.feature.grades.GradesRoute
 import com.gifwarno.rozklad.feature.homework.HomeworkRoute
 import com.gifwarno.rozklad.feature.profile.ProfileRoute
+import com.gifwarno.rozklad.feature.schedule.ScheduleEditorRoute
 import com.gifwarno.rozklad.feature.today.TodayRoute
 import com.gifwarno.rozklad.navigation.GradesKey
 import com.gifwarno.rozklad.navigation.HomeworkKey
 import com.gifwarno.rozklad.navigation.ProfileKey
+import com.gifwarno.rozklad.navigation.ScheduleEditorKey
 import com.gifwarno.rozklad.navigation.TodayKey
 import com.gifwarno.rozklad.navigation.TopLevelDestination
 
@@ -76,7 +78,8 @@ private fun MainShell(sync: SyncStatus, hasData: Boolean, actions: AppActions, m
 
     // Стек: [Сьогодні] або [Сьогодні, вкладка] — «назад» з будь-якої вкладки веде на «Сьогодні».
     val backStack = rememberNavBackStack(TodayKey)
-    val current = backStack.lastOrNull()
+    // Підсвічуємо вкладку, навіть коли поверх неї відкрито редактор.
+    val current = backStack.lastOrNull { key -> TopLevelDestination.entries.any { it.key == key } }
 
     NavigationSuiteScaffold(
         modifier = modifier,
@@ -86,7 +89,7 @@ private fun MainShell(sync: SyncStatus, hasData: Boolean, actions: AppActions, m
                 item(
                     selected = selected,
                     onClick = {
-                        if (selected) return@item
+                        if (selected && backStack.last() == dest.key) return@item
                         while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
                         if (dest.key != TodayKey) backStack.add(dest.key)
                     },
@@ -106,7 +109,8 @@ private fun MainShell(sync: SyncStatus, hasData: Boolean, actions: AppActions, m
                     rememberViewModelStoreNavEntryDecorator(),
                 ),
                 entryProvider = entryProvider<NavKey> {
-                    entry<TodayKey> { TodayRoute() }
+                    entry<TodayKey> { TodayRoute(onEditSchedule = { backStack.add(ScheduleEditorKey) }) }
+                    entry<ScheduleEditorKey> { ScheduleEditorRoute(onClose = { backStack.removeAt(backStack.lastIndex) }) }
                     entry<GradesKey> { if (hasData) GradesRoute() else LoadingState() }
                     entry<HomeworkKey> { if (hasData) HomeworkRoute() else LoadingState() }
                     entry<ProfileKey> { if (hasData) ProfileRoute() else LoadingState() }

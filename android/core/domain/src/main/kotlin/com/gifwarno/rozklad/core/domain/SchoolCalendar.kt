@@ -1,8 +1,10 @@
 package com.gifwarno.rozklad.core.domain
 
 import com.gifwarno.rozklad.core.model.Bell
+import com.gifwarno.rozklad.core.model.Holiday
 import com.gifwarno.rozklad.core.model.Lesson
 import com.gifwarno.rozklad.core.model.SchoolDay
+import com.gifwarno.rozklad.core.model.SchoolSchedule
 import java.time.DayOfWeek
 import java.time.Duration
 import java.time.LocalDate
@@ -20,18 +22,24 @@ sealed interface SchoolStatus {
     data object Done : SchoolStatus
 }
 
-/** Розрахунки за розкладом; розклад передається явно — легко тестувати й замінити на розклад із сервера. */
-class SchoolCalendar(
-    private val week: List<SchoolDay> = Timetable.WEEK,
-    private val bells: List<Bell> = Timetable.BELLS,
-    private val holidays: List<ClosedRange<LocalDate>> = Timetable.HOLIDAYS,
-) {
-    fun holidayOf(date: LocalDate): ClosedRange<LocalDate>? = holidays.firstOrNull { date in it }
+/** Розрахунки за розкладом конкретної дитини. Чиста логіка — тестується без Android. */
+class SchoolCalendar(private val schedule: SchoolSchedule) {
+    private val bells get() = schedule.bells
 
-    fun dayOf(date: LocalDate): SchoolDay? = week.getOrNull(date.dayOfWeek.value - 1)
+    fun holidayOf(date: LocalDate): Holiday? = schedule.holidays.firstOrNull { date in it }
 
-    /** Уроки на дату; null — вихідний або канікули. */
-    fun lessonsOn(date: LocalDate): List<Lesson>? = if (holidayOf(date) != null) null else dayOf(date)?.lessons
+    fun dayOf(date: LocalDate): SchoolDay? {
+        val i = date.dayOfWeek.value - 1
+        val lessons = schedule.week.getOrNull(i) ?: return null
+        return SchoolDay(Timetable.DAY_NAMES[i], lessons)
+    }
+
+    /** Уроки на дату; null — вихідний, канікули або порожній день. */
+    fun lessonsOn(date: LocalDate): List<Lesson>? {
+        if (holidayOf(date) != null) return null
+        // Захист від розкладу, де уроків більше, ніж дзвінків (сервер це забороняє, але дані могли прийти старі).
+        return dayOf(date)?.lessons?.take(bells.size)?.takeIf { it.isNotEmpty() }
+    }
 
     fun bell(index: Int): Bell = bells[index]
 
@@ -48,9 +56,8 @@ class SchoolCalendar(
         return SchoolStatus.Done
     }
 
-    /** Наступна навчальна дата після [from] з урахуванням канікул. */
-    fun nextSchoolDate(from: LocalDate): LocalDate =
-        (1L..MAX_LOOKAHEAD_DAYS).map(from::plusDays).firstOrNull { lessonsOn(it) != null } ?: from.plusDays(1)
+    /** Наступна навчальна дата після [from] з урахуванням канікул; null — у розкладі немає жодного уроку. */
+    fun nextSchoolDate(from: LocalDate): LocalDate? = (1L..MAX_LOOKAHEAD_DAYS).map(from::plusDays).firstOrNull { lessonsOn(it) != null }
 
     /** Найближча дата після [from], коли є урок предмета (для «здати домашку до…»). */
     fun nextLessonDate(subject: String, from: LocalDate): LocalDate = (1L..MAX_LOOKAHEAD_DAYS).map(from::plusDays)
@@ -62,9 +69,13 @@ class SchoolCalendar(
         val start = bells.first().start
         val end = bells[lessons.lastIndex].end
         val total = Duration.between(start, end).seconds.toFloat()
+        if (total <= 0f) return null
         val passed = Duration.between(start, now.toLocalTime()).seconds.toFloat()
         return (passed / total).coerceIn(0f, 1f)
     }
+
+    /** Предмети, які зустрічаються в розкладі (для вибору в оцінках і домашці). */
+    fun subjects(): List<String> = schedule.week.flatten().map { it.subject }.distinct()
 
     companion object {
         private const val MAX_LOOKAHEAD_DAYS = 366L

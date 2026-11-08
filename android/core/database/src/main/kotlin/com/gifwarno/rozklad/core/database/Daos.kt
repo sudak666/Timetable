@@ -28,6 +28,15 @@ interface FamilyDao {
     @Query("SELECT * FROM challenges WHERE familyId = :familyId")
     fun observeChallenges(familyId: String): Flow<List<ChallengeEntity>>
 
+    @Query("SELECT * FROM timetables WHERE familyId = :familyId")
+    fun observeTimetables(familyId: String): Flow<List<TimetableEntity>>
+
+    @Upsert
+    suspend fun upsertTimetables(rows: List<TimetableEntity>)
+
+    @Query("DELETE FROM timetables WHERE familyId = :familyId")
+    suspend fun clearTimetables(familyId: String)
+
     @Upsert suspend fun upsertFamily(family: FamilyEntity)
 
     @Upsert suspend fun upsertMembers(rows: List<MemberEntity>)
@@ -76,6 +85,7 @@ interface FamilyDao {
         homework: List<HomeworkEntity>,
         ledger: List<LedgerEntity>,
         challenges: List<ChallengeEntity>,
+        timetables: List<TimetableEntity>,
     ) {
         upsertFamily(family)
         clearMembers(family.id)
@@ -88,6 +98,8 @@ interface FamilyDao {
         upsertLedger(ledger)
         clearChallenges(family.id)
         upsertChallenges(challenges)
+        clearTimetables(family.id)
+        upsertTimetables(timetables)
     }
 }
 

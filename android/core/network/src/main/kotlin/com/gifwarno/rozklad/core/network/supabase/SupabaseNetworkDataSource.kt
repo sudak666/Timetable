@@ -10,6 +10,7 @@ import com.gifwarno.rozklad.core.network.model.NetworkLedger
 import com.gifwarno.rozklad.core.network.model.NetworkMember
 import com.gifwarno.rozklad.core.network.model.NetworkMembership
 import com.gifwarno.rozklad.core.network.model.NetworkSnapshot
+import com.gifwarno.rozklad.core.network.model.NetworkTimetable
 import com.gifwarno.rozklad.core.network.model.NetworkUser
 import com.gifwarno.rozklad.core.network.model.NetworkWrite
 import com.gifwarno.rozklad.core.network.model.WriteKind
@@ -158,20 +159,35 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
                 limit(MAX_HOMEWORK)
             }.decodeList<NetworkHomework>()
         }
-        NetworkSnapshot(family.await(), members.await(), grades.await(), ledger.await(), challenges.await(), homework.await())
+        val timetables = async {
+            client.from("school_timetables").select(Columns.list("child_id", "bells", "week", "holidays", "updated_at")) {
+                filter { eq("family_id", familyId) }
+            }.decodeList<NetworkTimetable>()
+        }
+        NetworkSnapshot(
+            family = family.await(),
+            members = members.await(),
+            grades = grades.await(),
+            ledger = ledger.await(),
+            challenges = challenges.await(),
+            homework = homework.await(),
+            timetables = timetables.await(),
+        )
     }
 
     override suspend fun write(op: NetworkWrite): WriteResult = try {
         val table = client.from(op.table)
         when (op.kind) {
             WriteKind.INSERT -> table.upsert(op.body) {
-                onConflict = "id"
+                onConflict = op.key
                 ignoreDuplicates = true
             }
 
-            WriteKind.UPDATE -> table.update(op.body) { filter { eq("id", op.rowId) } }
+            WriteKind.UPSERT -> table.upsert(op.body) { onConflict = op.key }
 
-            WriteKind.DELETE -> table.delete { filter { eq("id", op.rowId) } }
+            WriteKind.UPDATE -> table.update(op.body) { filter { eq(op.key, op.rowId) } }
+
+            WriteKind.DELETE -> table.delete { filter { eq(op.key, op.rowId) } }
         }
         WriteResult.Ok
     } catch (e: RestException) {

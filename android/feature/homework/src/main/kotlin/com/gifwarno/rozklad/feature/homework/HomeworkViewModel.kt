@@ -41,7 +41,8 @@ class HomeworkViewModel @Inject constructor(
     private val families: FamilyRepository,
     private val clock: Clock,
 ) : ViewModel() {
-    private val calendar = SchoolCalendar()
+    /** Розклад вибраної дитини — для автотерміну «до наступного уроку». */
+    private var calendar: SchoolCalendar? = null
 
     val uiState: StateFlow<HomeworkUiState> = active.context
         .map { ctx -> ctx?.let(::build) ?: HomeworkUiState.Loading }
@@ -49,6 +50,7 @@ class HomeworkViewModel @Inject constructor(
 
     private fun build(ctx: FamilyContext): HomeworkUiState {
         val child = ctx.child ?: return HomeworkUiState.NoChild
+        calendar = ctx.schedule?.let(::SchoolCalendar)
         val today = LocalDate.now(clock)
         val mine = ctx.data.homework.filter { it.childId == child.userId }
         val (done, open) = mine.partition { it.done }
@@ -63,7 +65,10 @@ class HomeworkViewModel @Inject constructor(
     }
 
     /** Термін за замовчуванням — найближчий урок цього предмета. */
-    fun suggestedDue(subject: String): LocalDate = calendar.nextLessonDate(subject, LocalDate.now(clock))
+    fun suggestedDue(subject: String): LocalDate {
+        val today = LocalDate.now(clock)
+        return calendar?.nextLessonDate(subject, today) ?: today.plusDays(1)
+    }
 
     private fun onContext(block: suspend (FamilyContext) -> Unit) {
         viewModelScope.launch { block(active.context.filterNotNull().first()) }

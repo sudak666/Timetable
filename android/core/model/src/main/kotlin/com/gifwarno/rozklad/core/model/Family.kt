@@ -79,6 +79,8 @@ data class FamilyData(
     val challenges: List<Challenge>,
     val homework: List<Homework>,
     val settings: RewardSettings,
+    /** Розклад кожної дитини: childId → розклад. Немає ключа — розклад ще не заповнено. */
+    val timetables: Map<String, SchoolSchedule> = emptyMap(),
 ) {
     val children: List<Member> get() = members.filter { it.role == Role.CHILD }
 }

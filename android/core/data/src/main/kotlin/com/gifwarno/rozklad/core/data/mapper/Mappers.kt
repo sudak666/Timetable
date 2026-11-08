@@ -6,27 +6,38 @@ import com.gifwarno.rozklad.core.database.GradeEntity
 import com.gifwarno.rozklad.core.database.HomeworkEntity
 import com.gifwarno.rozklad.core.database.LedgerEntity
 import com.gifwarno.rozklad.core.database.MemberEntity
+import com.gifwarno.rozklad.core.database.TimetableEntity
 import com.gifwarno.rozklad.core.domain.Rewards
+import com.gifwarno.rozklad.core.model.Bell
 import com.gifwarno.rozklad.core.model.Challenge
 import com.gifwarno.rozklad.core.model.Family
 import com.gifwarno.rozklad.core.model.Grade
 import com.gifwarno.rozklad.core.model.GradeStatus
+import com.gifwarno.rozklad.core.model.Holiday
 import com.gifwarno.rozklad.core.model.Homework
 import com.gifwarno.rozklad.core.model.LedgerEntry
 import com.gifwarno.rozklad.core.model.LedgerKind
+import com.gifwarno.rozklad.core.model.Lesson
 import com.gifwarno.rozklad.core.model.Member
 import com.gifwarno.rozklad.core.model.RewardSettings
 import com.gifwarno.rozklad.core.model.Role
+import com.gifwarno.rozklad.core.model.SchoolSchedule
 import com.gifwarno.rozklad.core.network.model.NetworkChallenge
 import com.gifwarno.rozklad.core.network.model.NetworkFamily
 import com.gifwarno.rozklad.core.network.model.NetworkGrade
 import com.gifwarno.rozklad.core.network.model.NetworkHomework
 import com.gifwarno.rozklad.core.network.model.NetworkLedger
+import com.gifwarno.rozklad.core.network.model.NetworkLesson
 import com.gifwarno.rozklad.core.network.model.NetworkMember
+import com.gifwarno.rozklad.core.network.model.NetworkTimetable
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -101,3 +112,34 @@ internal fun LedgerEntity.asModel() = LedgerEntry(
 
 internal fun ChallengeEntity.asModel() =
     Challenge(id, childId, title, subject, minGrade, need, reward, LocalDate.parse(startDate), LocalDate.parse(endDate))
+
+/* ---------- розклад ---------- */
+
+private val HHMM = DateTimeFormatter.ofPattern("H:mm")
+private val PAIRS = ListSerializer(ListSerializer(String.serializer()))
+private val WEEK = ListSerializer(ListSerializer(NetworkLesson.serializer()))
+
+internal fun NetworkTimetable.asEntity(familyId: String, json: Json) = TimetableEntity(
+    childId = childId,
+    familyId = familyId,
+    bellsJson = json.encodeToString(PAIRS, bells),
+    weekJson = json.encodeToString(WEEK, week),
+    holidaysJson = json.encodeToString(PAIRS, holidays),
+)
+
+/** Пошкоджені дані не валять застосунок — такий розклад просто вважається незаповненим. */
+internal fun TimetableEntity.asModel(json: Json): SchoolSchedule? = runCatching {
+    SchoolSchedule(
+        bells = json.decodeFromString(PAIRS, bellsJson).map { (a, b) -> Bell(LocalTime.parse(a, HHMM), LocalTime.parse(b, HHMM)) },
+        week = json.decodeFromString(WEEK, weekJson).map { day -> day.map { Lesson(it.subject, it.optional) } },
+        holidays = json.decodeFromString(PAIRS, holidaysJson).map { (a, b) -> Holiday(LocalDate.parse(a), LocalDate.parse(b)) },
+    )
+}.getOrNull()
+
+/** Модель → тіло запиту до school_timetables (updated_at ставить сервер). */
+internal fun SchoolSchedule.asNetwork(childId: String) = NetworkTimetable(
+    childId = childId,
+    bells = bells.map { listOf(HHMM.format(it.start), HHMM.format(it.end)) },
+    week = week.map { day -> day.map { NetworkLesson(it.subject.trim(), it.optional) } },
+    holidays = holidays.map { listOf(it.start.toString(), it.end.toString()) },
+)

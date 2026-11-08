@@ -4,6 +4,7 @@ import com.gifwarno.rozklad.core.common.Dispatcher
 import com.gifwarno.rozklad.core.common.RozkladDispatchers
 import com.gifwarno.rozklad.core.data.mapper.asEntity
 import com.gifwarno.rozklad.core.data.mapper.asModel
+import com.gifwarno.rozklad.core.data.mapper.asNetwork
 import com.gifwarno.rozklad.core.data.mapper.settings
 import com.gifwarno.rozklad.core.data.sync.LocalWriter
 import com.gifwarno.rozklad.core.data.sync.SyncManager
@@ -14,11 +15,13 @@ import com.gifwarno.rozklad.core.domain.Rewards
 import com.gifwarno.rozklad.core.model.FamilyData
 import com.gifwarno.rozklad.core.model.Grade
 import com.gifwarno.rozklad.core.model.LedgerKind
+import com.gifwarno.rozklad.core.model.SchoolSchedule
 import com.gifwarno.rozklad.core.model.SyncStatus
 import com.gifwarno.rozklad.core.network.RozkladNetworkDataSource
 import com.gifwarno.rozklad.core.network.model.NetworkGrade
 import com.gifwarno.rozklad.core.network.model.NetworkHomework
 import com.gifwarno.rozklad.core.network.model.NetworkLedger
+import com.gifwarno.rozklad.core.network.model.NetworkTimetable
 import com.gifwarno.rozklad.core.network.model.NetworkWrite
 import com.gifwarno.rozklad.core.network.model.WriteKind
 import java.time.Clock
@@ -56,8 +59,8 @@ internal class OfflineFirstFamilyRepository @Inject constructor(
         dao.observeMembers(familyId),
         dao.observeGrades(familyId),
         dao.observeHomework(familyId),
-        combine(dao.observeLedger(familyId), dao.observeChallenges(familyId), ::Pair),
-    ) { family, members, grades, homework, (ledger, challenges) ->
+        combine(dao.observeLedger(familyId), dao.observeChallenges(familyId), dao.observeTimetables(familyId), ::Triple),
+    ) { family, members, grades, homework, (ledger, challenges, timetables) ->
         family ?: return@combine null
         FamilyData(
             family = family.asModel(),
@@ -67,6 +70,7 @@ internal class OfflineFirstFamilyRepository @Inject constructor(
             challenges = challenges.map { it.asModel() },
             homework = homework.map { it.asModel() },
             settings = family.settings(json),
+            timetables = timetables.mapNotNull { t -> t.asModel(json)?.let { t.childId to it } }.toMap(),
         )
     }.flowOn(io)
 
@@ -83,6 +87,7 @@ internal class OfflineFirstFamilyRepository @Inject constructor(
                 homework = s.homework.map { it.asEntity(familyId) },
                 ledger = s.ledger.map { it.asEntity(familyId) },
                 challenges = s.challenges.map { it.asEntity(familyId) },
+                timetables = s.timetables.map { it.asEntity(familyId, json) },
             )
             writer.replayPending(familyId)
             Result.success(Unit)
@@ -162,6 +167,13 @@ internal class OfflineFirstFamilyRepository @Inject constructor(
 
     override suspend fun parentInviteCode(familyId: String): Result<String?> = withContext(io) {
         runCatching { network.parentCode(familyId) }
+    }
+
+    override suspend fun saveSchedule(familyId: String, childId: String, schedule: SchoolSchedule) {
+        val dto = json.encodeToJsonElement(NetworkTimetable.serializer(), schedule.asNetwork(childId)).jsonObject
+        // updated_at ставить тригер на сервері.
+        val body = withFamily(JsonObject(dto.filterKeys { it != "updated_at" }), familyId)
+        submit(familyId, NetworkWrite(Tables.TIMETABLES, WriteKind.UPSERT, childId, body, key = Tables.keyOf(Tables.TIMETABLES)))
     }
 
     override fun dismissSyncError() = sync.clearError()
