@@ -212,6 +212,6 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
         const val MAX_CHALLENGES = 200L
 
         /** Підтвердження пошти відкривається у веб-версії — після нього можна увійти в застосунку. */
-        const val EMAIL_CONFIRM_REDIRECT = "https://gifwarno.github.io/Timetable/"
+        const val EMAIL_CONFIRM_REDIRECT = "https://sudak666.github.io/Timetable/"
     }
 }

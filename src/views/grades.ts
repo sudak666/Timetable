@@ -128,7 +128,8 @@ function authView(): TemplateResult {
       <label class="sr-only" for="gPass">Пароль</label><input type="password" id="gPass" placeholder="пароль (від 6 символів)" minlength="6" required autocomplete="current-password">
       <button>Увійти</button><button type="button" @click=${signup}>Зареєструватись</button>
     </form>
-    ${msg ? html`<p class=${classMap({ msg: true, pos: !!msg.ok, neg: !msg.ok })} role="status">${emo(msg.text)}</p>` : nothing}`;
+    ${msg ? html`<p class=${classMap({ msg: true, pos: !!msg.ok, neg: !msg.ok })} role="status">${emo(msg.text)}</p>` : nothing}
+    <p class="legal"><a href="privacy.html" target="_blank" rel="noopener">Політика конфіденційності</a></p>`;
 }
 
 function joinView(): TemplateResult {
@@ -464,6 +465,7 @@ export function tabProfile(): TemplateResult {
       <button type="button" @click=${() => void signOut()}>Вийти</button>
       <button type="button" class="danger" @click=${askDeleteAccount}>Видалити акаунт</button>
     </div>
+    <p class="legal"><a href="privacy.html" target="_blank" rel="noopener">Політика конфіденційності</a></p>
     ${state.pushMsg ? html`<p class=${classMap({ msg: true, pos: !!state.pushMsg.ok, neg: !state.pushMsg.ok })} role="status">${emo(state.pushMsg.text)}</p>` : nothing}</section>`;
 }
 

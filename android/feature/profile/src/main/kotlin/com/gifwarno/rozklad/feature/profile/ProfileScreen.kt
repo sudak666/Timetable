@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gifwarno.rozklad.core.datastore.ThemeMode
 import com.gifwarno.rozklad.core.designsystem.component.LoadingState
 import com.gifwarno.rozklad.core.model.Role
+import com.gifwarno.rozklad.core.ui.PrivacyPolicyLink
 
 @Composable
 fun ProfileRoute(modifier: Modifier = Modifier, viewModel: ProfileViewModel = hiltViewModel()) {
@@ -130,6 +131,7 @@ internal fun ProfileScreen(
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
         ) { Text("Видалити акаунт") }
+        PrivacyPolicyLink(Modifier.fillMaxWidth())
     }
 
     if (confirmDelete) {

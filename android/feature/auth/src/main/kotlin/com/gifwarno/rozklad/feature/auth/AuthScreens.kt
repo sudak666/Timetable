@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
+import com.gifwarno.rozklad.core.ui.PrivacyPolicyLink
 
 @Composable
 fun AuthRoute(modifier: Modifier = Modifier, viewModel: AuthViewModel = hiltViewModel()) {
@@ -106,6 +107,7 @@ internal fun AuthScreen(
         TextButton(onClick = onToggleMode) {
             Text(if (state.isSignUp) "Вже маю акаунт — увійти" else "Немає акаунта? Зареєструватися")
         }
+        PrivacyPolicyLink()
     }
 }
 

@@ -95,6 +95,11 @@ keyPassword=…
 
 Без цього файлу release збирається непідписаним. Для Google Play використовуй Play App Signing.
 
+## Адреси для Google Play Console
+
+- Політика конфіденційності: https://sudak666.github.io/Timetable/privacy.html (`public/privacy.html`)
+- Видалення акаунта: https://sudak666.github.io/Timetable/ → увійти → «Я» → «Видалити акаунт»
+
 ## Видалення акаунта (вимога Google Play)
 
 «Профіль» → «Видалити акаунт», у застосунку й у веб-версії (адресу сайту вказати в Play Console як URL для видалення).
