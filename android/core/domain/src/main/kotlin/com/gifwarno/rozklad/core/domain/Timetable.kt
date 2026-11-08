@@ -65,7 +65,7 @@ object Timetable {
         SubjectInfo("Всесв. історія", 0xFFB84A00, "🏛️"),
         SubjectInfo("Громад. освіта", 0xFFAD1F76, "🤝"),
         SubjectInfo("Я досліджую світ", 0xFF2E7D32, "🔍"),
-        SubjectInfo("Природознавство", 0xFF388E3C, "🍃"),
+        SubjectInfo("Природознавство", 0xFF33691E, "🍃"),
         SubjectInfo("Довкілля", 0xFF1E7D43, "🌱"),
         SubjectInfo("Біологія", 0xFF2E7D32, "🧬"),
         SubjectInfo("Географія", 0xFF12806A, "🌍"),
@@ -78,7 +78,7 @@ object Timetable {
         SubjectInfo("Мистецтво", 0xFFB35C00, "🎨"),
         SubjectInfo("Музика", 0xFFC2185B, "🎵"),
         SubjectInfo("Фіз-ра", 0xFFC62828, "⚽"),
-        SubjectInfo("Здоров’я", 0xFFD84315, "❤️"),
+        SubjectInfo("Здоров’я", 0xFFBF360C, "❤️"),
         SubjectInfo("ЗБД", 0xFF4B5563, "🦺"),
         SubjectInfo("Захист України", 0xFF37474F, "🛡️"),
     )

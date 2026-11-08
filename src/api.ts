@@ -1,6 +1,7 @@
 import { AuthClient } from '@supabase/auth-js';
 import { PostgrestClient } from '@supabase/postgrest-js';
 import type { RealtimeChannel, RealtimeClient } from '@supabase/realtime-js';
+import type { TimetableRow } from './data/schedule';
 import { enqueue, isOp, overlay, type Op } from './features/outbox';
 import { parseSettings, type Challenge, type Grade, type Homework, type Ledger, type Member, type Role } from './features/rewards';
 import { set, state, store } from './state';
@@ -70,13 +71,14 @@ let reloadTimer: ReturnType<typeof setTimeout> | undefined;
 export async function loadFamily(): Promise<void> {
   const fid = state.family?.id;
   if (!fid) return;
-  const [f, m, g, l, c, h] = await Promise.all([
+  const [f, m, g, l, c, h, t] = await Promise.all([
     sb.from('school_families').select('id,name,invite_code,rates').eq('id', fid).single(),
     sb.from('school_members').select('user_id,role,name,goal_title,goal_amount,avatar,theme').eq('family_id', fid),
     sb.from('school_grades').select('id,child_id,subject,grade,date,status,amount,created_at').eq('family_id', fid).order('date', { ascending: false }).limit(2000),
     sb.from('school_ledger').select('id,child_id,kind,amount,note,date,created_at').eq('family_id', fid).order('date', { ascending: false }).limit(2000),
     sb.from('school_challenges').select('id,child_id,title,subject,min_grade,need,reward,start_date,end_date').eq('family_id', fid).limit(200),
     sb.from('school_homework').select('id,child_id,subject,due,text,done').eq('family_id', fid).order('due').limit(1000),
+    sb.from('school_timetables').select('child_id,bells,week,holidays').eq('family_id', fid),
   ]);
   const firstErr = [f, m, g, l, c, h].find((r) => r.error)?.error;
   if (firstErr) throw firstErr;
@@ -85,6 +87,8 @@ export async function loadFamily(): Promise<void> {
     role: state.role!, rates: f.data?.rates,
     members: (m.data ?? []) as Member[], grades: (g.data ?? []) as Grade[], ledger: (l.data ?? []) as Ledger[],
     challenges: (c.data ?? []) as Challenge[], homework: (h.data ?? []) as Homework[],
+    // Розклад не критичний: якщо запит не вдався, лишаємо попередній (або приклад).
+    timetables: t.error ? state.timetables : ((t.data ?? []) as TimetableRow[]),
   };
   if (state.me) store.set(SNAP + state.me.id, JSON.stringify(snap));
   applySnapshot(snap, false);
@@ -99,6 +103,7 @@ const SNAP = 'snap:', OUTBOX = 'outbox:';
 interface Snapshot {
   family: { id: string; name: string; invite_code: string }; role: Role; rates: unknown;
   members: Member[]; grades: Grade[]; ledger: Ledger[]; challenges: Challenge[]; homework: Homework[];
+  timetables?: TimetableRow[];
 }
 let server: Pick<Snapshot, 'grades' | 'homework'> = { grades: [], homework: [] };
 
@@ -122,6 +127,7 @@ function applySnapshot(x: Snapshot, stale: boolean): void {
     s.ledger = x.ledger;
     s.challenges = x.challenges;
     s.homework = o.homework;
+    s.timetables = Array.isArray(x.timetables) ? x.timetables : [];
     s.queued = q.length;
     s.stale = stale;
     const kids = s.members.filter((k) => k.role === 'child');
@@ -204,7 +210,7 @@ export async function enter(): Promise<void> {
   channel = rt.channel('fam-' + fid, { config: { presence: { key: user.id } } });
   const ch = channel;
   ch.on('presence', { event: 'sync' }, () => set({ present: Object.keys(ch.presenceState()) }));
-  for (const t of ['school_grades', 'school_ledger', 'school_members', 'school_challenges', 'school_homework'])
+  for (const t of ['school_grades', 'school_ledger', 'school_members', 'school_challenges', 'school_homework', 'school_timetables'])
     channel.on('postgres_changes', { event: '*', schema: 'public', table: t, filter: `family_id=eq.${fid}` }, scheduleReload);
   channel.on('postgres_changes', { event: '*', schema: 'public', table: 'school_families', filter: `id=eq.${fid}` }, scheduleReload);
   channel.subscribe((status) => { if (status === 'SUBSCRIBED') void ch.track({ at: Date.now() }); });
@@ -215,7 +221,7 @@ export async function signOut(): Promise<void> {
   channel = null;
   await sb.auth.signOut();
   if (state.me) { store.set(SNAP + state.me.id, null); store.set(OUTBOX + state.me.id, null); }
-  set({ view: 'auth', me: null, family: null, role: null, present: [], queued: 0, stale: false, members: [], grades: [], ledger: [], challenges: [], homework: [], kid: null });
+  set({ view: 'auth', me: null, family: null, role: null, present: [], queued: 0, stale: false, members: [], grades: [], ledger: [], challenges: [], homework: [], timetables: [], kid: null });
 }
 
 export function watchAuth(): void {

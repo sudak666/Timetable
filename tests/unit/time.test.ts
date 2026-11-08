@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { clockOf, hms, iso, mondayOf, nextLessonDate, nextSchoolDate, statusAt } from '../../src/lib/time';
+import { applyTimetable } from '../../src/data/schedule';
+import { clockOf, hms, iso, lessonsOn, mondayOf, nextLessonDate, nextSchoolDate, statusAt } from '../../src/lib/time';
 
 const at = (s: string) => clockOf(new Date(s));
 
@@ -27,4 +28,21 @@ it('hms', () => {
   expect(hms(0.5)).toBe('0:30');
   expect(hms(75)).toBe('1:15:00');
   expect(hms(-3)).toBe('0:00');
+});
+
+describe('розклад дитини з school_timetables', () => {
+  const row = {
+    child_id: 'k1',
+    bells: [['9:00', '9:40'], ['9:50', '10:30']] as [string, string][],
+    week: [[{ s: 'Фізика' }, { s: 'Хімія', o: true }], [], [], [], []],
+    holidays: [] as [string, string][],
+  };
+  it('підміняє дзвінки, уроки й канікули, а null повертає приклад', () => {
+    applyTimetable(row);
+    expect(statusAt(at('2026-10-26T09:10'))).toMatchObject({ kind: 'lesson', idx: 0 }); // понеділок; канікули прибрано
+    expect(lessonsOn(new Date(2026, 9, 27))).toBeUndefined(); // вівторок порожній
+    expect(nextLessonDate('Хімія', new Date(2026, 9, 26))).toBe('2026-11-02');
+    applyTimetable(null);
+    expect(statusAt(at('2026-10-26T09:10')).kind).toBe('done'); // знову канікули з прикладу
+  });
 });

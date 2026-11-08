@@ -1,3 +1,4 @@
+import type { TimetableRow } from './data/schedule';
 import type { Challenge, Grade, Homework, Ledger, Member, Rates, Role, Streak } from './features/rewards';
 import { DEFAULT_RATES, DEFAULT_STREAK } from './features/rewards';
 
@@ -30,6 +31,8 @@ export interface State {
   ledger: Ledger[];
   challenges: Challenge[];
   homework: Homework[];
+  /** Розклади дітей сім'ї (school_timetables); показується розклад state.kid. */
+  timetables: TimetableRow[];
   rates: Rates;
   streak: Streak;
 
@@ -71,6 +74,7 @@ export const state: State = {
   ledger: [],
   challenges: [],
   homework: [],
+  timetables: [],
   rates: { ...DEFAULT_RATES },
   streak: { ...DEFAULT_STREAK },
   form: { subject: 'Математика', date: '', hwSubject: 'Математика', hwDate: '', chSubject: '' },

@@ -6,7 +6,7 @@ import { PASS } from './features/rewards';
 import { formatRoute, parseRoute } from './lib/route';
 import { parseQuickGrade } from './lib/command';
 import { addDays } from './lib/time';
-import { SUBJECT_LIST, WEEK } from './data/schedule';
+import { WEEK, applyTimetable, scheduleSubjects, subjectList } from './data/schedule';
 import { openPalette, type Cmd } from './ui/palette';
 import { set, state, store, subscribe, TABS, type GameStyle, type Tab } from './state';
 import { bikeLane } from './ui/bike';
@@ -69,7 +69,7 @@ const baseCmds = (): Cmd[] => {
 const DAY_WORD = ['сьогодні', 'вчора', 'позавчора'];
 const quickCmds = (q: string): Cmd[] => {
   if (!G || state.view !== 'main' || !state.kid) return [];
-  const r = parseQuickGrade(q, SUBJECT_LIST, PASS);
+  const r = (parseQuickGrade(q, scheduleSubjects(), PASS) ?? parseQuickGrade(q, subjectList(), PASS));
   if (!r) return [];
   const date = iso(addDays(new Date(), r.offset));
   const who = state.members.find((m) => m.user_id === state.kid)?.name;
@@ -164,7 +164,12 @@ addEventListener('hashchange', () => {
 
 const mount = document.getElementById('app')!;
 mount.textContent = '';
-const draw = () => { render(app(), mount); syncUrl(); };
+const draw = () => {
+  // Розклад вибраної дитини (або приклад, якщо не увійшли / ще не заповнено).
+  applyTimetable(state.timetables.find((t) => t.child_id === state.kid) ?? null);
+  render(app(), mount);
+  syncUrl();
+};
 subscribe(draw);
 draw();
 if ('requestIdleCallback' in window) requestIdleCallback(showBelow, { timeout: 600 });

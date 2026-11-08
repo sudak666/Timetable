@@ -31,8 +31,10 @@ export function nowCard(): TemplateResult {
     subject = s.lessons[0]!.subject;
     body = html`<small>Сьогодні ${s.lessons.length} уроків</small><h2>Перший: ${subject}</h2><div class="big" role="timer">${hms(s.start - c.min)}</div><div>до початку о ${bellStart(0)}</div>`;
   } else {
-    const nd = nextSchoolDate(c.date), d = WEEK[clockOf(nd).weekday]!, h = holidayOf(c.date);
-    body = html`<small>${h ? html`Канікули до ${fmtDay(h[1])} ${emo('🏖️')}` : html`Уроки закінчились ${emo('🎉')}`}</small><h2>Далі: ${d.name}${h ? ', ' + fmtDay(iso(nd)) : ''}</h2><div>Перший урок — ${d.lessons[0]!.subject} о ${bellStart(0)}</div>`;
+    const nd = nextSchoolDate(c.date), d = WEEK[clockOf(nd).weekday], h = holidayOf(c.date), first = d?.lessons[0];
+    body = !d || !first
+      ? html`<small>${emo('🗓️')} Розклад ще не заповнено</small><h2>Додай уроки в застосунку «Дванадцятка»</h2>`
+      : html`<small>${h ? html`Канікули до ${fmtDay(h[1])} ${emo('🏖️')}` : html`Уроки закінчились ${emo('🎉')}`}</small><h2>Далі: ${d.name}${h ? ', ' + fmtDay(iso(nd)) : ''}</h2><div>Перший урок — ${first.subject} о ${bellStart(0)}</div>`;
   }
   const src = emojiSrc(subject ? subjEmoji(subject) : '🎉');
   return html`<div class="nowwrap">
@@ -45,7 +47,7 @@ export function sidePanel(): TemplateResult {
   const c = clockOf(state.now), s = statusAt(c);
   const lessons = lessonsOn(c.date);
   const target = s.kind === 'done' || !lessons ? clockOf(nextSchoolDate(c.date)).weekday : c.weekday;
-  const day = WEEK[target]!;
+  const day = WEEK[target] ?? { name: '', lessons: [] };
   const bag = [...new Set(day.lessons.map((l) => l.subject))];
   let prog: TemplateResult;
   if (lessons) {
@@ -63,7 +65,9 @@ function weekendText(): TemplateResult {
   const c = clockOf(state.now), h = holidayOf(c.date);
   if (h) return html`Канікули до ${fmtDay(h[1])}! Відпочивай ${emo('🏖️')}`;
   if (c.weekday > 4) return html`Ура, вихідні! Відпочивай ${emo('🎉')}`;
-  const left = (4 - c.weekday) * 1440 + (RANGES[WEEK[4]!.lessons.length - 1]![1] - c.min);
+  const fri = WEEK[4]?.lessons.length ?? 0;
+  if (!fri) return html`Скоро вихідні! ${emo('🏖️')}`;
+  const left = (4 - c.weekday) * 1440 + (RANGES[fri - 1]![1] - c.min);
   return left <= 0 ? html`Вихідні вже тут! ${emo('🥳')}` : html`Ще <b>${Math.floor(left / 1440)} д ${Math.floor((left % 1440) / 60)} год</b> — і вихідні! ${emo('🏖️')}`;
 }
 
@@ -107,12 +111,12 @@ export function weekGrid(): TemplateResult {
       const today = i === c.weekday, date = iso(addDays(mon, i)), off = !!holidayOf(addDays(mon, i));
       const st = (a: number, b: number) => (today && !off ? (c.min >= b ? 'past' : c.min >= a ? 'cur' : '') : '');
       return html`<section class=${classMap({ day: true, today, off })} aria-label=${d.name}>
-        <h3><span>${d.name}${today ? html`<span class="badge">Сьогодні</span>` : nothing}${off ? html`<span class="badge">Канікули</span>` : nothing}</span><span class="end">${d.lessons.length} ур. · до ${bellEnd(d.lessons.length - 1)}</span></h3>
+        <h3><span>${d.name}${today ? html`<span class="badge">Сьогодні</span>` : nothing}${off ? html`<span class="badge">Канікули</span>` : nothing}</span><span class="end">${d.lessons.length ? `${d.lessons.length} ур. · до ${bellEnd(d.lessons.length - 1)}` : 'вихідний'}</span></h3>
         <ol class="lessons">${d.lessons.map((l, j) => {
-          const [a, b] = RANGES[j]!, nx = RANGES[j + 1], k = st(a, b);
+          const [a, b] = RANGES[j] ?? [0, 0], nx = RANGES[j + 1], k = st(a, b);
           return html`<li class=${classMap({ l: true, [k]: !!k, match: state.highlight === l.subject })} aria-current=${k === 'cur' ? 'time' : nothing}>
               <span class="n" style=${styleMap({ background: subjColor(l.subject) })}>${j + 1}</span>
-              <span class="t">${BELLS[j]!.replace('-', ' – ')}</span>
+              <span class="t">${(BELLS[j] ?? '').replace('-', ' – ')}</span>
               <span class="s">${emo(subjEmoji(l.subject))} ${l.subject}${l.optional ? html` <span class="opt">факультатив</span>` : nothing}${due.has(date + '|' + l.subject) ? html`<span class="hwdot" title="Є домашка">ДЗ</span>` : nothing}</span>
             </li>${j < d.lessons.length - 1 && nx ? html`<li class=${classMap({ b: true, long: nx[0] - b >= 20, [st(b, nx[0])]: !!st(b, nx[0]) })} aria-label=${`Перерва ${nx[0] - b} хвилин`}>${emo('☕')} перерва ${nx[0] - b} хв${nx[0] - b >= 20 ? ' · велика' : ''}</li>` : nothing}`;
         })}</ol>

@@ -1,6 +1,6 @@
 import { html } from 'lit-html';
 import { classMap } from 'lit-html/directives/class-map.js';
-import { SUBJECT_LIST, subjEmoji } from '../data/schedule';
+import { subjEmoji, subjectList } from '../data/schedule';
 import { emo } from '../lib/emoji';
 import { addDays, fmtDay, iso } from '../lib/time';
 import { closePop, openPop } from './popover';
@@ -19,7 +19,7 @@ export function pickSubject(e: Event, cur: string, cb: (s: string) => void, any 
   const pick = (s: string) => { cb(s); closePop(); };
   openPop(e.currentTarget as HTMLElement, () => html`<div class="plist" role="listbox" aria-label="Предмет">
     ${any ? html`<button type="button" role="option" aria-selected=${!cur} class=${classMap({ opt: true, on: !cur })} @click=${() => pick('')}>${emo('🌐 Будь-який предмет')}</button>` : null}
-    ${SUBJECT_LIST.map((s) => html`<button type="button" role="option" aria-selected=${s === cur} class=${classMap({ opt: true, on: s === cur })} @click=${() => pick(s)}>${emo(subjEmoji(s))} ${s}</button>`)}
+    ${subjectList().map((s) => html`<button type="button" role="option" aria-selected=${s === cur} class=${classMap({ opt: true, on: s === cur })} @click=${() => pick(s)}>${emo(subjEmoji(s))} ${s}</button>`)}
   </div>`, 'Вибір предмета');
 }
 
