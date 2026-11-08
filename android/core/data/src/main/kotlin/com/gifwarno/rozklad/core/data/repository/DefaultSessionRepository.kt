@@ -105,8 +105,22 @@ internal class DefaultSessionRepository @Inject constructor(
         sync.cancel()
         withContext(io) {
             runCatching { network.signOut() } // офлайн — локальна сесія все одно очищається
-            database.clearAllTables()
         }
+        clearLocal()
+    }
+
+    override suspend fun deleteAccount(): Result<Unit> {
+        // Спершу сервер: якщо він не підтвердив, локально нічого не чіпаємо.
+        val r = call { network.deleteAccount() }
+        if (r.isSuccess) {
+            sync.cancel()
+            clearLocal()
+        }
+        return r
+    }
+
+    private suspend fun clearLocal() {
+        withContext(io) { database.clearAllTables() }
         preferences.clear()
     }
 }

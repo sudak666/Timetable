@@ -54,6 +54,15 @@ class FakeSessionRepository(initial: SessionState) : SessionRepository {
         state.value = SessionState.SignedOut
     }
 
+    var deleteResult: Result<Unit> = Result.success(Unit)
+    var deleteCalls = 0
+
+    override suspend fun deleteAccount(): Result<Unit> {
+        deleteCalls++
+        if (deleteResult.isSuccess) state.value = SessionState.SignedOut
+        return deleteResult
+    }
+
     companion object {
         fun ready() = FakeSessionRepository(SessionState.Ready(TestData.parentUser, "f1", TestData.parent.role))
     }

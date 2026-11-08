@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
@@ -39,6 +40,7 @@ import com.gifwarno.rozklad.core.model.Role
 @Composable
 fun ProfileRoute(modifier: Modifier = Modifier, viewModel: ProfileViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val deleteState by viewModel.deleteState.collectAsStateWithLifecycle()
     when (val s = state) {
         ProfileUiState.Loading -> LoadingState(modifier)
 
@@ -47,6 +49,9 @@ fun ProfileRoute(modifier: Modifier = Modifier, viewModel: ProfileViewModel = hi
             onShowParentCode = viewModel::loadParentCode,
             onTheme = viewModel::setTheme,
             onSignOut = viewModel::signOut,
+            deleteState = deleteState,
+            onDeleteAccount = viewModel::deleteAccount,
+            onDeleteDialogClosed = viewModel::resetDeleteState,
             modifier = modifier,
         )
     }
@@ -58,9 +63,13 @@ internal fun ProfileScreen(
     onShowParentCode: () -> Unit,
     onTheme: (ThemeMode) -> Unit,
     onSignOut: () -> Unit,
+    deleteState: DeleteAccountState,
+    onDeleteAccount: (String) -> Unit,
+    onDeleteDialogClosed: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var confirmSignOut by rememberSaveable { mutableStateOf(false) }
+    var confirmDelete by rememberSaveable { mutableStateOf(false) }
     Column(
         modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -116,6 +125,24 @@ internal fun ProfileScreen(
 
         HorizontalDivider()
         OutlinedButton(onClick = { confirmSignOut = true }, modifier = Modifier.fillMaxWidth()) { Text("Вийти") }
+        TextButton(
+            onClick = { confirmDelete = true },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+        ) { Text("Видалити акаунт") }
+    }
+
+    if (confirmDelete) {
+        DeleteAccountDialog(
+            warnings = state.deletionWarnings,
+            pendingChanges = state.pendingChanges,
+            deleteState = deleteState,
+            onConfirm = onDeleteAccount,
+            onDismiss = {
+                confirmDelete = false
+                onDeleteDialogClosed()
+            },
+        )
     }
 
     if (confirmSignOut) {

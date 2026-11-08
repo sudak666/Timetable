@@ -219,9 +219,22 @@ export async function enter(): Promise<void> {
 export async function signOut(): Promise<void> {
   if (channel && realtime) await realtime.removeChannel(channel);
   channel = null;
-  await sb.auth.signOut();
+  // scope 'local': якщо користувача вже немає на сервері (видалено), сесія однаково очищається.
+  await sb.auth.signOut({ scope: 'local' });
   if (state.me) { store.set(SNAP + state.me.id, null); store.set(OUTBOX + state.me.id, null); }
   set({ view: 'auth', me: null, family: null, role: null, present: [], queued: 0, stale: false, members: [], grades: [], ledger: [], challenges: [], homework: [], timetables: [], kid: null });
+}
+
+/**
+ * Безповоротне видалення акаунта (RPC school_delete_account). Повертає текст помилки або null.
+ * Спершу сервер; лише після його підтвердження чистимо локальні дані.
+ */
+export async function deleteAccount(): Promise<string | null> {
+  if (!navigator.onLine) return 'Немає інтернету — видалення потребує зв’язку з сервером';
+  const { error } = await sb.rpc('school_delete_account', {});
+  if (error) return errText(error);
+  await signOut();
+  return null;
 }
 
 export function watchAuth(): void {

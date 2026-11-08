@@ -91,6 +91,7 @@ img.emo{width:1.25em;height:1.25em;vertical-align:-.28em;margin:0 .05em;display:
 .sum b{display:block;font-size:24px;font-weight:900}
 .sum small{color:var(--muted);font-size:12px}
 .pos{color:var(--good)}.neg{color:var(--bad)}
+button.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,var(--line))}
 .form{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .form select,.form input{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:12px;padding:8px 10px}
 .gbtn{display:grid;grid-template-columns:repeat(12,1fr);gap:6px;margin:10px 0}

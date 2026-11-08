@@ -83,6 +83,12 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
         client.auth.signOut()
     }
 
+    override suspend fun deleteAccount() {
+        client.postgrest.rpc("school_delete_account")
+        // Користувача на сервері вже немає — /logout відповів би помилкою, тож чистимо сесію лише локально.
+        client.auth.clearSession()
+    }
+
     override suspend fun membership(userId: String): NetworkMembership? = client.from("school_members")
         .select(Columns.list("family_id", "role")) {
             filter { eq("user_id", userId) }

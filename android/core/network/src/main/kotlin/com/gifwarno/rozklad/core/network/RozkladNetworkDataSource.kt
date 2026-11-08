@@ -21,6 +21,12 @@ interface RozkladNetworkDataSource {
 
     suspend fun signOut()
 
+    /**
+     * Безповоротно видаляє акаунт на сервері (RPC school_delete_account) і локальну сесію.
+     * Якщо користувач — останній з батьків, сервер видаляє і сім'ю.
+     */
+    suspend fun deleteAccount()
+
     suspend fun membership(userId: String): NetworkMembership?
 
     suspend fun createFamily(familyName: String, parentName: String)

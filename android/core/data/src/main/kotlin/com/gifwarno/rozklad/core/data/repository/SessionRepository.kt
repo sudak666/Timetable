@@ -20,4 +20,7 @@ interface SessionRepository {
     fun retry()
 
     suspend fun signOut()
+
+    /** Видалити акаунт назавжди. Потрібна мережа; у разі успіху всі локальні дані теж стираються. */
+    suspend fun deleteAccount(): Result<Unit>
 }
