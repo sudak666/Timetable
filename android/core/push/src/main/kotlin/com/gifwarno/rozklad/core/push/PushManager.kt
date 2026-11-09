@@ -16,8 +16,6 @@ import com.gifwarno.rozklad.core.data.repository.SessionRepository
 import com.gifwarno.rozklad.core.datastore.UserPreferencesDataSource
 import com.gifwarno.rozklad.core.model.SessionState
 import com.gifwarno.rozklad.core.network.RozkladNetworkDataSource
-import com.google.firebase.FirebaseApp
-import com.google.firebase.FirebaseOptions
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -57,7 +55,7 @@ class PushManager @Inject constructor(
     @param:ApplicationScope private val scope: CoroutineScope,
     @param:Dispatcher(RozkladDispatchers.IO) private val io: CoroutineDispatcher,
 ) : PushSettings {
-    override val isAvailable: Boolean = firebaseOptions() != null
+    override val isAvailable: Boolean = FirebaseSetup.options() != null
 
     override val enabled: Flow<Boolean> = preferences.pushEnabled
 
@@ -67,9 +65,9 @@ class PushManager @Inject constructor(
 
     /** Викликається один раз зі старту застосунку. */
     fun start() {
-        val options = firebaseOptions() ?: return
+        // Firebase уже ініціалізовано в Application (FirebaseSetup.init); тут — лише якщо його немає.
+        if (!FirebaseSetup.init(context)) return
         createChannels()
-        if (FirebaseApp.getApps(context).isEmpty()) FirebaseApp.initializeApp(context, options)
         scope.launch {
             combine(session.session, preferences.pushEnabled, preferences.alertsPushEnabled) { s, on, alerts ->
                 Triple((s as? SessionState.Ready)?.user?.id, on, alerts)
@@ -174,23 +172,6 @@ class PushManager @Inject constructor(
                 },
             ),
         )
-    }
-
-    private fun firebaseOptions(): FirebaseOptions? {
-        val values =
-            listOf(
-                BuildConfig.FIREBASE_API_KEY,
-                BuildConfig.FIREBASE_APP_ID,
-                BuildConfig.FIREBASE_PROJECT_ID,
-                BuildConfig.FIREBASE_SENDER_ID,
-            )
-        if (values.any { it.isBlank() }) return null
-        return FirebaseOptions.Builder()
-            .setApiKey(BuildConfig.FIREBASE_API_KEY)
-            .setApplicationId(BuildConfig.FIREBASE_APP_ID)
-            .setProjectId(BuildConfig.FIREBASE_PROJECT_ID)
-            .setGcmSenderId(BuildConfig.FIREBASE_SENDER_ID)
-            .build()
     }
 
     private companion object {

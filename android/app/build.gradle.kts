@@ -1,3 +1,4 @@
+import com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension
 import java.util.Properties
 
 plugins {
@@ -5,6 +6,7 @@ plugins {
     alias(libs.plugins.rozklad.compose.application)
     alias(libs.plugins.rozklad.hilt)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.firebase.crashlytics)
 }
 
 // Ключ підпису — лише локально або з секретів CI, ніколи в git (див. android/README.md).
@@ -39,12 +41,16 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            configure<CrashlyticsExtension> { mappingFileUploadEnabled = false }
         }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.findByName("release")
+            // Плагін Crashlytics лише вписує ідентифікатор збірки (без нього SDK не працює).
+            // mapping не завантажуємо: обфускацію вимкнено (proguard-rules.pro), стеки читабельні й так.
+            configure<CrashlyticsExtension> { mappingFileUploadEnabled = false }
         }
     }
 
