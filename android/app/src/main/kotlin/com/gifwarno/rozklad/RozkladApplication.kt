@@ -3,6 +3,7 @@ package com.gifwarno.rozklad
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.gifwarno.rozklad.feature.widget.WidgetUpdater
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -11,6 +12,13 @@ class RozkladApplication :
     Application(),
     Configuration.Provider {
     @Inject lateinit var workerFactory: HiltWorkerFactory
+
+    @Inject lateinit var widgetUpdater: WidgetUpdater
+
+    override fun onCreate() {
+        super.onCreate()
+        widgetUpdater.start()
+    }
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()

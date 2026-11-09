@@ -67,6 +67,7 @@ dependencies {
     implementation(projects.feature.homework)
     implementation(projects.feature.profile)
     implementation(projects.feature.schedule)
+    implementation(projects.feature.widget)
 
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.ktx)
