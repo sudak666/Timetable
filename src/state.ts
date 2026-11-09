@@ -1,4 +1,5 @@
 import type { TimetableRow } from './data/schedule';
+import type { Draft } from './features/timetable';
 import type { Challenge, Grade, Homework, Ledger, Member, Rates, Role, Streak } from './features/rewards';
 import { DEFAULT_RATES, DEFAULT_STREAK } from './features/rewards';
 
@@ -8,6 +9,10 @@ export type Tab = 'today' | 'grades' | 'hw' | 'me';
 export const TABS: Tab[] = ['today', 'grades', 'hw', 'me'];
 
 export interface Family { id: string; name: string; invite_code: string }
+
+export type EditorTab = 'lessons' | 'bells' | 'holidays';
+/** Відкритий редактор розкладу: base — збережений стан (для «є зміни?»), draft — чернетка. */
+export interface EditorState { kid: string; base: Draft; draft: Draft; tab: EditorTab; day: number; saving: boolean }
 
 export interface State {
   tab: Tab;
@@ -48,6 +53,8 @@ export interface State {
   present: string[];
   /** Показано знімок з пристрою, а не свіжі дані сервера */
   stale: boolean;
+  /** Редактор розкладу (null — закритий). */
+  editor: EditorState | null;
 }
 
 type Listener = () => void;
@@ -86,6 +93,7 @@ export const state: State = {
   queued: 0,
   present: [],
   stale: false,
+  editor: null,
 };
 
 /** Мутує стан і планує один рендер на кадр (батчинг). */

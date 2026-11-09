@@ -112,10 +112,13 @@ function page(): TemplateResult {
     case 'grades': return G ? G.tabGrades() : loading;
     case 'hw': return G ? G.tabHomework() : loading;
     case 'me': return G ? G.tabProfile() : loading;
-    default: return html`${G?.profileBar() ?? ''}
+    default:
+      // Редактор розкладу замінює вкладку, поки відкритий (зміни — лише після «Зберегти»).
+      if (G && state.editor) return G.scheduleEditor();
+      return html`${G?.profileBar() ?? ''}
       ${bikeLane(G ? G.laneLabel() : emo('⚡ Електробайк мрії'))}
       <div class="top">${nowCard()}${sidePanel()}</div>
-      ${below ? html`${funCards(quizView())}${weekGrid()}${weekStats()}` : html`<div class="below-ph" aria-hidden="true"></div>`}`;
+      ${below ? html`${funCards(quizView())}${weekGrid()}${G?.editScheduleButton() ?? ''}${weekStats()}` : html`<div class="below-ph" aria-hidden="true"></div>`}`;
   }
 }
 

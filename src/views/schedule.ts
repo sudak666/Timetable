@@ -33,7 +33,7 @@ export function nowCard(): TemplateResult {
   } else {
     const nd = nextSchoolDate(c.date), d = WEEK[clockOf(nd).weekday], h = holidayOf(c.date), first = d?.lessons[0];
     body = !d || !first
-      ? html`<small>${emo('🗓️')} Розклад ще не заповнено</small><h2>Додай уроки в застосунку «Дванадцятка»</h2>`
+      ? html`<small>${emo('🗓️')} Розклад ще не заповнено</small><h2>Заповни його — кнопка «Заповнити розклад» під тижнем</h2>`
       : html`<small>${h ? html`Канікули до ${fmtDay(h[1])} ${emo('🏖️')}` : html`Уроки закінчились ${emo('🎉')}`}</small><h2>Далі: ${d.name}${h ? ', ' + fmtDay(iso(nd)) : ''}</h2><div>Перший урок — ${first.subject} о ${bellStart(0)}</div>`;
   }
   const src = emojiSrc(subject ? subjEmoji(subject) : '🎉');

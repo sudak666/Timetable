@@ -132,3 +132,63 @@ test('Command Palette: Ctrl+K, навігація й швидка оцінка',
   await page.keyboard.press('3');
   await expect(page).toHaveURL(/#hw\?kid=k1$/);
 });
+
+test('редактор розкладу: заповнити, перевірка помилок, збереження на сервер', async ({ page }) => {
+  await mockFamily(page, 'parent');
+  await page.goto('/');
+  await page.getByRole('button', { name: /Заповнити розклад/ }).click();
+  const heading = page.getByRole('heading', { name: /Розклад · Стас/ });
+  await expect(heading).toBeVisible();
+  const save = page.getByRole('button', { name: 'Зберегти' });
+  await expect(save).toBeDisabled();
+
+  // Понеділок: свій предмет, потім предмет зі списку, факультатив і перестановка.
+  await page.getByRole('button', { name: '+ Свій предмет' }).click();
+  await page.getByRole('dialog').locator('input').fill('Робототехніка');
+  await page.getByRole('button', { name: 'Готово' }).click();
+  await page.getByRole('button', { name: '+ Урок' }).click();
+  await page.getByRole('option', { name: /Математика/ }).first().click();
+  await page.locator('.ed-list .opt input').nth(1).check();
+  await page.getByRole('button', { name: 'Перемістити 2 урок вище' }).click();
+
+  // Дзвінки: помилка блокує збереження, виправлення — знімає.
+  await page.getByRole('tab', { name: 'Дзвінки' }).click();
+  await page.getByLabel('1 урок: початок').fill('08:00');
+  await page.getByLabel('1 урок: кінець').fill('07:50');
+  await expect(page.locator('.ed-err')).toContainText('1 урок: кінець має бути пізніше за початок');
+  await expect(save).toBeDisabled();
+  await page.getByLabel('1 урок: кінець').fill('08:45');
+  await expect(page.locator('.ed-err')).toHaveCount(0);
+
+  for (const scheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+    const r = await new AxeBuilder({ page }).include('.editor').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
+    expect(r.violations.map((v) => `${scheme} ${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
+  }
+
+  const post = page.waitForRequest((r) => r.method() === 'POST' && r.url().includes('school_timetables'));
+  await save.click();
+  const body = (await post).postDataJSON();
+  expect(body).toMatchObject({
+    child_id: 'k1',
+    family_id: 'f1',
+    week: [[{ s: 'Математика', o: true }, { s: 'Робототехніка' }], [], [], [], []],
+    holidays: [],
+  });
+  expect(body.bells[0]).toEqual(['8:00', '8:45']);
+  expect(body.bells).toHaveLength(7);
+  await expect(heading).toHaveCount(0);
+});
+
+test('редактор розкладу: незбережені зміни не губляться без підтвердження', async ({ page }) => {
+  await mockFamily(page, 'child');
+  await page.goto('/');
+  await page.getByRole('button', { name: /Заповнити розклад/ }).click();
+  await page.getByRole('button', { name: '+ Свій предмет' }).click();
+  await page.getByRole('dialog').locator('input').fill('Шахи');
+  await page.getByRole('button', { name: 'Готово' }).click();
+  await page.getByRole('button', { name: 'Скасувати' }).click();
+  await expect(page.getByRole('dialog')).toContainText('Скинути незбережені зміни');
+  await page.getByRole('dialog').getByRole('button', { name: 'Скасувати' }).click();
+  await expect(page.getByRole('button', { name: /Шахи/ })).toBeVisible();
+});
