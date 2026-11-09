@@ -21,6 +21,17 @@ interface SessionRepository {
 
     suspend fun signOut()
 
+    /** Відкриває вхід Google у браузері. Успіх — коли прийде deep link (completeGoogleSignIn). */
+    suspend fun signInWithGoogle(): Result<Unit>
+
+    /** Адреса повернення з браузера після входу Google — обмінюємо код на сесію. */
+    fun completeGoogleSignIn(callbackUri: String)
+
+    /** Помилка входу Google (показує екран входу), null — немає. */
+    val oauthError: StateFlow<String?>
+
+    fun clearOAuthError()
+
     /** Видалити акаунт назавжди. Потрібна мережа; у разі успіху всі локальні дані теж стираються. */
     suspend fun deleteAccount(): Result<Unit>
 }

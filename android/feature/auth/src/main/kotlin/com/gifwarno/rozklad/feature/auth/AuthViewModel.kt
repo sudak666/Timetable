@@ -8,6 +8,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -31,6 +32,25 @@ data class AuthUiState(
 class AuthViewModel @Inject constructor(private val session: SessionRepository) : ViewModel() {
     private val _state = MutableStateFlow(AuthUiState())
     val state: StateFlow<AuthUiState> = _state.asStateFlow()
+
+    init {
+        // Помилка після повернення з браузера (скасували вхід, Google відмовив тощо).
+        viewModelScope.launch {
+            session.oauthError.filterNotNull().collect { msg ->
+                _state.update { it.copy(busy = false, message = msg, messageIsError = true) }
+                session.clearOAuthError()
+            }
+        }
+    }
+
+    /** Відкриває вхід Google у браузері. Далі застосунок підхопить повернення сам. */
+    fun signInWithGoogle() {
+        if (_state.value.busy) return
+        _state.update { it.copy(message = null) }
+        viewModelScope.launch {
+            session.signInWithGoogle().onFailure { e -> _state.update { it.copy(message = e.message, messageIsError = true) } }
+        }
+    }
 
     fun onEmail(v: String) = _state.update { it.copy(email = v.take(MAX_EMAIL), message = null) }
 

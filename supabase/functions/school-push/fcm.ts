@@ -82,11 +82,15 @@ export class FcmAuth {
   }
 }
 
-/** Тіло запиту FCM v1. notification показує система, коли застосунок не відкритий. */
-export function fcmMessage(token: string, p: Push) {
+/**
+ * Тіло запиту FCM v1. Адресат — Firebase Installation ID (поле `fid`): так його видає
+ * firebase-messaging 26 (register()/onRegistered); поле `token` застаріле.
+ * notification показує система, коли застосунок не відкритий.
+ */
+export function fcmMessage(fid: string, p: Push) {
   return {
     message: {
-      token,
+      fid,
       notification: { title: p.title, body: p.body },
       data: { url: p.url, tag: p.tag, channel: p.channel },
       android: { priority: 'high', ttl: '86400s', notification: { channel_id: p.channel, tag: p.tag } },

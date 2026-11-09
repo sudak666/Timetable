@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -41,8 +43,23 @@ internal class DefaultSessionRepository @Inject constructor(
     private val database: RozkladDatabase,
     private val sync: SyncManager,
     @param:Dispatcher(RozkladDispatchers.IO) private val io: CoroutineDispatcher,
-    @ApplicationScope scope: CoroutineScope,
+    @param:ApplicationScope private val scope: CoroutineScope,
 ) : SessionRepository {
+    private val _oauthError = MutableStateFlow<String?>(null)
+    override val oauthError: StateFlow<String?> = _oauthError.asStateFlow()
+
+    override fun clearOAuthError() {
+        _oauthError.value = null
+    }
+
+    override suspend fun signInWithGoogle() = call { network.signInWithGoogle() }
+
+    override fun completeGoogleSignIn(callbackUri: String) {
+        scope.launch {
+            call { network.completeOAuth(callbackUri) }.onFailure { _oauthError.value = it.message ?: "Не вдалося увійти через Google" }
+        }
+    }
+
     private val reload = MutableStateFlow(0)
 
     override val session: StateFlow<SessionState> = combine(network.authState, reload) { auth, _ -> auth }

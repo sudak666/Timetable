@@ -2,10 +2,12 @@ package com.gifwarno.rozklad.feature.auth
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
@@ -23,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -41,7 +44,15 @@ import com.gifwarno.rozklad.core.ui.PrivacyPolicyLink
 @Composable
 fun AuthRoute(modifier: Modifier = Modifier, viewModel: AuthViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    AuthScreen(state, viewModel::onEmail, viewModel::onPassword, viewModel::submit, viewModel::toggleMode, modifier)
+    AuthScreen(
+        state,
+        viewModel::onEmail,
+        viewModel::onPassword,
+        viewModel::submit,
+        viewModel::toggleMode,
+        viewModel::signInWithGoogle,
+        modifier,
+    )
 }
 
 @Composable
@@ -51,6 +62,7 @@ internal fun AuthScreen(
     onPassword: (String) -> Unit,
     onSubmit: () -> Unit,
     onToggleMode: () -> Unit,
+    onGoogle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     CenteredForm(modifier) {
@@ -67,6 +79,13 @@ internal fun AuthScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
+        // Як на сайті: більшість сімей входить через Google.
+        OutlinedButton(onClick = onGoogle, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) {
+            Text("G", fontWeight = FontWeight.Black, color = Color(GOOGLE_BLUE))
+            Spacer(Modifier.width(12.dp))
+            Text("Увійти через Google")
+        }
+        Text("або поштою", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedTextField(
             value = state.email,
             onValueChange = onEmail,
@@ -186,5 +205,7 @@ private fun CenteredForm(modifier: Modifier = Modifier, content: @Composable () 
 @Preview(showBackground = true, locale = "uk")
 @Composable
 private fun AuthPreview() {
-    RozkladTheme { AuthScreen(AuthUiState(email = "mama@example.com"), {}, {}, {}, {}) }
+    RozkladTheme { AuthScreen(AuthUiState(email = "mama@example.com"), {}, {}, {}, {}, {}) }
 }
+
+private const val GOOGLE_BLUE = 0xFF4285F4

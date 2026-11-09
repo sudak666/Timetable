@@ -12,6 +12,10 @@
         <meta-data
             android:name="firebase_analytics_collection_enabled"
             android:value="false" />
+        <!-- Новий API register()/onRegistered() у firebase-messaging 26 вмикається явно (інакше «API disabled»). -->
+        <meta-data
+            android:name="firebase_messaging_installation_id_enabled"
+            android:value="true" />
         <!-- Вигляд сповіщень, які показує система, коли застосунок закритий. -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"

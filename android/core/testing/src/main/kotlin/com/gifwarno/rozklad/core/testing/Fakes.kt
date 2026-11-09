@@ -54,6 +54,28 @@ class FakeSessionRepository(initial: SessionState) : SessionRepository {
         state.value = SessionState.SignedOut
     }
 
+    var googleCalls = 0
+    private val oauthErrors = MutableStateFlow<String?>(null)
+    override val oauthError: StateFlow<String?> = oauthErrors
+
+    override suspend fun signInWithGoogle(): Result<Unit> {
+        googleCalls++
+        return Result.success(Unit)
+    }
+
+    override fun completeGoogleSignIn(callbackUri: String) {
+        if (callbackUri.contains("error")) {
+            oauthErrors.value = "Скасовано"
+        } else {
+            state.value =
+                SessionState.Ready(TestData.parentUser, "f1", TestData.parent.role)
+        }
+    }
+
+    override fun clearOAuthError() {
+        oauthErrors.value = null
+    }
+
     var deleteResult: Result<Unit> = Result.success(Unit)
     var deleteCalls = 0
 

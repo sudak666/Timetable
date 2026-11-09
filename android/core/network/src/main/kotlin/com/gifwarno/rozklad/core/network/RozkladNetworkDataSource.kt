@@ -21,6 +21,12 @@ interface RozkladNetworkDataSource {
 
     suspend fun signOut()
 
+    /** Відкриває вхід Google у браузері; результат прийде deep link'ом на <пакет>://login-callback. */
+    suspend fun signInWithGoogle()
+
+    /** Завершує вхід Google: обмінює одноразовий код із адреси повернення на сесію. */
+    suspend fun completeOAuth(callbackUri: String)
+
     /**
      * Безповоротно видаляє акаунт на сервері (RPC school_delete_account) і локальну сесію.
      * Якщо користувач — останній з батьків, сервер видаляє і сім'ю.
@@ -46,3 +52,6 @@ interface RozkladNetworkDataSource {
 
     suspend fun write(op: NetworkWrite): WriteResult
 }
+
+/** Хост адреси повернення після входу через Google: <пакет застосунку>://login-callback. */
+const val OAUTH_CALLBACK_HOST = "login-callback"

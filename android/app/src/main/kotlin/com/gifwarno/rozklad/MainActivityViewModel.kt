@@ -58,6 +58,8 @@ class MainActivityViewModel @Inject constructor(
 
     fun retrySession() = session.retry()
 
+    fun completeGoogleSignIn(callbackUri: String) = session.completeGoogleSignIn(callbackUri)
+
     fun signOut() {
         viewModelScope.launch { session.signOut() }
     }

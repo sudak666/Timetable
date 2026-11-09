@@ -32,6 +32,7 @@ class MainActivity : ComponentActivity() {
         splash.setKeepOnScreenCondition { viewModel.sessionState.value == SessionState.Loading }
         enableEdgeToEdge()
         deepLink.value = intent?.getStringExtra(EXTRA_URL)
+        handleOAuthRedirect(intent)
         val actions = AppActions(
             onRefresh = viewModel::refresh,
             onRetrySession = viewModel::retrySession,
@@ -60,6 +61,13 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         intent.getStringExtra(EXTRA_URL)?.let { deepLink.value = it }
+        handleOAuthRedirect(intent)
+    }
+
+    /** Браузер повернув нас після входу Google — завершуємо вхід (обмін коду на сесію). */
+    private fun handleOAuthRedirect(intent: Intent?) {
+        val uri = intent?.data ?: return
+        if (uri.scheme == packageName && uri.host == "login-callback") viewModel.completeGoogleSignIn(uri.toString())
     }
 
     private companion object {

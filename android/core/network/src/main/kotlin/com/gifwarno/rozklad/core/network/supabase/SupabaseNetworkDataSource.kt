@@ -17,6 +17,7 @@ import com.gifwarno.rozklad.core.network.model.WriteKind
 import com.gifwarno.rozklad.core.network.model.WriteResult
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.exceptions.HttpRequestException
@@ -81,6 +82,20 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
 
     override suspend fun signOut() {
         client.auth.signOut()
+    }
+
+    override suspend fun signInWithGoogle() {
+        client.auth.signInWith(Google) {
+            // Дати вибрати акаунт Google, а не входити мовчки в останній.
+            queryParams["prompt"] = "select_account"
+        }
+    }
+
+    override suspend fun completeOAuth(callbackUri: String) {
+        val query = OAuthCallback.parse(callbackUri)
+        query.error?.let { throw IllegalStateException(it) }
+        val code = query.code ?: throw IllegalStateException("Google не повернув код входу")
+        client.auth.exchangeCodeForSession(code)
     }
 
     override suspend fun deleteAccount() {

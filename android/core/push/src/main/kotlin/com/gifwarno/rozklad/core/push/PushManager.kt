@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import androidx.core.content.ContextCompat
 import com.gifwarno.rozklad.core.common.ApplicationScope
 import com.gifwarno.rozklad.core.common.Dispatcher
@@ -90,6 +91,7 @@ class PushManager @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+                Log.w(TAG, "Не вдалося зареєструвати токен на сервері", e)
                 _lastError.value = OFFLINE_MESSAGE
             }
         }
@@ -123,6 +125,7 @@ class PushManager @Inject constructor(
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             // Немає мережі тощо — спробуємо знову під час наступного запуску.
+            Log.w(TAG, "Не вдалося налаштувати сповіщення", e)
             _lastError.value = OFFLINE_MESSAGE
         }
     }
@@ -159,6 +162,7 @@ class PushManager @Inject constructor(
     }
 
     private companion object {
+        const val TAG = "RozkladPush"
         const val OFFLINE_MESSAGE = "Не вдалося налаштувати сповіщення — перевір інтернет"
     }
 }

@@ -58,6 +58,11 @@ describe('токен доступу кешується', () => {
 
 describe('повідомлення й відповіді FCM', () => {
   const p = { title: '✅ Математика: 12 підтверджено', body: 'Нараховано +300 ₴', tag: 'g1', url: '#grades', channel: 'family' as const };
+  it('адресат — Firebase Installation ID у полі fid (token застарів)', () => {
+    const m = fcmMessage('fid-22-chars-abcdefghij', p).message as Record<string, unknown>;
+    expect(m.fid).toBe('fid-22-chars-abcdefghij');
+    expect('token' in m).toBe(false);
+  });
   it('канал і tag потрапляють в android.notification', () => {
     const m = fcmMessage('tok', p).message;
     expect(m.android.notification).toEqual({ channel_id: 'family', tag: 'g1' });

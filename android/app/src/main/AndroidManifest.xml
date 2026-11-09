@@ -29,11 +29,21 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.Rozklad.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- Повернення після входу через Google: <пакет>://login-callback (схема = applicationId, у debug і release різна). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="login-callback"
+                    android:scheme="${applicationId}" />
             </intent-filter>
         </activity>
 
