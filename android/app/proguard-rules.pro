@@ -5,6 +5,7 @@
 -dontwarn org.slf4j.impl.StaticLoggerBinder
 -dontwarn java.lang.management.**
 
-# Стек-трейси в звітах про падіння читабельні після деобфускації (mapping.txt зберігається як артефакт CI).
+# Звіти про збої (Crashlytics, Android vitals) мають бути читабельні без mapping.txt.
+# Обфускація тут нічого не захищає — код відкритий на GitHub; R8 і далі стискає й прибирає зайве.
+-dontobfuscate
 -keepattributes SourceFile,LineNumberTable
--renamesourcefileattribute SourceFile
