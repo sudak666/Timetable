@@ -8,4 +8,6 @@ android {
 
 dependencies {
     implementation(projects.core.datastore)
+    implementation(projects.core.push)
+    implementation(libs.androidx.activity.compose)
 }

@@ -1,5 +1,6 @@
 package com.gifwarno.rozklad
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -7,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gifwarno.rozklad.core.datastore.ThemeMode
@@ -20,17 +22,22 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val viewModel: MainActivityViewModel by viewModels()
 
+    /** Куди перейти після натискання на сповіщення («#grades», «#hw»). */
+    private val deepLink = mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
         // Сплеш тримаємо, поки не відомо, чи користувач увійшов (без миготіння екрана входу).
         splash.setKeepOnScreenCondition { viewModel.sessionState.value == SessionState.Loading }
         enableEdgeToEdge()
+        deepLink.value = intent?.getStringExtra(EXTRA_URL)
         val actions = AppActions(
             onRefresh = viewModel::refresh,
             onRetrySession = viewModel::retrySession,
             onSignOut = viewModel::signOut,
             onDismissSyncError = viewModel::dismissSyncError,
+            onDeepLinkHandled = { deepLink.value = null },
         )
         setContent {
             val theme by viewModel.themeMode.collectAsStateWithLifecycle()
@@ -43,8 +50,20 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.DARK -> true
             }
             RozkladTheme(darkTheme = dark) {
-                RozkladApp(session = session, sync = sync, hasFamilyData = hasData, actions = actions)
+                RozkladApp(session = session, sync = sync, hasFamilyData = hasData, actions = actions, deepLink = deepLink.value)
             }
         }
+    }
+
+    /** Застосунок уже відкритий, а людина натиснула сповіщення. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.getStringExtra(EXTRA_URL)?.let { deepLink.value = it }
+    }
+
+    private companion object {
+        /** Той самий ключ, що й у сповіщеннях (core:push → PushNotifier.EXTRA_URL і data.url з сервера). */
+        const val EXTRA_URL = "url"
     }
 }

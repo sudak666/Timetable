@@ -10,6 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -44,11 +45,19 @@ data class AppActions(
     val onRetrySession: () -> Unit,
     val onSignOut: () -> Unit,
     val onDismissSyncError: () -> Unit,
+    val onDeepLinkHandled: () -> Unit,
 )
 
 /** Корінь UI: стан сесії вирішує, що показати. */
 @Composable
-fun RozkladApp(session: SessionState, sync: SyncStatus, hasFamilyData: Boolean, actions: AppActions, modifier: Modifier = Modifier) {
+fun RozkladApp(
+    session: SessionState,
+    sync: SyncStatus,
+    hasFamilyData: Boolean,
+    actions: AppActions,
+    modifier: Modifier = Modifier,
+    deepLink: String? = null,
+) {
     Surface(modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (session) {
             SessionState.Loading -> LoadingState()
@@ -64,13 +73,13 @@ fun RozkladApp(session: SessionState, sync: SyncStatus, hasFamilyData: Boolean, 
                 modifier = Modifier.safeDrawingPadding(),
             )
 
-            is SessionState.Ready -> MainShell(sync, hasFamilyData, actions)
+            is SessionState.Ready -> MainShell(sync, hasFamilyData, actions, deepLink)
         }
     }
 }
 
 @Composable
-private fun MainShell(sync: SyncStatus, hasData: Boolean, actions: AppActions, modifier: Modifier = Modifier) {
+private fun MainShell(sync: SyncStatus, hasData: Boolean, actions: AppActions, deepLink: String?, modifier: Modifier = Modifier) {
     LifecycleResumeEffect(Unit) {
         actions.onRefresh()
         onPauseOrDispose { }
@@ -80,6 +89,21 @@ private fun MainShell(sync: SyncStatus, hasData: Boolean, actions: AppActions, m
     val backStack = rememberNavBackStack(TodayKey)
     // Підсвічуємо вкладку, навіть коли поверх неї відкрито редактор.
     val current = backStack.lastOrNull { key -> TopLevelDestination.entries.any { it.key == key } }
+
+    // Натиснули сповіщення → відкриваємо потрібну вкладку поверх «Сьогодні».
+    LaunchedEffect(deepLink) {
+        val target = when {
+            deepLink == null -> null
+            deepLink.startsWith("#hw") -> HomeworkKey
+            deepLink.startsWith("#grades") -> GradesKey
+            else -> null
+        }
+        if (target != null) {
+            while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
+            backStack.add(target)
+        }
+        if (deepLink != null) actions.onDeepLinkHandled()
+    }
 
     NavigationSuiteScaffold(
         modifier = modifier,

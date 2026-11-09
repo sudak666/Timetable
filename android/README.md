@@ -96,6 +96,27 @@ keyPassword=…
 
 Без цього файлу release збирається непідписаним. Для Google Play використовуй Play App Signing.
 
+## Push-сповіщення (Firebase)
+
+Сервер (`supabase/functions/school-push`) надсилає ті самі події і в веб-push, і в Android (FCM HTTP v1, `fcm.ts`).
+Токени пристроїв — таблиця `school_fcm_tokens` (міграція `20261109_school_fcm_tokens.sql`). Користувач сам вмикає
+сповіщення в «Профілі»; при вимкненні або виході з акаунта токен видаляється. Без налаштувань Firebase усе тихо вимкнено.
+
+Як увімкнути (одноразово):
+1. [console.firebase.google.com](https://console.firebase.google.com) → новий проєкт (Google Analytics не потрібна).
+2. Додай два Android-застосунки: `com.gifwarno.dvanadtsiatka` і `com.gifwarno.dvanadtsiatka.debug`.
+3. З `google-services.json` (файл у git не додавати) перенеси значення в `android/gradle.properties`:
+   ```properties
+   rozklad.firebase.projectId=…          # project_info.project_id
+   rozklad.firebase.senderId=…           # project_info.project_number
+   rozklad.firebase.apiKey=…             # client[].api_key[].current_key
+   rozklad.firebase.appId=…              # mobilesdk_app_id для com.gifwarno.dvanadtsiatka
+   rozklad.firebase.appIdDebug=…         # mobilesdk_app_id для …debug
+   ```
+   Ці значення публічні (вони є в будь-якому APK), секрету тут немає.
+4. Firebase → Project settings → Service accounts → Generate new private key. Вміст JSON (це **секрет**!) —
+   у Supabase → Edge Functions → Secrets як `FCM_SERVICE_ACCOUNT`. Нікуди більше його не копіюй.
+
 ## Адреси для Google Play Console
 
 - Політика конфіденційності: https://sudak666.github.io/Timetable/privacy.html (`public/privacy.html`)
@@ -121,7 +142,7 @@ keyPassword=…
 ## Що далі
 
 - [x] Віджет на головному екрані (Glance): поточний урок, перерва, уроки дня; оновлюється на межах уроків.
-- [ ] Сповіщення: FCM для оцінок і нагадування про домашку (зараз це web-push).
+- [x] Push-сповіщення в Android (FCM): оцінки, підтвердження, бонуси, челенджі, домашка на завтра.
 - [ ] Повітряні тривоги: статус по області та режим «урок в укритті».
 - [x] Свій розклад для кожної дитини (таблиця `school_timetables`, редактор у застосунку).
 - [x] Веб-версія показує розклад дитини з `school_timetables`.

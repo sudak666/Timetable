@@ -104,6 +104,8 @@ internal class DefaultSessionRepository @Inject constructor(
     override suspend fun signOut() {
         sync.cancel()
         withContext(io) {
+            // Спершу відв'язуємо пристрій від сповіщень, поки ще є сесія (інакше RLS не дасть видалити токен).
+            preferences.pushToken.first()?.let { token -> runCatching { network.unregisterPushToken(token) } }
             runCatching { network.signOut() } // офлайн — локальна сесія все одно очищається
         }
         clearLocal()

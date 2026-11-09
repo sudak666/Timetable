@@ -9,6 +9,7 @@ import com.gifwarno.rozklad.core.datastore.ThemeMode
 import com.gifwarno.rozklad.core.datastore.UserPreferencesDataSource
 import com.gifwarno.rozklad.core.model.Member
 import com.gifwarno.rozklad.core.model.Role
+import com.gifwarno.rozklad.core.push.PushSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +42,8 @@ sealed interface ProfileUiState {
         val pendingChanges: Int,
     ) : ProfileUiState
 }
+
+data class PushUiState(val enabled: Boolean, val error: String?)
 
 sealed interface DeleteAccountState {
     data object Idle : DeleteAccountState
@@ -84,7 +87,22 @@ class ProfileViewModel @Inject constructor(
     private val families: FamilyRepository,
     private val session: SessionRepository,
     private val preferences: UserPreferencesDataSource,
+    private val push: PushSettings,
 ) : ViewModel() {
+    /** Перемикач сповіщень: null — збірка без Firebase, перемикач не показуємо. */
+    val pushState: StateFlow<PushUiState?> = if (!push.isAvailable) {
+        MutableStateFlow(null)
+    } else {
+        combine(push.enabled, push.lastError) { on, err -> PushUiState(on, err) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), PushUiState(false, null))
+    }
+
+    fun needsNotificationPermission(): Boolean = !push.hasPermission()
+
+    fun setPushEnabled(enabled: Boolean) {
+        viewModelScope.launch { push.setEnabled(enabled) }
+    }
+
     private val parentCode = MutableStateFlow<String?>(null)
 
     val uiState: StateFlow<ProfileUiState> = combine(active.context, preferences.preferences, parentCode) { ctx, prefs, code ->

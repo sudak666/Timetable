@@ -89,6 +89,14 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
         client.auth.clearSession()
     }
 
+    override suspend fun registerPushToken(token: String) {
+        client.postgrest.rpc("school_register_fcm", buildJsonObject { put("p_token", token) })
+    }
+
+    override suspend fun unregisterPushToken(token: String) {
+        client.from("school_fcm_tokens").delete { filter { eq("token", token) } }
+    }
+
     override suspend fun membership(userId: String): NetworkMembership? = client.from("school_members")
         .select(Columns.list("family_id", "role")) {
             filter { eq("user_id", userId) }

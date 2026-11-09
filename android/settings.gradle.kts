@@ -43,6 +43,7 @@ include(":core:data")
 include(":core:designsystem")
 include(":core:ui")
 include(":core:testing")
+include(":core:push")
 
 include(":feature:auth")
 include(":feature:today")

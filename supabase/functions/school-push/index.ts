@@ -1,5 +1,6 @@
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { FcmAuth, parseServiceAccount, sendFcm, type Push } from "./fcm.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 let cfg: Record<string, string> | null = null;
@@ -11,10 +12,29 @@ async function secrets() {
   }
   return cfg;
 }
+// Android (Firebase). Секрет FCM_SERVICE_ACCOUNT — JSON сервісного акаунта; без нього Android просто пропускаємо.
+const fcmAccount = parseServiceAccount(Deno.env.get("FCM_SERVICE_ACCOUNT"));
+const fcmAuth = fcmAccount ? new FcmAuth(fcmAccount) : null;
+
+async function sendAndroid(userIds: string[], p: Push) {
+  if (!fcmAccount || !fcmAuth) return;
+  const { data } = await sb.from("school_fcm_tokens").select("token").in("user_id", userIds);
+  await Promise.all((data ?? []).map(async ({ token }) => {
+    const res = await sendFcm(fcmAuth, fcmAccount.project_id, token, p);
+    if (res === "unregistered") await sb.from("school_fcm_tokens").delete().eq("token", token);
+  }));
+}
+
 const uah = (v: number) => (v > 0 ? "+" : "") + v + " ₴";
 
-async function send(userIds: string[], title: string, body: string, tag: string, url = "#grades") {
+async function send(userIds: string[], title: string, body: string, tag: string, url = "#grades", channel: Push["channel"] = "family") {
   if (!userIds.length) return;
+  // Збій Firebase не повинен зупинити web-push (і навпаки).
+  try {
+    await sendAndroid(userIds, { title, body, tag, url, channel });
+  } catch (e) {
+    console.error("fcm", e);
+  }
   const { data } = await sb.from("school_push").select("endpoint,sub").in("user_id", userIds);
   await Promise.all((data ?? []).map(async (s) => {
     try {
@@ -42,7 +62,7 @@ async function remindHomework() {
   const by = new Map<string, string[]>();
   for (const h of data ?? []) by.set(h.child_id, [...(by.get(h.child_id) ?? []), h.subject]);
   await Promise.all([...by].map(([kid, subj]) =>
-    send([kid], `📝 На завтра ${subj.length} ${subj.length < 5 ? "завдання" : "завдань"}`, [...new Set(subj)].join(", "), "hw" + tomorrow, "#hw")));
+    send([kid], `📝 На завтра ${subj.length} ${subj.length < 5 ? "завдання" : "завдань"}`, [...new Set(subj)].join(", "), "hw" + tomorrow, "#hw", "homework")));
 }
 
 Deno.serve(async (req) => {

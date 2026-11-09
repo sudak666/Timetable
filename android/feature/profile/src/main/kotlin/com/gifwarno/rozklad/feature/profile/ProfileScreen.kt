@@ -1,5 +1,9 @@
 package com.gifwarno.rozklad.feature.profile
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +22,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -42,6 +47,18 @@ import com.gifwarno.rozklad.core.ui.PrivacyPolicyLink
 fun ProfileRoute(modifier: Modifier = Modifier, viewModel: ProfileViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val deleteState by viewModel.deleteState.collectAsStateWithLifecycle()
+    val pushState by viewModel.pushState.collectAsStateWithLifecycle()
+    // Android 13+: системний запит дозволу; вмикаємо лише якщо людина дозволила.
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) viewModel.setPushEnabled(true)
+    }
+    val onPushToggle: (Boolean) -> Unit = { on ->
+        if (on && viewModel.needsNotificationPermission() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            viewModel.setPushEnabled(on)
+        }
+    }
     when (val s = state) {
         ProfileUiState.Loading -> LoadingState(modifier)
 
@@ -53,6 +70,8 @@ fun ProfileRoute(modifier: Modifier = Modifier, viewModel: ProfileViewModel = hi
             deleteState = deleteState,
             onDeleteAccount = viewModel::deleteAccount,
             onDeleteDialogClosed = viewModel::resetDeleteState,
+            pushState = pushState,
+            onPushToggle = onPushToggle,
             modifier = modifier,
         )
     }
@@ -67,6 +86,8 @@ internal fun ProfileScreen(
     deleteState: DeleteAccountState,
     onDeleteAccount: (String) -> Unit,
     onDeleteDialogClosed: () -> Unit,
+    pushState: PushUiState?,
+    onPushToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var confirmSignOut by rememberSaveable { mutableStateOf(false) }
@@ -108,6 +129,25 @@ internal fun ProfileScreen(
                         headlineContent = { Text(m.name) },
                         supportingContent = { Text(if (m.role == Role.PARENT) "Батьки" else "Дитина") },
                     )
+                }
+            }
+        }
+
+        if (pushState != null) {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Сповіщення на цей телефон", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Нові оцінки, підтвердження, бонуси й домашка на завтра",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(checked = pushState.enabled, onCheckedChange = onPushToggle)
+                    }
+                    pushState.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                 }
             }
         }

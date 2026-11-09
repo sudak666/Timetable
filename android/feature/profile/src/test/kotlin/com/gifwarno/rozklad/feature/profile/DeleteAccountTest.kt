@@ -3,16 +3,29 @@ package com.gifwarno.rozklad.feature.profile
 import com.gifwarno.rozklad.core.data.repository.ActiveFamily
 import com.gifwarno.rozklad.core.model.Member
 import com.gifwarno.rozklad.core.model.Role
+import com.gifwarno.rozklad.core.push.PushSettings
 import com.gifwarno.rozklad.core.testing.FakeFamilyRepository
 import com.gifwarno.rozklad.core.testing.FakeSessionRepository
 import com.gifwarno.rozklad.core.testing.MainDispatcherRule
 import com.gifwarno.rozklad.core.testing.TestData
 import com.gifwarno.rozklad.core.testing.fakePreferences
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+
+/** Збірка без Firebase. */
+private object NoPush : PushSettings {
+    override val isAvailable = false
+    override val enabled = flowOf(false)
+    override val lastError = flowOf<String?>(null)
+
+    override suspend fun setEnabled(enabled: Boolean) = Unit
+
+    override fun hasPermission() = true
+}
 
 class DeleteAccountTest {
     @get:Rule val main = MainDispatcherRule()
@@ -42,7 +55,7 @@ class DeleteAccountTest {
 
     private fun vm(session: FakeSessionRepository): ProfileViewModel {
         val families = FakeFamilyRepository(TestData.familyData())
-        return ProfileViewModel(ActiveFamily(session, families, fakePreferences()), families, session, fakePreferences())
+        return ProfileViewModel(ActiveFamily(session, families, fakePreferences()), families, session, fakePreferences(), NoPush)
     }
 
     @Test

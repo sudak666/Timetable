@@ -27,6 +27,12 @@ interface RozkladNetworkDataSource {
      */
     suspend fun deleteAccount()
 
+    /** Прив'язати токен FCM цього пристрою до поточного користувача (RPC school_register_fcm). */
+    suspend fun registerPushToken(token: String)
+
+    /** Прибрати токен із сервера (RLS дозволяє лише свої). */
+    suspend fun unregisterPushToken(token: String)
+
     suspend fun membership(userId: String): NetworkMembership?
 
     suspend fun createFamily(familyName: String, parentName: String)

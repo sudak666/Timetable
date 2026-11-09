@@ -3,6 +3,7 @@ package com.gifwarno.rozklad.core.datastore
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -64,6 +65,20 @@ class UserPreferencesDataSource @Inject constructor(private val store: DataStore
         }
     }
 
+    /** Користувач сам увімкнув сповіщення на цьому пристрої (за замовчуванням — ні). */
+    val pushEnabled: Flow<Boolean> = store.data.map { it[PUSH_ENABLED] ?: false }
+
+    suspend fun setPushEnabled(enabled: Boolean) {
+        store.edit { it[PUSH_ENABLED] = enabled }
+    }
+
+    /** Токен FCM, зареєстрований на сервері, — щоб видалити його під час виходу з акаунта. */
+    val pushToken: Flow<String?> = store.data.map { it[PUSH_TOKEN] }
+
+    suspend fun setPushToken(token: String?) {
+        store.edit { if (token == null) it.remove(PUSH_TOKEN) else it[PUSH_TOKEN] = token }
+    }
+
     suspend fun clear() {
         store.edit { it.clear() }
     }
@@ -74,6 +89,8 @@ class UserPreferencesDataSource @Inject constructor(private val store: DataStore
         val MEMBER_USER = stringPreferencesKey("member_user")
         val MEMBER_FAMILY = stringPreferencesKey("member_family")
         val MEMBER_ROLE = stringPreferencesKey("member_role")
+        val PUSH_ENABLED = booleanPreferencesKey("push_enabled")
+        val PUSH_TOKEN = stringPreferencesKey("push_token")
     }
 }
 
