@@ -1,0 +1,187 @@
+package com.gifwarno.rozklad.core.data.mapper
+
+import com.gifwarno.rozklad.core.database.AirAlertEntity
+import com.gifwarno.rozklad.core.database.ChallengeEntity
+import com.gifwarno.rozklad.core.database.FamilyEntity
+import com.gifwarno.rozklad.core.database.GradeEntity
+import com.gifwarno.rozklad.core.database.HomeworkEntity
+import com.gifwarno.rozklad.core.database.LedgerEntity
+import com.gifwarno.rozklad.core.database.MemberEntity
+import com.gifwarno.rozklad.core.database.TimetableEntity
+import com.gifwarno.rozklad.core.domain.Rewards
+import com.gifwarno.rozklad.core.model.AirAlert
+import com.gifwarno.rozklad.core.model.AlertLocation
+import com.gifwarno.rozklad.core.model.AlertLocationKind
+import com.gifwarno.rozklad.core.model.AlertStatus
+import com.gifwarno.rozklad.core.model.Bell
+import com.gifwarno.rozklad.core.model.Challenge
+import com.gifwarno.rozklad.core.model.Family
+import com.gifwarno.rozklad.core.model.Grade
+import com.gifwarno.rozklad.core.model.GradeStatus
+import com.gifwarno.rozklad.core.model.Holiday
+import com.gifwarno.rozklad.core.model.Homework
+import com.gifwarno.rozklad.core.model.LedgerEntry
+import com.gifwarno.rozklad.core.model.LedgerKind
+import com.gifwarno.rozklad.core.model.Lesson
+import com.gifwarno.rozklad.core.model.Member
+import com.gifwarno.rozklad.core.model.RewardSettings
+import com.gifwarno.rozklad.core.model.Role
+import com.gifwarno.rozklad.core.model.SchoolSchedule
+import com.gifwarno.rozklad.core.network.model.NetworkAlert
+import com.gifwarno.rozklad.core.network.model.NetworkAlertLocation
+import com.gifwarno.rozklad.core.network.model.NetworkChallenge
+import com.gifwarno.rozklad.core.network.model.NetworkFamily
+import com.gifwarno.rozklad.core.network.model.NetworkGrade
+import com.gifwarno.rozklad.core.network.model.NetworkHomework
+import com.gifwarno.rozklad.core.network.model.NetworkLedger
+import com.gifwarno.rozklad.core.network.model.NetworkLesson
+import com.gifwarno.rozklad.core.network.model.NetworkMember
+import com.gifwarno.rozklad.core.network.model.NetworkTimetable
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+
+/* network → entity (зберігаємо) → model (показуємо). Жодна інша частина застосунку не бачить DTO. */
+
+internal fun parseInstant(s: String): Instant = try {
+    OffsetDateTime.parse(s).toInstant()
+} catch (_: DateTimeParseException) {
+    runCatching { Instant.parse(s) }.getOrDefault(Instant.EPOCH)
+}
+
+/** Для тривог невідомий час краще показати «невідомо», ніж 1970 рік. */
+internal fun parseInstantOrNull(s: String?): Instant? = s?.let {
+    runCatching { OffsetDateTime.parse(it).toInstant() }.recoverCatching { _ -> Instant.parse(it) }.getOrNull()
+}
+
+internal fun NetworkAlert.asEntity(familyId: String) = AirAlertEntity(
+    familyId = familyId,
+    uid = location.uid,
+    name = location.name,
+    status = state?.status,
+    sinceMillis = parseInstantOrNull(state?.since)?.toEpochMilli(),
+    checkedAtMillis = parseInstantOrNull(state?.checkedAt)?.toEpochMilli(),
+)
+
+internal fun AirAlertEntity.asModel() = AirAlert(
+    regionUid = uid,
+    regionName = name,
+    status = status?.let(AlertStatus::fromCode),
+    since = sinceMillis?.let(Instant::ofEpochMilli),
+    checkedAt = checkedAtMillis?.let(Instant::ofEpochMilli),
+)
+
+internal fun NetworkAlertLocation.asModel() = AlertLocation(
+    uid = uid,
+    name = name,
+    kind = when (kind) {
+        "oblast" -> AlertLocationKind.OBLAST
+        "city" -> AlertLocationKind.CITY
+        "raion" -> AlertLocationKind.RAION
+        else -> AlertLocationKind.HROMADA
+    },
+    oblastUid = oblastUid,
+    raionUid = raionUid,
+)
+
+internal fun NetworkFamily.asEntity() = FamilyEntity(id, name, inviteCode, (rates ?: JsonObject(emptyMap())).toString())
+
+internal fun NetworkMember.asEntity(familyId: String) = MemberEntity(
+    familyId = familyId,
+    userId = userId,
+    role = role,
+    name = name,
+    goalTitle = goalTitle.orEmpty(),
+    goalAmount = goalAmount ?: 0,
+    avatar = avatar.orEmpty(),
+    theme = theme.orEmpty(),
+)
+
+internal fun NetworkGrade.asEntity(familyId: String) =
+    GradeEntity(id, familyId, childId, subject, grade, date, status, amount, parseInstant(createdAt).toEpochMilli())
+
+internal fun NetworkHomework.asEntity(familyId: String) = HomeworkEntity(id, familyId, childId, subject, due, text, done)
+
+internal fun NetworkLedger.asEntity(familyId: String) =
+    LedgerEntity(id, familyId, childId, kind, amount, note.orEmpty(), date, parseInstant(createdAt).toEpochMilli())
+
+internal fun NetworkChallenge.asEntity(familyId: String) =
+    ChallengeEntity(id, familyId, childId, title, subject, minGrade, need, reward, startDate, endDate)
+
+internal fun FamilyEntity.asModel() = Family(id, name, inviteCode)
+
+internal fun FamilyEntity.settings(json: Json): RewardSettings {
+    val obj = runCatching { json.parseToJsonElement(settingsJson) as? JsonObject }.getOrNull() ?: return Rewards.DEFAULT_SETTINGS
+    val flat = obj.mapValues { (_, v) -> (v as? JsonPrimitive)?.takeUnless { it is JsonNull }?.content }
+    return Rewards.parseSettings(flat)
+}
+
+internal fun roleOf(s: String) = if (s == "parent") Role.PARENT else Role.CHILD
+
+internal fun MemberEntity.asModel() = Member(userId, roleOf(role), name, goalTitle, goalAmount, avatar, theme)
+
+internal fun GradeEntity.asModel() = Grade(
+    id = id,
+    childId = childId,
+    subject = subject,
+    value = value,
+    date = LocalDate.parse(date),
+    status = if (status == "approved") GradeStatus.APPROVED else GradeStatus.PENDING,
+    amount = amount,
+    createdAt = Instant.ofEpochMilli(createdAt),
+)
+
+internal fun HomeworkEntity.asModel() = Homework(id, childId, subject, LocalDate.parse(due), text, done)
+
+internal fun LedgerEntity.asModel() = LedgerEntry(
+    id = id,
+    childId = childId,
+    kind = if (kind == "payout") LedgerKind.PAYOUT else LedgerKind.BONUS,
+    amount = amount,
+    note = note,
+    date = LocalDate.parse(date),
+    createdAt = Instant.ofEpochMilli(createdAt),
+)
+
+internal fun ChallengeEntity.asModel() =
+    Challenge(id, childId, title, subject, minGrade, need, reward, LocalDate.parse(startDate), LocalDate.parse(endDate))
+
+/* ---------- розклад ---------- */
+
+private val HHMM = DateTimeFormatter.ofPattern("H:mm")
+private val PAIRS = ListSerializer(ListSerializer(String.serializer()))
+private val WEEK = ListSerializer(ListSerializer(NetworkLesson.serializer()))
+
+internal fun NetworkTimetable.asEntity(familyId: String, json: Json) = TimetableEntity(
+    childId = childId,
+    familyId = familyId,
+    bellsJson = json.encodeToString(PAIRS, bells),
+    weekJson = json.encodeToString(WEEK, week),
+    holidaysJson = json.encodeToString(PAIRS, holidays),
+)
+
+/** Пошкоджені дані не валять застосунок — такий розклад просто вважається незаповненим. */
+internal fun TimetableEntity.asModel(json: Json): SchoolSchedule? = runCatching {
+    SchoolSchedule(
+        bells = json.decodeFromString(PAIRS, bellsJson).map { (a, b) -> Bell(LocalTime.parse(a, HHMM), LocalTime.parse(b, HHMM)) },
+        week = json.decodeFromString(WEEK, weekJson).map { day -> day.map { Lesson(it.subject, it.optional) } },
+        holidays = json.decodeFromString(PAIRS, holidaysJson).map { (a, b) -> Holiday(LocalDate.parse(a), LocalDate.parse(b)) },
+    )
+}.getOrNull()
+
+/** Модель → тіло запиту до school_timetables (updated_at ставить сервер). */
+internal fun SchoolSchedule.asNetwork(childId: String) = NetworkTimetable(
+    childId = childId,
+    bells = bells.map { listOf(HHMM.format(it.start), HHMM.format(it.end)) },
+    week = week.map { day -> day.map { NetworkLesson(it.subject.trim(), it.optional) } },
+    holidays = holidays.map { listOf(it.start.toString(), it.end.toString()) },
+)

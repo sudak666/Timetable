@@ -12,7 +12,12 @@ self.addEventListener('fetch', (e) => {
   const r = e.request, u = new URL(r.url);
   if (r.method !== 'GET' || u.origin !== location.origin) return;
   if (r.mode === 'navigate') {
-    e.respondWith(fetch(r).then((res) => { const cp = res.clone(); caches.open(CACHE).then((c) => c.put('./', cp)); return res; }).catch(() => caches.match('./')));
+    // Оболонкою кешуємо лише головну сторінку — інакше, напр., privacy.html підмінив би застосунок офлайн.
+    const shell = u.pathname.endsWith('/') || u.pathname.endsWith('/index.html');
+    e.respondWith(fetch(r).then((res) => {
+      if (shell && res.ok) { const cp = res.clone(); caches.open(CACHE).then((c) => c.put('./', cp)); }
+      return res;
+    }).catch(() => caches.match('./')));
     return;
   }
   e.respondWith(caches.match(r).then((hit) => hit || fetch(r).then((res) => {

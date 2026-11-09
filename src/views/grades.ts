@@ -2,7 +2,8 @@ import { html, nothing, type TemplateResult } from 'lit-html';
 import { classMap } from 'lit-html/directives/class-map.js';
 import { live } from 'lit-html/directives/live.js';
 import { styleMap } from 'lit-html/directives/style-map.js';
-import { enter, errText, loadFamily, mutate, sb, signOut } from '../api';
+import { deleteAccount, enter, errText, loadFamily, mutate, sb, signOut } from '../api';
+import { DELETE_CONFIRM_WORD, deletionWarnings, isDeleteConfirmed } from '../features/account';
 import { subjEmoji } from '../data/schedule';
 import {
   AVATARS, THEMES, XP_PER_LEVEL, autoRewards, bestTenRun, byTime, challengeHits, currentRun, PASS, gradeColor, gradeLabel, gradeValue, isScored, rateOf, levelOf, totals, xpOf,
@@ -18,6 +19,8 @@ import { toast } from '../ui/toast';
 import { dateLabel, pickDate, pickSubject, subjLabel } from '../ui/pickers';
 import { closePop, openPop } from '../ui/popover';
 import { installApp, togglePush } from '../pwa';
+
+export { editScheduleButton, scheduleEditor } from './editor';
 
 const uah = (v: number) => (v > 0 ? '+' : '') + v + ' ₴';
 const tone = (v: number) => (v > 0 ? 'pos' : v < 0 ? 'neg' : '');
@@ -127,7 +130,8 @@ function authView(): TemplateResult {
       <label class="sr-only" for="gPass">Пароль</label><input type="password" id="gPass" placeholder="пароль (від 6 символів)" minlength="6" required autocomplete="current-password">
       <button>Увійти</button><button type="button" @click=${signup}>Зареєструватись</button>
     </form>
-    ${msg ? html`<p class=${classMap({ msg: true, pos: !!msg.ok, neg: !msg.ok })} role="status">${emo(msg.text)}</p>` : nothing}`;
+    ${msg ? html`<p class=${classMap({ msg: true, pos: !!msg.ok, neg: !msg.ok })} role="status">${emo(msg.text)}</p>` : nothing}
+    <p class="legal"><a href="privacy.html" target="_blank" rel="noopener">Політика конфіденційності</a></p>`;
 }
 
 function joinView(): TemplateResult {
@@ -461,8 +465,23 @@ export function tabProfile(): TemplateResult {
       <button type="button" @click=${togglePush}>${emo(state.pushOn ? '🔕 Вимкнути сповіщення' : '🔔 Сповіщення на телефон')}</button>
       ${state.canInstall ? html`<button type="button" @click=${installApp}>${emo('📱 Встановити застосунок')}</button>` : nothing}
       <button type="button" @click=${() => void signOut()}>Вийти</button>
+      <button type="button" class="danger" @click=${askDeleteAccount}>Видалити акаунт</button>
     </div>
+    <p class="legal"><a href="privacy.html" target="_blank" rel="noopener">Політика конфіденційності</a></p>
     ${state.pushMsg ? html`<p class=${classMap({ msg: true, pos: !!state.pushMsg.ok, neg: !state.pushMsg.ok })} role="status">${emo(state.pushMsg.text)}</p>` : nothing}</section>`;
+}
+
+/** Два кроки: чесний перелік наслідків → введення слова. Безповоротно. */
+async function askDeleteAccount(): Promise<void> {
+  const w = deletionWarnings(state.role === 'parent', state.members, state.me!.id, state.family?.name ?? '');
+  if (state.queued) w.push(`Ще не надіслані зміни з цього пристрою (${state.queued}) теж буде втрачено.`);
+  if (!(await confirm('Видалити акаунт? ' + w.map((x) => '• ' + x).join(' ')))) return;
+  const typed = await prompt(`Щоб підтвердити, введи слово ${DELETE_CONFIRM_WORD}`, '', 'text');
+  if (typed === null) return;
+  if (!isDeleteConfirmed(typed)) return void toast('Слово не збігається — акаунт не видалено', 'err');
+  const err = await deleteAccount();
+  if (err) toast('Акаунт не видалено: ' + err, 'err');
+  else toast('Акаунт видалено. Дякуємо, що були з нами.');
 }
 
 /** Бейдж для нижньої навігації: скільки дій чекає. */

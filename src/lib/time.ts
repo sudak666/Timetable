@@ -18,7 +18,11 @@ export const holidayOf = (d: Date): readonly [string, string] | undefined => {
   return HOLIDAYS.find(([a, b]) => k >= a && k <= b);
 };
 /** Уроки на конкретну дату (без вихідних і канікул). */
-export const lessonsOn = (d: Date): Lesson[] | undefined => (holidayOf(d) ? undefined : WEEK[(d.getDay() + 6) % 7]?.lessons);
+export const lessonsOn = (d: Date): Lesson[] | undefined => {
+  if (holidayOf(d)) return undefined;
+  const l = WEEK[(d.getDay() + 6) % 7]?.lessons;
+  return l?.length ? l : undefined;
+};
 
 export interface Clock { date: Date; weekday: number; min: number }
 /** weekday: 0 = понеділок … 6 = неділя; min: хвилини від опівночі з дробовими секундами. */

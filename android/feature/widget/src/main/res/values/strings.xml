@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_name">Розклад зараз</string>
+    <string name="widget_description">Поточний урок, перерва й уроки на день</string>
+</resources>

@@ -3,7 +3,7 @@ import ts from 'typescript-eslint';
 import globals from 'globals';
 
 export default ts.config(
-  { ignores: ['dist', 'public/theme-init.js', 'public/sw.js', 'supabase/functions'] },
+  { ignores: ['dist', 'public/theme-init.js', 'public/sw.js', 'supabase/functions', 'android'] },
   js.configs.recommended,
   ...ts.configs.strict,
   {
