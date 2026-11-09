@@ -20,7 +20,7 @@
     "@fontsource/russo-one": "^5.3.0",
     "@supabase/auth-js": "^2.117.2",
     "@supabase/postgrest-js": "^2.117.2",
-    "@supabase/realtime-js": "^2.117.2",
+    "@supabase/realtime-js": "^2.119.0",
     "lit-html": "^3.3.3"
   },
   "devDependencies": {
