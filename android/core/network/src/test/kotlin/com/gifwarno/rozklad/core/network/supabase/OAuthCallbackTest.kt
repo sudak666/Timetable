@@ -22,6 +22,24 @@ class OAuthCallbackTest {
     }
 
     @Test
+    fun `кирилиця в описі помилки декодується`() {
+        assertEquals(
+            "Скасовано",
+            OAuthCallback.parse("app://login-callback?error_description=%D0%A1%D0%BA%D0%B0%D1%81%D0%BE%D0%B2%D0%B0%D0%BD%D0%BE").error,
+        )
+    }
+
+    @Test
+    fun `зіпсоване відсоткове кодування в сусідньому полі не губить код`() {
+        assertEquals(OAuthCallback("ok", null), OAuthCallback.parse("app://login-callback?code=ok&state=100%ZZ"))
+    }
+
+    @Test
+    fun `зіпсоване значення помилки показуємо як є`() {
+        assertEquals("bad%ZZ", OAuthCallback.parse("app://login-callback?error=bad%ZZ").error)
+    }
+
+    @Test
     fun `сміття не валить застосунок`() {
         assertEquals(null, OAuthCallback.parse("::::").code)
     }
