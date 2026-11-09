@@ -31,10 +31,13 @@ jobs:
         run: ./gradlew spotlessCheck
       - name: Unit-тести
         run: ./gradlew test -PwarningsAsErrors=true
-      - name: Android Lint
-        run: ./gradlew :app:lintRelease
+      # Спершу release-збірка, потім Lint: двічі (efa1c82, 26e3dc9) KSP2 падав з «could not be resolved»
+      # лише тоді, коли release-KSP запускався паралельно з аналізом Lint в одному процесі Gradle.
+      # Після збірки release-KSP уже виконано, і Lint лише аналізує.
       - name: Release-збірка (R8)
         run: ./gradlew :app:assembleRelease -PwarningsAsErrors=true
+      - name: Android Lint
+        run: ./gradlew :app:lintRelease
       - name: Звіти
         if: always()
         uses: actions/upload-artifact@v4
