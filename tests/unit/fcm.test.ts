@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FcmAuth, base64url, classify, fcmMessage, parseServiceAccount, sendFcm, signJwt, type ServiceAccount } from '../../supabase/functions/school-push/fcm.ts';
+import { FcmAuth, base64url, classify, fcmAlertMessage, fcmMessage, parseServiceAccount, sendFcm, signJwt, type ServiceAccount } from '../../supabase/functions/school-push/fcm.ts';
 
 /** Справжня пара ключів RSA — перевіряємо, що підпис JWT валідний для Google. */
 async function testAccount(): Promise<{ sa: ServiceAccount; publicKey: CryptoKey }> {
@@ -67,6 +67,13 @@ describe('повідомлення й відповіді FCM', () => {
     const m = fcmMessage('tok', p).message;
     expect(m.android.notification).toEqual({ channel_id: 'family', tag: 'g1' });
     expect(m.data).toEqual({ url: '#grades', tag: 'g1', channel: 'family' });
+  });
+  it('тривога — лише data (показує застосунок), високий пріоритет, короткий TTL, без notification', () => {
+    const m = fcmAlertMessage('fid-1', { uid: 31, status: 'A', since: '2026-11-10T08:00:00.000Z', title: 'T', body: 'B' }).message as Record<string, unknown>;
+    expect(m.fid).toBe('fid-1');
+    expect('notification' in m).toBe(false);
+    expect(m.data).toEqual({ type: 'alert', uid: '31', status: 'A', since: '2026-11-10T08:00:00.000Z', title: 'T', body: 'B' });
+    expect(m.android).toEqual({ priority: 'high', ttl: '600s', collapse_key: 'alert-31' });
   });
   it('класифікація помилок', () => {
     expect(classify(200, '')).toBe('ok');

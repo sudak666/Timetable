@@ -72,6 +72,13 @@ class UserPreferencesDataSource @Inject constructor(private val store: DataStore
         store.edit { it[PUSH_ENABLED] = enabled }
     }
 
+    /** Push про повітряні тривоги на цей пристрій (окремо від решти сповіщень; за замовчуванням — ні). */
+    val alertsPushEnabled: Flow<Boolean> = store.data.map { it[ALERTS_PUSH] ?: false }
+
+    suspend fun setAlertsPushEnabled(enabled: Boolean) {
+        store.edit { it[ALERTS_PUSH] = enabled }
+    }
+
     /** Токен FCM, зареєстрований на сервері, — щоб видалити його під час виходу з акаунта. */
     val pushToken: Flow<String?> = store.data.map { it[PUSH_TOKEN] }
 
@@ -91,6 +98,7 @@ class UserPreferencesDataSource @Inject constructor(private val store: DataStore
         val MEMBER_ROLE = stringPreferencesKey("member_role")
         val PUSH_ENABLED = booleanPreferencesKey("push_enabled")
         val PUSH_TOKEN = stringPreferencesKey("push_token")
+        val ALERTS_PUSH = booleanPreferencesKey("alerts_push")
     }
 }
 

@@ -81,6 +81,8 @@ data class FamilyData(
     val settings: RewardSettings,
     /** Розклад кожної дитини: childId → розклад. Немає ключа — розклад ще не заповнено. */
     val timetables: Map<String, SchoolSchedule> = emptyMap(),
+    /** Повітряні тривоги для обраного сім'єю місця; null — місце не обрано. */
+    val airAlert: AirAlert? = null,
 ) {
     val children: List<Member> get() = members.filter { it.role == Role.CHILD }
 }

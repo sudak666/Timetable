@@ -11,6 +11,7 @@ import androidx.core.content.ContextCompat
 import com.gifwarno.rozklad.core.common.ApplicationScope
 import com.gifwarno.rozklad.core.common.Dispatcher
 import com.gifwarno.rozklad.core.common.RozkladDispatchers
+import com.gifwarno.rozklad.core.data.repository.FamilyRepository
 import com.gifwarno.rozklad.core.data.repository.SessionRepository
 import com.gifwarno.rozklad.core.datastore.UserPreferencesDataSource
 import com.gifwarno.rozklad.core.model.SessionState
@@ -37,6 +38,7 @@ import kotlinx.coroutines.withContext
 object PushChannels {
     const val FAMILY = "family"
     const val HOMEWORK = "homework"
+    const val ALERTS = "alerts"
 }
 
 /**
@@ -51,6 +53,7 @@ class PushManager @Inject constructor(
     private val session: SessionRepository,
     private val preferences: UserPreferencesDataSource,
     private val network: RozkladNetworkDataSource,
+    private val families: FamilyRepository,
     @param:ApplicationScope private val scope: CoroutineScope,
     @param:Dispatcher(RozkladDispatchers.IO) private val io: CoroutineDispatcher,
 ) : PushSettings {
@@ -68,13 +71,19 @@ class PushManager @Inject constructor(
         createChannels()
         if (FirebaseApp.getApps(context).isEmpty()) FirebaseApp.initializeApp(context, options)
         scope.launch {
-            combine(session.session, preferences.pushEnabled) { s, on -> (s as? SessionState.Ready)?.user?.id to on }
+            combine(session.session, preferences.pushEnabled, preferences.alertsPushEnabled) { s, on, alerts ->
+                Triple((s as? SessionState.Ready)?.user?.id, on, alerts)
+            }
                 .distinctUntilChanged()
-                .collect { (userId, on) -> sync(signedIn = userId != null, wanted = on && hasPermission()) }
+                .collect { (userId, on, alerts) -> sync(signedIn = userId != null, wanted = on && hasPermission(), alerts = alerts) }
         }
     }
 
     override suspend fun setEnabled(enabled: Boolean) = preferences.setPushEnabled(enabled)
+
+    override val alertsEnabled: Flow<Boolean> = preferences.alertsPushEnabled
+
+    override suspend fun setAlertsEnabled(enabled: Boolean) = preferences.setAlertsPushEnabled(enabled)
 
     override fun hasPermission(): Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
         ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
@@ -85,7 +94,7 @@ class PushManager @Inject constructor(
             val signedIn = session.session.value is SessionState.Ready
             if (!signedIn || !preferences.pushEnabled.first() || !hasPermission()) return@launch
             try {
-                network.registerPushToken(token)
+                network.registerPushToken(token, alerts = preferences.alertsPushEnabled.first())
                 preferences.setPushToken(token)
                 _lastError.value = null
             } catch (e: CancellationException) {
@@ -100,13 +109,15 @@ class PushManager @Inject constructor(
     /** Чи реєстрували ми пристрій у цьому процесі — щоб знати, що треба відв'язати. */
     private var registered = false
 
-    private suspend fun sync(signedIn: Boolean, wanted: Boolean) = withContext(io) {
+    private suspend fun sync(signedIn: Boolean, wanted: Boolean, alerts: Boolean) = withContext(io) {
         try {
             when {
                 // Токен прийде в onRegistered(); якщо він уже є — Firebase поверне той самий.
                 signedIn && wanted -> {
                     FirebaseMessaging.getInstance().register().await()
                     registered = true
+                    // Перемкнули тривоги при вже зареєстрованому токені — повідомляємо сервер одразу.
+                    preferences.pushToken.first()?.let { network.registerPushToken(it, alerts) }
                 }
 
                 registered || preferences.pushToken.first() != null -> {
@@ -130,6 +141,24 @@ class PushManager @Inject constructor(
         }
     }
 
+    /**
+     * Data-повідомлення про тривогу: оновлюємо стан (плашка й віджет підхоплять із Room)
+     * і показуємо сповіщення, якщо тривоги на цьому пристрої увімкнено.
+     */
+    internal suspend fun onAlert(data: Map<String, String>) {
+        val alert = parseAlert(data) ?: return
+        families.applyAlertPush(alert.uid, alert.status, alert.since)
+        if (!preferences.alertsPushEnabled.first()) return
+        PushNotifier.show(
+            context = context,
+            title = alert.title,
+            body = alert.body,
+            tag = "alert-${alert.uid}",
+            url = null,
+            channel = PushChannels.ALERTS,
+        )
+    }
+
     private fun createChannels() {
         val nm = context.getSystemService(NotificationManager::class.java) ?: return
         nm.createNotificationChannels(
@@ -139,6 +168,9 @@ class PushManager @Inject constructor(
                 },
                 NotificationChannel(PushChannels.HOMEWORK, "Домашка", NotificationManager.IMPORTANCE_DEFAULT).apply {
                     description = "Нагадування ввечері про домашку на завтра"
+                },
+                NotificationChannel(PushChannels.ALERTS, "Повітряні тривоги", NotificationManager.IMPORTANCE_HIGH).apply {
+                    description = "Початок і відбій тривоги для місця, обраного в профілі. Не замінює офіційні застосунки й сирени."
                 },
             ),
         )

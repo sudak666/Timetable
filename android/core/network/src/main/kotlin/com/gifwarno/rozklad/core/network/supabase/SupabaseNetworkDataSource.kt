@@ -1,6 +1,9 @@
 package com.gifwarno.rozklad.core.network.supabase
 
 import com.gifwarno.rozklad.core.network.RozkladNetworkDataSource
+import com.gifwarno.rozklad.core.network.model.NetworkAlert
+import com.gifwarno.rozklad.core.network.model.NetworkAlertLocation
+import com.gifwarno.rozklad.core.network.model.NetworkAlertState
 import com.gifwarno.rozklad.core.network.model.NetworkAuthState
 import com.gifwarno.rozklad.core.network.model.NetworkChallenge
 import com.gifwarno.rozklad.core.network.model.NetworkFamily
@@ -35,6 +38,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -104,8 +108,14 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
         client.auth.clearSession()
     }
 
-    override suspend fun registerPushToken(token: String) {
-        client.postgrest.rpc("school_register_fcm", buildJsonObject { put("p_token", token) })
+    override suspend fun registerPushToken(token: String, alerts: Boolean) {
+        client.postgrest.rpc(
+            "school_register_fcm",
+            buildJsonObject {
+                put("p_token", token)
+                put("p_alerts", alerts)
+            },
+        )
     }
 
     override suspend fun unregisterPushToken(token: String) {
@@ -146,7 +156,7 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
 
     override suspend fun snapshot(familyId: String): NetworkSnapshot = coroutineScope {
         val family = async {
-            client.from("school_families").select(Columns.list("id", "name", "invite_code", "rates")) {
+            client.from("school_families").select(Columns.list("id", "name", "invite_code", "rates", "alert_uid")) {
                 filter { eq("id", familyId) }
             }.decodeSingle<NetworkFamily>()
         }
@@ -193,15 +203,48 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
                 filter { eq("family_id", familyId) }
             }.decodeList<NetworkTimetable>()
         }
+        val familyRow = family.await()
         NetworkSnapshot(
-            family = family.await(),
+            family = familyRow,
             members = members.await(),
             grades = grades.await(),
             ledger = ledger.await(),
             challenges = challenges.await(),
             homework = homework.await(),
             timetables = timetables.await(),
+            alert = familyRow.alertUid?.let { alert(it) },
         )
+    }
+
+    override suspend fun alertLocations(oblastUid: Int?): List<NetworkAlertLocation> =
+        client.from("school_alert_locations").select(Columns.list("uid", "name", "kind", "oblast_uid", "raion_uid")) {
+            filter {
+                if (oblastUid == null) isIn("kind", listOf("oblast", "city")) else eq("oblast_uid", oblastUid)
+            }
+            order("name", Order.ASCENDING)
+        }.decodeList<NetworkAlertLocation>()
+
+    override suspend fun setAlertRegion(familyId: String, uid: Int?) {
+        // RLS мовчки пропускає чужі оновлення (0 рядків) — перевіряємо, що зміна справді відбулась.
+        val changed = client.from("school_families").update(buildJsonObject { put("alert_uid", uid) }) {
+            select(Columns.list("id"))
+            filter { eq("id", familyId) }
+        }.decodeList<JsonObject>()
+        check(changed.isNotEmpty()) { "Змінити місце можуть лише батьки" }
+    }
+
+    override suspend fun alert(uid: Int): NetworkAlert? = coroutineScope {
+        val location = async {
+            client.from("school_alert_locations").select(Columns.list("uid", "name", "kind", "oblast_uid", "raion_uid")) {
+                filter { eq("uid", uid) }
+            }.decodeSingleOrNull<NetworkAlertLocation>()
+        }
+        val state = async {
+            client.from("school_alert_state").select(Columns.list("uid", "status", "since", "checked_at")) {
+                filter { eq("uid", uid) }
+            }.decodeSingleOrNull<NetworkAlertState>()
+        }
+        location.await()?.let { NetworkAlert(it, state.await()) }
     }
 
     override suspend fun write(op: NetworkWrite): WriteResult = try {

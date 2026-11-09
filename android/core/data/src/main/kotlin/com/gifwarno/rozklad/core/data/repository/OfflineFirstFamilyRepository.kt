@@ -10,8 +10,14 @@ import com.gifwarno.rozklad.core.data.sync.LocalWriter
 import com.gifwarno.rozklad.core.data.sync.SyncManager
 import com.gifwarno.rozklad.core.data.sync.Tables
 import com.gifwarno.rozklad.core.data.sync.with
+import com.gifwarno.rozklad.core.database.AirAlertEntity
+import com.gifwarno.rozklad.core.database.ChallengeEntity
 import com.gifwarno.rozklad.core.database.FamilyDao
+import com.gifwarno.rozklad.core.database.LedgerEntity
+import com.gifwarno.rozklad.core.database.TimetableEntity
 import com.gifwarno.rozklad.core.domain.Rewards
+import com.gifwarno.rozklad.core.model.AlertLocation
+import com.gifwarno.rozklad.core.model.AlertStatus
 import com.gifwarno.rozklad.core.model.FamilyData
 import com.gifwarno.rozklad.core.model.Grade
 import com.gifwarno.rozklad.core.model.LedgerKind
@@ -25,6 +31,7 @@ import com.gifwarno.rozklad.core.network.model.NetworkTimetable
 import com.gifwarno.rozklad.core.network.model.NetworkWrite
 import com.gifwarno.rozklad.core.network.model.WriteKind
 import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 import javax.inject.Inject
@@ -59,8 +66,14 @@ internal class OfflineFirstFamilyRepository @Inject constructor(
         dao.observeMembers(familyId),
         dao.observeGrades(familyId),
         dao.observeHomework(familyId),
-        combine(dao.observeLedger(familyId), dao.observeChallenges(familyId), dao.observeTimetables(familyId), ::Triple),
-    ) { family, members, grades, homework, (ledger, challenges, timetables) ->
+        combine(
+            dao.observeLedger(familyId),
+            dao.observeChallenges(familyId),
+            dao.observeTimetables(familyId),
+            dao.observeAlert(familyId),
+            ::Extras,
+        ),
+    ) { family, members, grades, homework, (ledger, challenges, timetables, alert) ->
         family ?: return@combine null
         FamilyData(
             family = family.asModel(),
@@ -71,8 +84,16 @@ internal class OfflineFirstFamilyRepository @Inject constructor(
             homework = homework.map { it.asModel() },
             settings = family.settings(json),
             timetables = timetables.mapNotNull { t -> t.asModel(json)?.let { t.childId to it } }.toMap(),
+            airAlert = alert?.asModel(),
         )
     }.flowOn(io)
+
+    private data class Extras(
+        val ledger: List<LedgerEntity>,
+        val challenges: List<ChallengeEntity>,
+        val timetables: List<TimetableEntity>,
+        val alert: AirAlertEntity?,
+    )
 
     override val syncStatus: Flow<SyncStatus> = sync.status
 
@@ -88,6 +109,7 @@ internal class OfflineFirstFamilyRepository @Inject constructor(
                 ledger = s.ledger.map { it.asEntity(familyId) },
                 challenges = s.challenges.map { it.asEntity(familyId) },
                 timetables = s.timetables.map { it.asEntity(familyId, json) },
+                alert = s.alert?.asEntity(familyId),
             )
             writer.replayPending(familyId)
             Result.success(Unit)
@@ -177,4 +199,41 @@ internal class OfflineFirstFamilyRepository @Inject constructor(
     }
 
     override fun dismissSyncError() = sync.clearError()
+
+    override suspend fun alertLocations(oblastUid: Int?): Result<List<AlertLocation>> = withContext(io) {
+        runNetwork { network.alertLocations(oblastUid).map { it.asModel() } }
+    }
+
+    override suspend fun setAlertRegion(familyId: String, uid: Int?): Result<Unit> = withContext(io) {
+        runNetwork {
+            network.setAlertRegion(familyId, uid)
+            val alert = uid?.let { network.alert(it) }
+            if (alert == null) dao.deleteAlert(familyId) else dao.upsertAlert(alert.asEntity(familyId))
+        }
+    }
+
+    override suspend fun refreshAlert(familyId: String): Result<Unit> = withContext(io) {
+        val current = dao.alert(familyId) ?: return@withContext Result.success(Unit)
+        runNetwork<Unit> { network.alert(current.uid)?.let { dao.upsertAlert(it.asEntity(familyId)) } }
+    }
+
+    override suspend fun applyAlertPush(uid: Int, status: AlertStatus, since: Instant?) = withContext(io) {
+        dao.updateAlertState(uid, status.code, since?.toEpochMilli(), clock.millis())
+    }
+
+    private inline fun <T> runNetwork(block: () -> T): Result<T> = try {
+        Result.success(block())
+    } catch (e: CancellationException) {
+        throw e
+    } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+        Result.failure(e)
+    }
 }
+
+/** Код сервера для стану (school_alert_state.status). */
+internal val AlertStatus.code: String
+    get() = when (this) {
+        AlertStatus.ACTIVE -> "A"
+        AlertStatus.PARTIAL -> "P"
+        AlertStatus.NONE -> "N"
+    }

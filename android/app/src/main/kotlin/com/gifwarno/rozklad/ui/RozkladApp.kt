@@ -11,8 +11,13 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
@@ -22,6 +27,8 @@ import androidx.navigation3.ui.NavDisplay
 import com.gifwarno.rozklad.core.designsystem.component.LoadingState
 import com.gifwarno.rozklad.core.model.SessionState
 import com.gifwarno.rozklad.core.model.SyncStatus
+import com.gifwarno.rozklad.core.ui.AlertBanner
+import com.gifwarno.rozklad.core.ui.AlertBannerText
 import com.gifwarno.rozklad.core.ui.SyncBanner
 import com.gifwarno.rozklad.feature.auth.AuthRoute
 import com.gifwarno.rozklad.feature.auth.JoinFamilyRoute
@@ -29,14 +36,17 @@ import com.gifwarno.rozklad.feature.auth.UnavailableScreen
 import com.gifwarno.rozklad.feature.grades.GradesRoute
 import com.gifwarno.rozklad.feature.homework.HomeworkRoute
 import com.gifwarno.rozklad.feature.profile.ProfileRoute
+import com.gifwarno.rozklad.feature.profile.alerts.AlertRegionRoute
 import com.gifwarno.rozklad.feature.schedule.ScheduleEditorRoute
 import com.gifwarno.rozklad.feature.today.TodayRoute
+import com.gifwarno.rozklad.navigation.AlertRegionKey
 import com.gifwarno.rozklad.navigation.GradesKey
 import com.gifwarno.rozklad.navigation.HomeworkKey
 import com.gifwarno.rozklad.navigation.ProfileKey
 import com.gifwarno.rozklad.navigation.ScheduleEditorKey
 import com.gifwarno.rozklad.navigation.TodayKey
 import com.gifwarno.rozklad.navigation.TopLevelDestination
+import kotlinx.coroutines.delay
 
 /** Дії рівня застосунку — стан піднято в MainActivity, UI лише відображає (state hoisting). */
 @Immutable
@@ -46,7 +56,11 @@ data class AppActions(
     val onSignOut: () -> Unit,
     val onDismissSyncError: () -> Unit,
     val onDeepLinkHandled: () -> Unit,
+    val onRefreshAlert: () -> Unit,
 )
+
+/** Як часто перевіряти стан тривоги, поки застосунок на екрані (сервер оновлює раз на хвилину). */
+private const val ALERT_POLL_MS = 60_000L
 
 /** Корінь UI: стан сесії вирішує, що показати. */
 @Composable
@@ -56,6 +70,7 @@ fun RozkladApp(
     hasFamilyData: Boolean,
     actions: AppActions,
     modifier: Modifier = Modifier,
+    alert: AlertBannerText? = null,
     deepLink: String? = null,
 ) {
     Surface(modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -73,16 +88,35 @@ fun RozkladApp(
                 modifier = Modifier.safeDrawingPadding(),
             )
 
-            is SessionState.Ready -> MainShell(sync, hasFamilyData, actions, deepLink)
+            is SessionState.Ready -> MainShell(sync, hasFamilyData, actions, alert, deepLink)
         }
     }
 }
 
 @Composable
-private fun MainShell(sync: SyncStatus, hasData: Boolean, actions: AppActions, deepLink: String?, modifier: Modifier = Modifier) {
+private fun MainShell(
+    sync: SyncStatus,
+    hasData: Boolean,
+    actions: AppActions,
+    alert: AlertBannerText?,
+    deepLink: String?,
+    modifier: Modifier = Modifier,
+) {
     LifecycleResumeEffect(Unit) {
         actions.onRefresh()
         onPauseOrDispose { }
+    }
+
+    // Стан тривоги — щохвилини, лише поки застосунок на екрані (у фоні — push).
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val refreshAlert by rememberUpdatedState(actions.onRefreshAlert)
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                delay(ALERT_POLL_MS)
+                refreshAlert()
+            }
+        }
     }
 
     // Стек: [Сьогодні] або [Сьогодні, вкладка] — «назад» з будь-якої вкладки веде на «Сьогодні».
@@ -124,6 +158,7 @@ private fun MainShell(sync: SyncStatus, hasData: Boolean, actions: AppActions, d
         },
     ) {
         Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+            AlertBanner(alert)
             SyncBanner(sync, onDismissError = actions.onDismissSyncError)
             NavDisplay(
                 backStack = backStack,
@@ -137,7 +172,10 @@ private fun MainShell(sync: SyncStatus, hasData: Boolean, actions: AppActions, d
                     entry<ScheduleEditorKey> { ScheduleEditorRoute(onClose = { backStack.removeAt(backStack.lastIndex) }) }
                     entry<GradesKey> { if (hasData) GradesRoute() else LoadingState() }
                     entry<HomeworkKey> { if (hasData) HomeworkRoute() else LoadingState() }
-                    entry<ProfileKey> { if (hasData) ProfileRoute() else LoadingState() }
+                    entry<ProfileKey> {
+                        if (hasData) ProfileRoute(onPickAlertRegion = { backStack.add(AlertRegionKey) }) else LoadingState()
+                    }
+                    entry<AlertRegionKey> { AlertRegionRoute(onClose = { backStack.removeAt(backStack.lastIndex) }) }
                 },
             )
         }

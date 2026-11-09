@@ -3,10 +3,15 @@ package com.gifwarno.rozklad.feature.widget
 import com.gifwarno.rozklad.core.domain.SchoolCalendar
 import com.gifwarno.rozklad.core.domain.SchoolStatus
 import com.gifwarno.rozklad.core.domain.Timetable
+import com.gifwarno.rozklad.core.model.AirAlert
+import com.gifwarno.rozklad.core.model.AlertStatus
 import com.gifwarno.rozklad.core.model.SchoolSchedule
+import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -109,6 +114,25 @@ fun buildWidgetState(now: LocalDateTime, childName: String, schedule: SchoolSche
 }
 
 private fun lessonDays(s: SchoolSchedule) = s.week.size
+
+/** Дані старші за це — дописуємо «станом на», щоб віджет не видавав їх за поточні. */
+private val STALE_AFTER: Duration = Duration.ofMinutes(15)
+
+/**
+ * Рядок тривоги для віджета (коротко — віджет вузький); null — тривоги немає або стан невідомий.
+ * Віджет оновлюється push-ем і на межах уроків, тож давні дані чесно позначаємо часом.
+ */
+fun widgetAlertLine(alert: AirAlert?, now: Instant, zone: ZoneId): String? {
+    val status = alert?.status ?: return null
+    val head = when (status) {
+        AlertStatus.ACTIVE -> "🚨 Тривога" + (alert.since?.let { " з ${HM.format(it.atZone(zone))}" } ?: "")
+        AlertStatus.PARTIAL -> "⚠️ Тривога в частині області"
+        AlertStatus.NONE -> return null
+    }
+    val checked = alert.checkedAt
+    val stale = checked != null && Duration.between(checked, now) > STALE_AFTER
+    return if (stale) "$head · станом на ${HM.format(checked.atZone(zone))}" else head
+}
 
 /**
  * Найближчий момент, коли вміст віджета зміниться: початок або кінець уроку сьогодні,

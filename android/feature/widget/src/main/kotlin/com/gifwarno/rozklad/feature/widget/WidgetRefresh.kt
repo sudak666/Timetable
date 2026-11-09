@@ -12,6 +12,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.gifwarno.rozklad.core.common.ApplicationScope
 import com.gifwarno.rozklad.core.data.repository.ActiveFamily
+import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Duration
 import java.time.LocalDateTime
@@ -22,6 +23,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
@@ -57,9 +59,16 @@ internal object WidgetRefreshScheduler {
     }
 }
 
-/** Без залежностей — HiltWorkerFactory повертає null, і WorkManager створює його звичайним способом. */
+/**
+ * Без конструкторних залежностей — HiltWorkerFactory повертає null, і WorkManager створює його звичайним способом.
+ * На межі уроку заодно освіжаємо стан тривоги (без мережі — лишається останній відомий, з позначкою часу).
+ */
 internal class WidgetRefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
+        val deps = EntryPointAccessors.fromApplication(applicationContext, WidgetEntryPoint::class.java)
+        deps.activeFamily().context.firstOrNull()?.let { ctx ->
+            if (ctx.data.airAlert != null) deps.families().refreshAlert(ctx.familyId)
+        }
         RozkladWidget().updateAll(applicationContext)
         return Result.success()
     }
@@ -80,7 +89,11 @@ class WidgetUpdater @Inject constructor(
         }
         scope.launch {
             active.context
-                .map { ctx -> Triple(ctx?.child?.userId, ctx?.child?.name, ctx?.schedule) }
+                // Тривога — лише статус і початок: «станом на» змінюється щохвилини, віджет від цього не перемальовуємо.
+                .map { ctx ->
+                    val alert = ctx?.data?.airAlert
+                    listOf(ctx?.child?.userId, ctx?.child?.name, ctx?.schedule, alert?.status, alert?.since)
+                }
                 .distinctUntilChanged()
                 .debounce(DEBOUNCE_MS)
                 .collect { RozkladWidget().updateAll(context) }

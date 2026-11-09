@@ -32,6 +32,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.gifwarno.rozklad.core.data.repository.ActiveFamily
+import com.gifwarno.rozklad.core.data.repository.FamilyRepository
 import com.gifwarno.rozklad.core.data.repository.SessionRepository
 import com.gifwarno.rozklad.core.domain.Timetable
 import com.gifwarno.rozklad.core.model.SessionState
@@ -54,6 +55,8 @@ internal interface WidgetEntryPoint {
     fun session(): SessionRepository
 
     fun clock(): Clock
+
+    fun families(): FamilyRepository
 }
 
 /** Віджет «що зараз у школі»: маленький — лише поточне, більший — ще й уроки дня. */
@@ -77,11 +80,13 @@ class RozkladWidget : GlanceAppWidget() {
             child == null -> WidgetState.NoSchedule("")
             else -> buildWidgetState(now, child.name, family.schedule)
         }
+        val clock = deps.clock()
+        val alert = widgetAlertLine(family?.data?.airAlert, clock.instant(), clock.zone)
         WidgetRefreshScheduler.scheduleAt(context, now, nextRefreshAt(now, family?.schedule))
 
         val open = context.packageManager.getLaunchIntentForPackage(context.packageName)?.let { actionStartActivity(it) }
         provideContent {
-            GlanceTheme { WidgetContent(state, open) }
+            GlanceTheme { WidgetContent(state, open, alert) }
         }
     }
 
@@ -102,13 +107,20 @@ class RozkladWidget : GlanceAppWidget() {
 }
 
 @Composable
-internal fun WidgetContent(state: WidgetState, open: Action?) {
+internal fun WidgetContent(state: WidgetState, open: Action?, alert: String? = null) {
     val base = GlanceModifier
         .fillMaxSize()
         .background(GlanceTheme.colors.widgetBackground)
         .cornerRadius(16.dp)
         .padding(12.dp)
     Column(modifier = if (open != null) base.clickable(open) else base) {
+        if (alert != null && state != WidgetState.SignedOut) {
+            Text(
+                alert,
+                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 13.sp, color = GlanceTheme.colors.error),
+                maxLines = 1,
+            )
+        }
         when (state) {
             WidgetState.SignedOut -> Message("Дванадцятка", "Увійди в застосунок, щоб бачити розклад")
             is WidgetState.NoSchedule -> Message("🗓️ Розклад не заповнено", "Відкрий «Сьогодні» → «Розклад»")

@@ -22,6 +22,24 @@ class TodayStateTest {
     }
 
     @Test
+    fun `тривога з 9-50 — укриття для уроків від неї до зараз, майбутні не позначаємо`() {
+        val s = checkNotNull(buildTodayState(LocalDateTime.parse("2026-11-09T10:40"), cal, LocalDateTime.parse("2026-11-09T09:50")))
+        assertEquals(listOf(false, true, true, false), s.lessons.take(4).map { it.inShelter })
+    }
+
+    @Test
+    fun `тривога з учора — укриття для всіх сьогоднішніх уроків до зараз`() {
+        val s = checkNotNull(buildTodayState(LocalDateTime.parse("2026-11-09T09:30"), cal, LocalDateTime.parse("2026-11-08T23:00")))
+        assertEquals(listOf(true, true, false), s.lessons.take(3).map { it.inShelter })
+    }
+
+    @Test
+    fun `без тривоги позначок немає`() {
+        val s = checkNotNull(buildTodayState(LocalDateTime.parse("2026-11-09T10:40"), cal))
+        assertTrue(s.lessons.none { it.inShelter })
+    }
+
+    @Test
     fun `після уроків показує розклад наступного дня`() {
         val s = checkNotNull(buildTodayState(LocalDateTime.parse("2026-11-09T17:00"), cal))
         assertTrue(s.now is NowCard.Done)

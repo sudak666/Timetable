@@ -42,23 +42,45 @@ import com.gifwarno.rozklad.core.datastore.ThemeMode
 import com.gifwarno.rozklad.core.designsystem.component.LoadingState
 import com.gifwarno.rozklad.core.model.Role
 import com.gifwarno.rozklad.core.ui.PrivacyPolicyLink
+import com.gifwarno.rozklad.feature.profile.alerts.AlertsSection
+import com.gifwarno.rozklad.feature.profile.alerts.AlertsSectionActions
 
 @Composable
-fun ProfileRoute(modifier: Modifier = Modifier, viewModel: ProfileViewModel = hiltViewModel()) {
+fun ProfileRoute(onPickAlertRegion: () -> Unit, modifier: Modifier = Modifier, viewModel: ProfileViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val alertError by viewModel.alertError.collectAsStateWithLifecycle()
     val deleteState by viewModel.deleteState.collectAsStateWithLifecycle()
     val pushState by viewModel.pushState.collectAsStateWithLifecycle()
     // Android 13+: системний запит дозволу; вмикаємо лише якщо людина дозволила.
+    // Що ввімкнути після дозволу: загальні сповіщення чи тривоги (тривоги вмикають і загальні).
+    var pendingAlerts by rememberSaveable { mutableStateOf(false) }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) viewModel.setPushEnabled(true)
+        if (granted) {
+            if (pendingAlerts) viewModel.setAlertsPushEnabled(true) else viewModel.setPushEnabled(true)
+        }
     }
     val onPushToggle: (Boolean) -> Unit = { on ->
         if (on && viewModel.needsNotificationPermission() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pendingAlerts = false
             permission.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
             viewModel.setPushEnabled(on)
         }
     }
+    val onAlertsToggle: (Boolean) -> Unit = { on ->
+        if (on && viewModel.needsNotificationPermission() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pendingAlerts = true
+            permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            viewModel.setAlertsPushEnabled(on)
+        }
+    }
+    val alerts = AlertsSectionActions(
+        onPick = onPickAlertRegion,
+        onClear = viewModel::clearAlertRegion,
+        onPushToggle = onAlertsToggle,
+        error = alertError,
+    )
     when (val s = state) {
         ProfileUiState.Loading -> LoadingState(modifier)
 
@@ -72,6 +94,7 @@ fun ProfileRoute(modifier: Modifier = Modifier, viewModel: ProfileViewModel = hi
             onDeleteDialogClosed = viewModel::resetDeleteState,
             pushState = pushState,
             onPushToggle = onPushToggle,
+            alerts = alerts,
             modifier = modifier,
         )
     }
@@ -89,6 +112,7 @@ internal fun ProfileScreen(
     pushState: PushUiState?,
     onPushToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    alerts: AlertsSectionActions? = null,
 ) {
     var confirmSignOut by rememberSaveable { mutableStateOf(false) }
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
@@ -150,6 +174,15 @@ internal fun ProfileScreen(
                     pushState.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                 }
             }
+        }
+
+        if (alerts != null) {
+            AlertsSection(
+                region = state.alertRegion,
+                isParent = state.isParent,
+                alertsPush = pushState?.let { it.enabled && it.alerts },
+                actions = alerts,
+            )
         }
 
         Text("Тема", style = MaterialTheme.typography.titleMedium)

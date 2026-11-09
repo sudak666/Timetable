@@ -12,6 +12,7 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import kotlinx.coroutines.runBlocking
 
 /**
  * Коли застосунок закритий, сповіщення показує сама система (канал/іконка з маніфесту).
@@ -29,6 +30,12 @@ class RozkladMessagingService : FirebaseMessagingService() {
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
+        // Тривога — data без notification: стан і сповіщення обробляємо самі.
+        // Метод працює у фоновому потоці Firebase, тож дочекатися збереження безпечно.
+        if (message.data["type"] == ALERT_TYPE) {
+            runBlocking { push.onAlert(message.data) }
+            return
+        }
         val n = message.notification ?: return
         PushNotifier.show(
             context = this,
@@ -40,6 +47,8 @@ class RozkladMessagingService : FirebaseMessagingService() {
         )
     }
 }
+
+private const val ALERT_TYPE = "alert"
 
 internal object PushNotifier {
     /** Ключ, яким MainActivity дізнається, яку вкладку відкрити («#grades», «#hw»). */

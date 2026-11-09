@@ -9,7 +9,10 @@ import com.gifwarno.rozklad.core.datastore.ThemeMode
 import com.gifwarno.rozklad.core.datastore.UserPreferencesDataSource
 import com.gifwarno.rozklad.core.model.SessionState
 import com.gifwarno.rozklad.core.model.SyncStatus
+import com.gifwarno.rozklad.core.ui.AlertBannerText
+import com.gifwarno.rozklad.core.ui.alertBannerText
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Clock
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +28,7 @@ class MainActivityViewModel @Inject constructor(
     private val families: FamilyRepository,
     active: ActiveFamily,
     preferences: UserPreferencesDataSource,
+    private val clock: Clock,
 ) : ViewModel() {
     val sessionState: StateFlow<SessionState> = session.session
 
@@ -41,6 +45,12 @@ class MainActivityViewModel @Inject constructor(
         .map { it != null }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
 
+    /** Плашка тривоги над вкладками; null — немає тривоги або місце не обрано. */
+    val alertBanner: StateFlow<AlertBannerText?> = active.context
+        .map { alertBannerText(it?.data?.airAlert, clock.instant(), clock.zone) }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+
     init {
         // Нова сім'я (вхід/вступ) → одразу тягнемо дані.
         viewModelScope.launch {
@@ -54,6 +64,12 @@ class MainActivityViewModel @Inject constructor(
     fun refresh() {
         val s = session.session.value as? SessionState.Ready ?: return
         viewModelScope.launch { families.refresh(s.familyId) }
+    }
+
+    /** Легке оновлення лише стану тривоги (щохвилини, поки застосунок на екрані). */
+    fun refreshAlert() {
+        val s = session.session.value as? SessionState.Ready ?: return
+        viewModelScope.launch { families.refreshAlert(s.familyId) }
     }
 
     fun retrySession() = session.retry()

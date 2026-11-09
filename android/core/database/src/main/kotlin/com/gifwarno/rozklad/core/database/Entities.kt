@@ -91,6 +91,20 @@ data class TimetableEntity(
 )
 
 /**
+ * Місце для повітряних тривог, обране сім'єю, і останній відомий стан (одне на сім'ю).
+ * [status] — код сервера A/P/N; null — сервер ще не перевіряв місце.
+ */
+@Entity(tableName = "air_alerts", indices = [Index("uid")])
+data class AirAlertEntity(
+    @PrimaryKey val familyId: String,
+    val uid: Int,
+    val name: String,
+    val status: String?,
+    val sinceMillis: Long?,
+    val checkedAtMillis: Long?,
+)
+
+/**
  * Офлайн-черга змін. Кожна зміна має клієнтський UUID рядка → повторна відправка ідемпотентна.
  * [payload] — JSON тіла запиту (формує core:data).
  */

@@ -98,6 +98,30 @@ export function fcmMessage(fid: string, p: Push) {
   };
 }
 
+export interface AlertPush {
+  uid: number;
+  /** A — тривога, P/N — відбій. */
+  status: string;
+  since: string;
+  title: string;
+  body: string;
+}
+
+/**
+ * Тривога — лише data-повідомлення: застосунок сам оновлює стан (плашка, віджет) і показує
+ * сповіщення в каналі «Тривоги». Високий пріоритет, бо надсилаємо лише тим, хто ввімкнув тривоги,
+ * і кожне повідомлення показується. Короткий TTL: застаріла тривога нікому не потрібна.
+ */
+export function fcmAlertMessage(fid: string, a: AlertPush) {
+  return {
+    message: {
+      fid,
+      data: { type: 'alert', uid: String(a.uid), status: a.status, since: a.since, title: a.title, body: a.body },
+      android: { priority: 'high', ttl: '600s', collapse_key: `alert-${a.uid}` },
+    },
+  };
+}
+
 /** 404 / UNREGISTERED — токен більше не дійсний (застосунок видалено), його треба прибрати з бази. */
 export function classify(status: number, body: string): SendResult {
   if (status >= 200 && status < 300) return 'ok';
@@ -105,11 +129,15 @@ export function classify(status: number, body: string): SendResult {
   return 'error';
 }
 
-export async function sendFcm(auth: FcmAuth, projectId: string, token: string, p: Push, fetchFn: typeof fetch = fetch): Promise<SendResult> {
+/** Надсилає готове тіло FCM v1 (fcmMessage / fcmAlertMessage). */
+export async function sendFcmMessage(auth: FcmAuth, projectId: string, message: object, fetchFn: typeof fetch = fetch): Promise<SendResult> {
   const r = await fetchFn(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${await auth.token()}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(fcmMessage(token, p)),
+    body: JSON.stringify(message),
   });
   return classify(r.status, r.ok ? '' : await r.text());
 }
+
+export const sendFcm = (auth: FcmAuth, projectId: string, token: string, p: Push, fetchFn: typeof fetch = fetch): Promise<SendResult> =>
+  sendFcmMessage(auth, projectId, fcmMessage(token, p), fetchFn);

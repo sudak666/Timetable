@@ -1,5 +1,7 @@
 package com.gifwarno.rozklad.core.network
 
+import com.gifwarno.rozklad.core.network.model.NetworkAlert
+import com.gifwarno.rozklad.core.network.model.NetworkAlertLocation
 import com.gifwarno.rozklad.core.network.model.NetworkAuthState
 import com.gifwarno.rozklad.core.network.model.NetworkMembership
 import com.gifwarno.rozklad.core.network.model.NetworkSnapshot
@@ -33,8 +35,11 @@ interface RozkladNetworkDataSource {
      */
     suspend fun deleteAccount()
 
-    /** Прив'язати токен FCM цього пристрою до поточного користувача (RPC school_register_fcm). */
-    suspend fun registerPushToken(token: String)
+    /**
+     * Прив'язати токен FCM цього пристрою до поточного користувача (RPC school_register_fcm).
+     * [alerts] — чи надсилати на цей пристрій push про повітряні тривоги.
+     */
+    suspend fun registerPushToken(token: String, alerts: Boolean)
 
     /** Прибрати токен із сервера (RLS дозволяє лише свої). */
     suspend fun unregisterPushToken(token: String)
@@ -51,6 +56,18 @@ interface RozkladNetworkDataSource {
     suspend fun snapshot(familyId: String): NetworkSnapshot
 
     suspend fun write(op: NetworkWrite): WriteResult
+
+    /**
+     * Довідник місць для тривог: [oblastUid] == null — області та міста зі спецстатусом,
+     * інакше — райони й громади цієї області.
+     */
+    suspend fun alertLocations(oblastUid: Int?): List<NetworkAlertLocation>
+
+    /** Обрати місце для тривог сім'ї (лише батьки — так дозволяє RLS); null — вимкнути. */
+    suspend fun setAlertRegion(familyId: String, uid: Int?)
+
+    /** Місце і поточний стан тривоги — легкий запит для оновлення плашки. */
+    suspend fun alert(uid: Int): NetworkAlert?
 }
 
 /** Хост адреси повернення після входу через Google: <пакет застосунку>://login-callback. */

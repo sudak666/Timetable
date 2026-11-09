@@ -10,6 +10,7 @@ import com.gifwarno.rozklad.core.model.Member
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Clock
 import java.time.LocalDateTime
+import java.time.ZoneId
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -33,7 +34,7 @@ sealed interface TodayScreenState {
 }
 
 @HiltViewModel
-class TodayViewModel @Inject constructor(private val active: ActiveFamily, clock: Clock) : ViewModel() {
+class TodayViewModel @Inject constructor(private val active: ActiveFamily, private val clock: Clock) : ViewModel() {
     /** Тікає щосекунди лише поки екран видимий (WhileSubscribed) — батарея не страждає. */
     val uiState: StateFlow<TodayScreenState> = combine(active.context, clock.ticks()) { ctx, now -> build(ctx, now) }
         .distinctUntilChanged()
@@ -43,7 +44,8 @@ class TodayViewModel @Inject constructor(private val active: ActiveFamily, clock
         ctx ?: return TodayScreenState.Loading
         val child = ctx.child ?: return TodayScreenState.NoChild
         val schedule = ctx.schedule
-        val today = schedule?.let { buildTodayState(now, SchoolCalendar(it)) }
+        val alertSince = ctx.data.airAlert?.takeIf { it.isActive }?.since?.let { alertLocal(it, clock.zone) }
+        val today = schedule?.let { buildTodayState(now, SchoolCalendar(it), alertSince) }
         return if (today == null) {
             TodayScreenState.NoSchedule(child.name, ctx.canEditSchedule, ctx.data.children, child.userId)
         } else {
@@ -57,5 +59,7 @@ class TodayViewModel @Inject constructor(private val active: ActiveFamily, clock
 
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L
+
+        fun alertLocal(since: java.time.Instant, zone: ZoneId): LocalDateTime = LocalDateTime.ofInstant(since, zone)
     }
 }

@@ -40,10 +40,13 @@ sealed interface ProfileUiState {
         /** Що саме зникне, якщо видалити акаунт — показуємо чесно до підтвердження. */
         val deletionWarnings: List<String>,
         val pendingChanges: Int,
+        /** Місце для повітряних тривог; null — не обрано. */
+        val alertRegion: String? = null,
     ) : ProfileUiState
 }
 
-data class PushUiState(val enabled: Boolean, val error: String?)
+/** [alerts] — push про тривоги на цей телефон (працює лише разом з [enabled]). */
+data class PushUiState(val enabled: Boolean, val error: String?, val alerts: Boolean = false)
 
 sealed interface DeleteAccountState {
     data object Idle : DeleteAccountState
@@ -93,7 +96,7 @@ class ProfileViewModel @Inject constructor(
     val pushState: StateFlow<PushUiState?> = if (!push.isAvailable) {
         MutableStateFlow(null)
     } else {
-        combine(push.enabled, push.lastError) { on, err -> PushUiState(on, err) }
+        combine(push.enabled, push.lastError, push.alertsEnabled) { on, err, alerts -> PushUiState(on, err, alerts) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), PushUiState(false, null))
     }
 
@@ -101,6 +104,27 @@ class ProfileViewModel @Inject constructor(
 
     fun setPushEnabled(enabled: Boolean) {
         viewModelScope.launch { push.setEnabled(enabled) }
+    }
+
+    /** Тривоги без загальних сповіщень не працюють — тож вмикаємо їх разом. */
+    fun setAlertsPushEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            push.setAlertsEnabled(enabled)
+            if (enabled) push.setEnabled(true)
+        }
+    }
+
+    private val _alertError = MutableStateFlow<String?>(null)
+    val alertError: StateFlow<String?> = _alertError.asStateFlow()
+
+    /** Вимкнути тривоги для всієї сім'ї (лише батьки). */
+    fun clearAlertRegion() {
+        viewModelScope.launch {
+            val ctx = active.context.filterNotNull().first()
+            _alertError.value = families.setAlertRegion(ctx.familyId, null).exceptionOrNull()?.let {
+                it.message ?: "Не вдалося — перевір інтернет"
+            }
+        }
     }
 
     private val parentCode = MutableStateFlow<String?>(null)
@@ -119,6 +143,7 @@ class ProfileViewModel @Inject constructor(
             themeMode = prefs.themeMode,
             deletionWarnings = deletionWarnings(ctx.isParent, ctx.data.members, ctx.user.id, ctx.data.family.name),
             pendingChanges = ctx.sync.pendingChanges,
+            alertRegion = ctx.data.airAlert?.regionName,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ProfileUiState.Loading)
 

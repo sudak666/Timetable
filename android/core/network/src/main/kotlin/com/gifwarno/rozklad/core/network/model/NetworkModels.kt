@@ -12,6 +12,8 @@ data class NetworkFamily(
     val name: String = "",
     @SerialName("invite_code") val inviteCode: String = "",
     val rates: JsonObject? = null,
+    /** Місце для повітряних тривог (school_alert_locations.uid); null — не обрано. */
+    @SerialName("alert_uid") val alertUid: Int? = null,
 )
 
 @Serializable
@@ -83,7 +85,26 @@ data class NetworkSnapshot(
     val challenges: List<NetworkChallenge>,
     val homework: List<NetworkHomework>,
     val timetables: List<NetworkTimetable> = emptyList(),
+    /** Обране місце й стан тривоги для нього (null — місце не обрано). */
+    val alert: NetworkAlert? = null,
 )
+
+/** Місце з довідника school_alert_locations. */
+@Serializable
+data class NetworkAlertLocation(
+    val uid: Int,
+    val name: String,
+    val kind: String,
+    @SerialName("oblast_uid") val oblastUid: Int? = null,
+    @SerialName("raion_uid") val raionUid: Int? = null,
+)
+
+/** Рядок school_alert_state: A / P / N, з якого часу, остання перевірка. */
+@Serializable
+data class NetworkAlertState(val uid: Int, val status: String, val since: String, @SerialName("checked_at") val checkedAt: String)
+
+/** Обране місце і його стан; [state] == null — сервер ще не перевіряв це місце. */
+data class NetworkAlert(val location: NetworkAlertLocation, val state: NetworkAlertState?)
 
 /** Розклад дитини (school_timetables). Формат — див. supabase/migrations/20261108_school_timetables.sql. */
 @Serializable

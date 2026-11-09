@@ -24,6 +24,10 @@ private object NoPush : PushSettings {
 
     override suspend fun setEnabled(enabled: Boolean) = Unit
 
+    override val alertsEnabled = flowOf(false)
+
+    override suspend fun setAlertsEnabled(enabled: Boolean) = Unit
+
     override fun hasPermission() = true
 }
 

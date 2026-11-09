@@ -6,6 +6,9 @@ import androidx.datastore.preferences.core.emptyPreferences
 import com.gifwarno.rozklad.core.data.repository.FamilyRepository
 import com.gifwarno.rozklad.core.data.repository.SessionRepository
 import com.gifwarno.rozklad.core.datastore.UserPreferencesDataSource
+import com.gifwarno.rozklad.core.model.AirAlert
+import com.gifwarno.rozklad.core.model.AlertLocation
+import com.gifwarno.rozklad.core.model.AlertStatus
 import com.gifwarno.rozklad.core.model.FamilyData
 import com.gifwarno.rozklad.core.model.Grade
 import com.gifwarno.rozklad.core.model.GradeStatus
@@ -155,4 +158,27 @@ class FakeFamilyRepository(initial: FamilyData?) : FamilyRepository {
     }
 
     override fun dismissSyncError() = sync.update { it.copy(lastError = null) }
+
+    /** Довідник місць: ключ — oblastUid (null — області). */
+    var locations: Map<Int?, List<AlertLocation>> = emptyMap()
+    var alertResult: Result<Unit> = Result.success(Unit)
+    val alertRegions = mutableListOf<Int?>()
+
+    override suspend fun alertLocations(oblastUid: Int?) = Result.success(locations[oblastUid].orEmpty())
+
+    override suspend fun setAlertRegion(familyId: String, uid: Int?): Result<Unit> {
+        alertRegions += uid
+        if (alertResult.isSuccess) {
+            val name = locations.values.flatten().firstOrNull { it.uid == uid }?.name ?: "Місце $uid"
+            data.update { it?.copy(airAlert = uid?.let { u -> AirAlert(u, name, null, null, null) }) }
+        }
+        return alertResult
+    }
+
+    override suspend fun refreshAlert(familyId: String) = Result.success(Unit)
+
+    override suspend fun applyAlertPush(uid: Int, status: AlertStatus, since: Instant?) = data.update { d ->
+        val a = d?.airAlert
+        if (a == null || a.regionUid != uid) d else d.copy(airAlert = a.copy(status = status, since = since))
+    }
 }

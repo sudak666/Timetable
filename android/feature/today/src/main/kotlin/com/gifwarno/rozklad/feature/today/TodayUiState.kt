@@ -42,7 +42,15 @@ sealed interface NowCard {
 
 enum class LessonState { PAST, CURRENT, UPCOMING }
 
-data class LessonRow(val number: Int, val subject: String, val time: String, val optional: Boolean, val state: LessonState)
+data class LessonRow(
+    val number: Int,
+    val subject: String,
+    val time: String,
+    val optional: Boolean,
+    val state: LessonState,
+    /** Урок збігся з поточною повітряною тривогою — швидше за все, проходить в укритті. */
+    val inShelter: Boolean = false,
+)
 
 data class TodayUiState(
     val now: NowCard,
@@ -64,8 +72,9 @@ private fun progress(start: LocalTime, end: LocalTime, now: LocalTime): Float =
 /**
  * Чиста функція: час + розклад → стан екрана. Тестується без Android.
  * null — у розкладі немає жодного уроку (ще не заповнено).
+ * [alertSince] — початок поточної тривоги (місцевий час) або null, якщо тривоги немає.
  */
-fun buildTodayState(now: LocalDateTime, cal: SchoolCalendar): TodayUiState? {
+fun buildTodayState(now: LocalDateTime, cal: SchoolCalendar, alertSince: LocalDateTime? = null): TodayUiState? {
     val t = now.toLocalTime()
     val today = now.toLocalDate()
     val status = cal.statusAt(now)
@@ -114,6 +123,8 @@ fun buildTodayState(now: LocalDateTime, cal: SchoolCalendar): TodayUiState? {
     val shownDate = if (showToday) today else cal.nextSchoolDate(today) ?: return null
     val day = cal.dayOf(shownDate)
     val lessons = cal.lessonsOn(shownDate).orEmpty()
+    // Тривога почалась учора — сьогоднішні уроки до цього моменту всі під нею.
+    val alertStart = alertSince?.let { if (it.toLocalDate().isBefore(today)) LocalTime.MIN else it.toLocalTime() }
     val rows = lessons.mapIndexed { i, l ->
         val bell = cal.bell(i)
         val state = when {
@@ -122,7 +133,9 @@ fun buildTodayState(now: LocalDateTime, cal: SchoolCalendar): TodayUiState? {
             !t.isBefore(bell.start) -> LessonState.CURRENT
             else -> LessonState.UPCOMING
         }
-        LessonRow(i + 1, l.subject, "${HM.format(bell.start)}–${HM.format(bell.end)}", l.optional, state)
+        // Урок [початок, кінець) перетинається з тривогою [alertSince, зараз].
+        val inShelter = showToday && alertStart != null && state != LessonState.UPCOMING && bell.end.isAfter(alertStart)
+        LessonRow(i + 1, l.subject, "${HM.format(bell.start)}–${HM.format(bell.end)}", l.optional, state, inShelter)
     }
     return TodayUiState(
         now = card,

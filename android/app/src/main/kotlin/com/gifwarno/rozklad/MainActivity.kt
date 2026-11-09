@@ -39,19 +39,28 @@ class MainActivity : ComponentActivity() {
             onSignOut = viewModel::signOut,
             onDismissSyncError = viewModel::dismissSyncError,
             onDeepLinkHandled = { deepLink.value = null },
+            onRefreshAlert = viewModel::refreshAlert,
         )
         setContent {
             val theme by viewModel.themeMode.collectAsStateWithLifecycle()
             val session by viewModel.sessionState.collectAsStateWithLifecycle()
             val sync by viewModel.sync.collectAsStateWithLifecycle()
             val hasData by viewModel.hasFamilyData.collectAsStateWithLifecycle()
+            val alert by viewModel.alertBanner.collectAsStateWithLifecycle()
             val dark = when (theme) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
             }
             RozkladTheme(darkTheme = dark) {
-                RozkladApp(session = session, sync = sync, hasFamilyData = hasData, actions = actions, deepLink = deepLink.value)
+                RozkladApp(
+                    session = session,
+                    sync = sync,
+                    hasFamilyData = hasData,
+                    actions = actions,
+                    alert = alert,
+                    deepLink = deepLink.value,
+                )
             }
         }
     }

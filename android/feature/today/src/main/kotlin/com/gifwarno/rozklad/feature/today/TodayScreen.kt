@@ -221,6 +221,11 @@ private fun LessonItem(row: LessonRow) {
             )
         },
         supportingContent = { Text("${row.number} урок · ${row.time}") },
+        trailingContent = if (row.inShelter) {
+            { Text("🛡️ укриття", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error) }
+        } else {
+            null
+        },
     )
 }
 

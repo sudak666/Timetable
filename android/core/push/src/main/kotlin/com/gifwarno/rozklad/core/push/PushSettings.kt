@@ -15,6 +15,11 @@ interface PushSettings {
 
     suspend fun setEnabled(enabled: Boolean)
 
+    /** Push про повітряні тривоги на цей пристрій — окремо, працює лише разом із [enabled]. */
+    val alertsEnabled: Flow<Boolean>
+
+    suspend fun setAlertsEnabled(enabled: Boolean)
+
     /** Android 13+ вимагає дозволу POST_NOTIFICATIONS. */
     fun hasPermission(): Boolean
 }

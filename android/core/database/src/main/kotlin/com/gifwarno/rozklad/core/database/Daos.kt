@@ -39,6 +39,21 @@ interface FamilyDao {
 
     @Upsert suspend fun upsertFamily(family: FamilyEntity)
 
+    @Query("SELECT * FROM air_alerts WHERE familyId = :familyId")
+    fun observeAlert(familyId: String): Flow<AirAlertEntity?>
+
+    @Query("SELECT * FROM air_alerts WHERE familyId = :familyId")
+    suspend fun alert(familyId: String): AirAlertEntity?
+
+    @Upsert suspend fun upsertAlert(alert: AirAlertEntity)
+
+    @Query("DELETE FROM air_alerts WHERE familyId = :familyId")
+    suspend fun deleteAlert(familyId: String)
+
+    /** Push про тривогу: оновити стан усіх сімей із цим місцем (зазвичай одна). */
+    @Query("UPDATE air_alerts SET status = :status, sinceMillis = :sinceMillis, checkedAtMillis = :checkedAtMillis WHERE uid = :uid")
+    suspend fun updateAlertState(uid: Int, status: String, sinceMillis: Long?, checkedAtMillis: Long)
+
     @Upsert suspend fun upsertMembers(rows: List<MemberEntity>)
 
     @Upsert suspend fun upsertGrades(rows: List<GradeEntity>)
@@ -86,6 +101,7 @@ interface FamilyDao {
         ledger: List<LedgerEntity>,
         challenges: List<ChallengeEntity>,
         timetables: List<TimetableEntity>,
+        alert: AirAlertEntity?,
     ) {
         upsertFamily(family)
         clearMembers(family.id)
@@ -100,6 +116,7 @@ interface FamilyDao {
         upsertChallenges(challenges)
         clearTimetables(family.id)
         upsertTimetables(timetables)
+        if (alert == null) deleteAlert(family.id) else upsertAlert(alert)
     }
 }
 

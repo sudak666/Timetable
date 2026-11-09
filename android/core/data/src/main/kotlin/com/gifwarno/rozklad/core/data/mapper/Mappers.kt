@@ -1,5 +1,6 @@
 package com.gifwarno.rozklad.core.data.mapper
 
+import com.gifwarno.rozklad.core.database.AirAlertEntity
 import com.gifwarno.rozklad.core.database.ChallengeEntity
 import com.gifwarno.rozklad.core.database.FamilyEntity
 import com.gifwarno.rozklad.core.database.GradeEntity
@@ -8,6 +9,10 @@ import com.gifwarno.rozklad.core.database.LedgerEntity
 import com.gifwarno.rozklad.core.database.MemberEntity
 import com.gifwarno.rozklad.core.database.TimetableEntity
 import com.gifwarno.rozklad.core.domain.Rewards
+import com.gifwarno.rozklad.core.model.AirAlert
+import com.gifwarno.rozklad.core.model.AlertLocation
+import com.gifwarno.rozklad.core.model.AlertLocationKind
+import com.gifwarno.rozklad.core.model.AlertStatus
 import com.gifwarno.rozklad.core.model.Bell
 import com.gifwarno.rozklad.core.model.Challenge
 import com.gifwarno.rozklad.core.model.Family
@@ -22,6 +27,8 @@ import com.gifwarno.rozklad.core.model.Member
 import com.gifwarno.rozklad.core.model.RewardSettings
 import com.gifwarno.rozklad.core.model.Role
 import com.gifwarno.rozklad.core.model.SchoolSchedule
+import com.gifwarno.rozklad.core.network.model.NetworkAlert
+import com.gifwarno.rozklad.core.network.model.NetworkAlertLocation
 import com.gifwarno.rozklad.core.network.model.NetworkChallenge
 import com.gifwarno.rozklad.core.network.model.NetworkFamily
 import com.gifwarno.rozklad.core.network.model.NetworkGrade
@@ -50,6 +57,41 @@ internal fun parseInstant(s: String): Instant = try {
 } catch (_: DateTimeParseException) {
     runCatching { Instant.parse(s) }.getOrDefault(Instant.EPOCH)
 }
+
+/** Для тривог невідомий час краще показати «невідомо», ніж 1970 рік. */
+internal fun parseInstantOrNull(s: String?): Instant? = s?.let {
+    runCatching { OffsetDateTime.parse(it).toInstant() }.recoverCatching { _ -> Instant.parse(it) }.getOrNull()
+}
+
+internal fun NetworkAlert.asEntity(familyId: String) = AirAlertEntity(
+    familyId = familyId,
+    uid = location.uid,
+    name = location.name,
+    status = state?.status,
+    sinceMillis = parseInstantOrNull(state?.since)?.toEpochMilli(),
+    checkedAtMillis = parseInstantOrNull(state?.checkedAt)?.toEpochMilli(),
+)
+
+internal fun AirAlertEntity.asModel() = AirAlert(
+    regionUid = uid,
+    regionName = name,
+    status = status?.let(AlertStatus::fromCode),
+    since = sinceMillis?.let(Instant::ofEpochMilli),
+    checkedAt = checkedAtMillis?.let(Instant::ofEpochMilli),
+)
+
+internal fun NetworkAlertLocation.asModel() = AlertLocation(
+    uid = uid,
+    name = name,
+    kind = when (kind) {
+        "oblast" -> AlertLocationKind.OBLAST
+        "city" -> AlertLocationKind.CITY
+        "raion" -> AlertLocationKind.RAION
+        else -> AlertLocationKind.HROMADA
+    },
+    oblastUid = oblastUid,
+    raionUid = raionUid,
+)
 
 internal fun NetworkFamily.asEntity() = FamilyEntity(id, name, inviteCode, (rates ?: JsonObject(emptyMap())).toString())
 
