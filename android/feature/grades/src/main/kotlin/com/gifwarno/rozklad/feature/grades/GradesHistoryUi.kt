@@ -143,18 +143,15 @@ internal fun StatsCard(state: GradesUiState.Ready) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             state.compare?.let { m ->
                 Text("🏆 Я проти минулого місяця", style = MaterialTheme.typography.titleSmall)
+                // Без оцінок цього місяця порівнювати нема з чим — без стрілки.
                 CompareRow(
                     "Середній бал",
-                    m.avgNow?.let {
-                        "%.1f".format(it)
-                    } ?: "—",
+                    m.avgNow?.let { "%.1f".format(it) } ?: "—",
                     m.avgPrev?.let { "%.1f".format(it) } ?: "—",
-                    (
-                        m.avgNow
-                            ?: 0.0
-                        ).compareTo(m.avgPrev ?: 0.0),
+                    if (m.avgNow == null || m.avgPrev == null) 0 else m.avgNow.compareTo(m.avgPrev),
                 )
-                CompareRow("Заробив", Format.money(m.earnedNow), Format.money(m.earnedPrev), m.earnedNow.compareTo(m.earnedPrev))
+                // Минулий місяць — просто сума («було 1910 ₴»), без «+», щоб не сперечалася зі стрілкою.
+                CompareRow("Заробив", Format.money(m.earnedNow), Format.balance(m.earnedPrev), m.earnedNow.compareTo(m.earnedPrev))
             }
             if (state.rank.isNotEmpty()) {
                 Text("🏆 Рейтинг місяця", style = MaterialTheme.typography.titleSmall)
@@ -222,7 +219,7 @@ private fun CompareRow(label: String, now: String, prev: String, trend: Int) {
                 }
             },
         )
-        Text(" ($prev)", style = MaterialTheme.typography.bodySmall, color = c.muted)
+        Text(" (було $prev)", style = MaterialTheme.typography.bodySmall, color = c.muted)
     }
 }
 

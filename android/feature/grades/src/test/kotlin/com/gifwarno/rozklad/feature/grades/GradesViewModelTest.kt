@@ -66,6 +66,27 @@ class GradesViewModelTest {
     }
 
     @Test
+    fun `підтвердити все — усі очікувані оцінки стають підтвердженими`() = runTest {
+        val families = FakeFamilyRepository(
+            TestData.familyData(
+                grades = listOf(
+                    TestData.grade("a", 8, "2026-11-06", GradeStatus.PENDING),
+                    TestData.grade("b", 7, "2026-10-16", GradeStatus.PENDING),
+                ),
+            ),
+        )
+        val vm = vm(families)
+        vm.uiState.test {
+            val ready = awaitItem().let { if (it is GradesUiState.Loading) awaitItem() else it } as GradesUiState.Ready
+            vm.approveAll(ready.pending.map { it.grade })
+            val after = expectMostRecentItem() as GradesUiState.Ready
+            assertTrue(after.pending.isEmpty())
+            assertEquals(setOf("a", "b"), after.recent.map { it.grade.id }.toSet())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `штраф — від'ємний бонус із поясненням`() = runTest {
         val families = FakeFamilyRepository(TestData.familyData())
         val vm = vm(families)

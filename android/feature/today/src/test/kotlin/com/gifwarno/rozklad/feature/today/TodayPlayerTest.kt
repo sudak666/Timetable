@@ -47,6 +47,7 @@ class TodayPlayerTest {
         assertEquals("Домашка на завтра", q[0].title)
         assertTrue(q[1].done)
         assertEquals(2 to 5, q[2].progress to q[2].target)
+        assertEquals(listOf(true, true, false), q.map { it.daily })
     }
 
     @Test

@@ -69,6 +69,10 @@ export const hms = (minutes: number): string => {
 export const fmtDay = (isoDate: string): string =>
   new Date(isoDate + 'T12:00').toLocaleDateString('uk-UA', { weekday: 'short', day: 'numeric', month: 'short' });
 
+/** Дата без дня тижня: «11 листопада». */
+export const fmtDate = (isoDate: string): string =>
+  new Date(isoDate + 'T12:00').toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
+
 /** Найближча дата (після сьогодні), коли є урок предмета. */
 export function nextLessonDate(subject: string, from: Date): string {
   for (let i = 1; i <= 366; i++) {

@@ -63,7 +63,7 @@ internal fun RatesSheet(settings: RewardSettings, onDismiss: () -> Unit, onSave:
             Text("🔥 Серія", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 MoneyField(streak[0], { streak[0] = it }, "Оцінок поспіль", Modifier.weight(1f), allowMinus = false)
-                MoneyField(streak[1], { streak[1] = it }, "Кожна ≥", Modifier.weight(1f), allowMinus = false)
+                MoneyField(streak[1], { streak[1] = it }, "Від балу", Modifier.weight(1f), allowMinus = false)
                 MoneyField(streak[2], { streak[2] = it }, "Бонус, ₴", Modifier.weight(1f), allowMinus = false)
             }
             GameButton(

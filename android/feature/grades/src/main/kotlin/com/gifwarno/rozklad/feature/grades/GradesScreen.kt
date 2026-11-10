@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Undo
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,6 +28,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -108,6 +110,10 @@ fun GradesRoute(modifier: Modifier = Modifier, viewModel: GradesViewModel = hilt
             onDeleteChallenge = viewModel::deleteChallenge,
             onDeleteLedger = viewModel::deleteLedger,
             onSetGoal = viewModel::setGoal,
+            onApproveAll = { gs ->
+                viewModel.approveAll(gs)
+                if (gs.any { it.value in TEN..TWELVE }) burst++
+            },
         )
         ConfettiBurst(burst, Modifier.matchParentSize())
     }
@@ -132,7 +138,9 @@ internal fun GradesScreen(
     onDeleteChallenge: (String) -> Unit = {},
     onDeleteLedger: (String) -> Unit = {},
     onSetGoal: (String, Int) -> Unit = { _, _ -> },
+    onApproveAll: (List<Grade>) -> Unit = {},
 ) {
+    var confirmAll by rememberSaveable { mutableStateOf(false) }
     var goalOpen by rememberSaveable { mutableStateOf(false) }
     var showAdd by rememberSaveable { mutableStateOf(false) }
     var money by rememberSaveable { mutableStateOf<Money?>(null) }
@@ -177,6 +185,7 @@ internal fun GradesScreen(
                 onDeleteChallenge = onDeleteChallenge,
                 onEditGoal = { goalOpen = true },
                 onDeleteLedger = onDeleteLedger,
+                onApproveAll = { confirmAll = true },
             )
         }
     }
@@ -192,6 +201,7 @@ internal fun GradesScreen(
     money?.let { m ->
         LedgerDialog(
             money = m,
+            balance = (state as? GradesUiState.Ready)?.totals?.balance,
             onDismiss = { money = null },
             onConfirm = { amount, note ->
                 when (m) {
@@ -201,6 +211,26 @@ internal fun GradesScreen(
                 }
                 money = null
             },
+        )
+    }
+    if (confirmAll && state is GradesUiState.Ready) {
+        val items = state.pending.filter { it.canApprove }
+        AlertDialog(
+            onDismissRequest = { confirmAll = false },
+            title = { Text("Підтвердити все?") },
+            text = {
+                Text(
+                    "Оцінок: ${items.size}. До гаманця додасться ${Format.money(items.sumOf { it.money })}. " +
+                        "Якщо щось не так — підтвердження можна скасувати в історії.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onApproveAll(items.map { it.grade })
+                    confirmAll = false
+                }) { Text("Підтвердити") }
+            },
+            dismissButton = { TextButton(onClick = { confirmAll = false }) { Text("Скасувати") } },
         )
     }
     if (goalOpen && state is GradesUiState.Ready) {
@@ -238,6 +268,7 @@ private fun ReadyContent(
     onDeleteChallenge: (String) -> Unit,
     onEditGoal: () -> Unit,
     onDeleteLedger: (String) -> Unit,
+    onApproveAll: () -> Unit,
 ) {
     val actions = RowActions(onApprove, onUnapprove, onDelete)
     LazyColumn(
@@ -267,6 +298,19 @@ private fun ReadyContent(
         if (state.pending.isNotEmpty()) {
             item(key = "pending-title") { ArenaTitle("⏳ Чекають підтвердження") }
             item(key = "pending") { GradeList(state.pending, actions) }
+            val approvable = state.pending.count { it.canApprove }
+            if (approvable >= 2) {
+                item(key = "approve-all") {
+                    GameButton(
+                        "Підтвердити все ($approvable)",
+                        onApproveAll,
+                        Modifier.fillMaxWidth(),
+                        color = RozkladTheme.colors.positive,
+                        contentColor = Color.White,
+                        leading = "✓",
+                    )
+                }
+            }
         }
         if (state.compare != null || state.rank.isNotEmpty() || state.subjectAvgs.isNotEmpty()) {
             item(key = "stats-title") { ArenaTitle("📊 Статистика") }
