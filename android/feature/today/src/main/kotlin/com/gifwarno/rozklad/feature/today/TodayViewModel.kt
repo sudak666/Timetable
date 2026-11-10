@@ -29,8 +29,14 @@ sealed interface TodayScreenState {
     data class NoSchedule(val childName: String, val canEdit: Boolean, val children: List<Member>, val childId: String) :
         TodayScreenState
 
-    data class Ready(val today: TodayUiState, val canEdit: Boolean, val children: List<Member>, val childId: String) :
-        TodayScreenState
+    data class Ready(
+        val today: TodayUiState,
+        val canEdit: Boolean,
+        val children: List<Member>,
+        val childId: String,
+        val player: PlayerStrip,
+        val quests: List<Quest>,
+    ) : TodayScreenState
 }
 
 @HiltViewModel
@@ -45,11 +51,19 @@ class TodayViewModel @Inject constructor(private val active: ActiveFamily, priva
         val child = ctx.child ?: return TodayScreenState.NoChild
         val schedule = ctx.schedule
         val alertSince = ctx.data.airAlert?.takeIf { it.isActive }?.since?.let { alertLocal(it, clock.zone) }
-        val today = schedule?.let { buildTodayState(now, SchoolCalendar(it), alertSince) }
+        val cal = schedule?.let(::SchoolCalendar)
+        val today = cal?.let { buildTodayState(now, it, alertSince) }
         return if (today == null) {
             TodayScreenState.NoSchedule(child.name, ctx.canEditSchedule, ctx.data.children, child.userId)
         } else {
-            TodayScreenState.Ready(today, ctx.canEditSchedule, ctx.data.children, child.userId)
+            TodayScreenState.Ready(
+                today = today,
+                canEdit = ctx.canEditSchedule,
+                children = ctx.data.children,
+                childId = child.userId,
+                player = buildPlayer(child, ctx.data, now.toLocalDate()),
+                quests = buildQuests(child.userId, ctx.data, checkNotNull(cal), now.toLocalDate()),
+            )
         }
     }
 
