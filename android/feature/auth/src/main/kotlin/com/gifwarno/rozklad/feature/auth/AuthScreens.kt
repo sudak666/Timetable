@@ -2,6 +2,8 @@ package com.gifwarno.rozklad.feature.auth
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,10 +15,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -28,6 +28,7 @@ import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -36,8 +37,15 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gifwarno.rozklad.core.designsystem.component.ButtonShape
+import com.gifwarno.rozklad.core.designsystem.component.GameButton
+import com.gifwarno.rozklad.core.designsystem.component.GameSurface
+import com.gifwarno.rozklad.core.designsystem.component.StrokeText
+import com.gifwarno.rozklad.core.designsystem.theme.GameFont
+import com.gifwarno.rozklad.core.designsystem.theme.GameTitleStyle
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.ui.PrivacyPolicyLink
 
@@ -65,25 +73,30 @@ internal fun AuthScreen(
     onGoogle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    CenteredForm(modifier) {
-        Text(
-            "12",
-            style = MaterialTheme.typography.displayLarge,
-            fontWeight = FontWeight.Black,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Text("Дванадцятка", style = MaterialTheme.typography.headlineMedium)
+    CenteredForm(header = { Logo() }, modifier = modifier) {
         Text(
             "Оцінки, кишенькові й розклад — для всієї сім’ї",
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
         // Як на сайті: більшість сімей входить через Google.
-        OutlinedButton(onClick = onGoogle, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) {
-            Text("G", fontWeight = FontWeight.Black, color = Color(GOOGLE_BLUE))
-            Spacer(Modifier.width(12.dp))
-            Text("Увійти через Google")
+        GameSurface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = ButtonShape,
+            color = Color.White,
+            contentColor = Color(GOOGLE_TEXT),
+            onClick = if (state.busy) null else onGoogle,
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("G", fontWeight = FontWeight.Black, color = Color(GOOGLE_BLUE), fontSize = 20.sp)
+                Spacer(Modifier.width(12.dp))
+                Text("Увійти через Google", style = MaterialTheme.typography.labelLarge)
+            }
         }
         Text("або поштою", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedTextField(
@@ -91,6 +104,7 @@ internal fun AuthScreen(
             onValueChange = onEmail,
             label = { Text("Пошта") },
             singleLine = true,
+            shape = ButtonShape,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
             modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.EmailAddress },
         )
@@ -100,6 +114,7 @@ internal fun AuthScreen(
             label = { Text("Пароль") },
             supportingText = if (state.isSignUp) ({ Text("Щонайменше ${AuthUiState.MIN_PASSWORD} символів") }) else null,
             singleLine = true,
+            shape = ButtonShape,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { onSubmit() }),
@@ -114,19 +129,34 @@ internal fun AuthScreen(
                 textAlign = TextAlign.Center,
             )
         }
-        Button(onClick = onSubmit, enabled = state.canSubmit, modifier = Modifier.fillMaxWidth()) {
-            Text(
-                when {
-                    state.busy -> "Зачекай…"
-                    state.isSignUp -> "Зареєструватися"
-                    else -> "Увійти"
-                },
-            )
-        }
+        GameButton(
+            text = when {
+                state.busy -> "Зачекай…"
+                state.isSignUp -> "Зареєструватися"
+                else -> "Увійти"
+            },
+            onClick = onSubmit,
+            enabled = state.canSubmit,
+            modifier = Modifier.fillMaxWidth(),
+        )
         TextButton(onClick = onToggleMode) {
             Text(if (state.isSignUp) "Вже маю акаунт — увійти" else "Немає акаунта? Зареєструватися")
         }
         PrivacyPolicyLink()
+    }
+}
+
+/** «12» великими ігровими цифрами й назва. */
+@Composable
+private fun Logo() {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        StrokeText(
+            "12",
+            TextStyle(fontFamily = GameFont, fontSize = 96.sp, lineHeight = 100.sp),
+            color = RozkladTheme.colors.gold,
+            strokeWidth = 8.dp,
+        )
+        StrokeText("Дванадцятка", GameTitleStyle.copy(fontSize = 30.sp, lineHeight = 36.sp), strokeWidth = 5.dp)
     }
 }
 
@@ -146,31 +176,47 @@ internal fun JoinFamilyScreen(
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    CenteredForm(modifier) {
-        Text("👨‍👩‍👧", style = MaterialTheme.typography.displayLarge)
-        Text("Майже готово", style = MaterialTheme.typography.headlineMedium)
+    CenteredForm(
+        modifier = modifier,
+        header = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("👨‍👩‍👧", fontSize = 64.sp)
+                StrokeText("Майже готово!", GameTitleStyle.copy(fontSize = 28.sp, lineHeight = 34.sp), strokeWidth = 5.dp)
+            }
+        },
+    ) {
         OutlinedTextField(
             value = state.name,
             onValueChange = onName,
             label = { Text("Як тебе звати") },
             singleLine = true,
+            shape = ButtonShape,
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
             modifier = Modifier.fillMaxWidth(),
         )
-        Text("Я дитина або другий з батьків", style = MaterialTheme.typography.titleMedium)
+        Text("🧒 Я дитина або другий з батьків", style = MaterialTheme.typography.titleMedium)
         OutlinedTextField(
             value = state.code,
             onValueChange = onCode,
             label = { Text("Код сім’ї") },
             singleLine = true,
+            shape = ButtonShape,
+            textStyle = MaterialTheme.typography.titleLarge.copy(fontFamily = GameFont, letterSpacing = 3.sp),
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { onJoin() }),
             modifier = Modifier.fillMaxWidth(),
         )
-        Button(onClick = onJoin, enabled = state.canJoin, modifier = Modifier.fillMaxWidth()) { Text("Приєднатися") }
-        HorizontalDivider(Modifier.padding(vertical = 8.dp))
-        Text("Я з батьків і починаю", style = MaterialTheme.typography.titleMedium)
-        OutlinedButton(onClick = onCreate, enabled = state.canCreate, modifier = Modifier.fillMaxWidth()) { Text("Створити сім’ю") }
+        GameButton("Приєднатися", onJoin, Modifier.fillMaxWidth(), enabled = state.canJoin, leading = "🚀")
+        HorizontalDivider(Modifier.padding(vertical = 8.dp), color = RozkladTheme.colors.line)
+        Text("👑 Я з батьків і починаю", style = MaterialTheme.typography.titleMedium)
+        GameButton(
+            "Створити сім’ю",
+            onCreate,
+            Modifier.fillMaxWidth(),
+            color = RozkladTheme.colors.positive,
+            enabled = state.canCreate,
+            leading = "✨",
+        )
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center) }
         TextButton(onClick = onSignOut) { Text("Вийти з акаунта") }
     }
@@ -179,26 +225,30 @@ internal fun JoinFamilyScreen(
 /** Помилка без мережі й кешу — пропонуємо повторити. */
 @Composable
 fun UnavailableScreen(message: String, onRetry: () -> Unit, onSignOut: () -> Unit, modifier: Modifier = Modifier) {
-    CenteredForm(modifier) {
-        Text("📡", style = MaterialTheme.typography.displayLarge)
+    CenteredForm(header = { Text("📡", fontSize = 64.sp) }, modifier = modifier) {
         Text(message, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
-        Button(onClick = onRetry) { Text("Спробувати ще раз") }
+        GameButton("Спробувати ще раз", onRetry, Modifier.fillMaxWidth(), leading = "🔄")
         TextButton(onClick = onSignOut) { Text("Вийти") }
     }
 }
 
+/** Заголовок на тлі «арени», під ним — картка з формою. */
 @Composable
-private fun CenteredForm(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+private fun CenteredForm(header: @Composable () -> Unit, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Column(
-        modifier = modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(24.dp),
+        modifier = modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
     ) {
-        Column(
-            Modifier.widthIn(max = 420.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) { content() }
+        header()
+        GameSurface(Modifier.widthIn(max = 440.dp).fillMaxWidth(), depth = 6.dp) {
+            Column(
+                Modifier.fillMaxWidth().padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                content = content,
+            )
+        }
     }
 }
 
@@ -209,3 +259,4 @@ private fun AuthPreview() {
 }
 
 private const val GOOGLE_BLUE = 0xFF4285F4
+private const val GOOGLE_TEXT = 0xFF1F1F1F

@@ -2,6 +2,7 @@ package com.gifwarno.rozklad.feature.schedule
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -10,18 +11,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -35,7 +35,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.gifwarno.rozklad.core.designsystem.component.ButtonShape
+import com.gifwarno.rozklad.core.designsystem.component.GameButton
+import com.gifwarno.rozklad.core.designsystem.component.GameSurface
+import com.gifwarno.rozklad.core.designsystem.component.NumberTile
+import com.gifwarno.rozklad.core.designsystem.component.Pill
+import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.domain.Timetable
 import com.gifwarno.rozklad.core.model.SchoolSchedule
 import com.gifwarno.rozklad.core.ui.Format
@@ -54,34 +61,53 @@ private val HM = DateTimeFormatter.ofPattern("H:mm")
 internal fun BellsTab(draft: SchoolSchedule, actions: EditorActions) {
     // (індекс дзвінка, true — початок / false — кінець)
     var editing by rememberSaveable { mutableStateOf<Pair<Int, Boolean>?>(null) }
-    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        item(key = "hint") {
-            Text(
-                "Натисни на час, щоб змінити. i-й урок кожного дня йде за i-м дзвінком.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        itemsIndexed(draft.bells) { i, b ->
-            ListItem(
-                headlineContent = { Text("${i + 1} урок") },
-                supportingContent = {
-                    val prev = draft.bells.getOrNull(i - 1)
-                    if (prev != null) Text("перерва ${Duration.between(prev.end, b.start).toMinutes()} хв")
-                },
-                trailingContent = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { editing = i to true }) { Text(HM.format(b.start)) }
-                        Text("–")
-                        TextButton(onClick = { editing = i to false }) { Text(HM.format(b.end)) }
+    val c = RozkladTheme.colors
+    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item(key = "bells") {
+            GameSurface {
+                Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                    Text(
+                        "Натисни на час, щоб змінити. i-й урок кожного дня йде за i-м дзвінком.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = c.muted,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
+                    draft.bells.forEachIndexed { i, b ->
+                        val prev = draft.bells.getOrNull(i - 1)
+                        if (prev != null) {
+                            Box(Modifier.fillMaxWidth().padding(vertical = 2.dp), contentAlignment = Alignment.Center) {
+                                Pill("перерва · ${Duration.between(prev.end, b.start).toMinutes()} хв")
+                            }
+                        }
+                        Row(Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            NumberTile(i + 1, c.accent)
+                            Text("урок", Modifier.weight(1f).padding(start = 10.dp), style = MaterialTheme.typography.bodyLarge)
+                            TimeChip(HM.format(b.start)) { editing = i to true }
+                            Text("–", Modifier.padding(horizontal = 6.dp))
+                            TimeChip(HM.format(b.end)) { editing = i to false }
+                        }
                     }
-                },
-            )
+                }
+            }
         }
         item(key = "actions") {
-            Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = actions.addBell, enabled = draft.bells.size < SchoolSchedule.MAX_LESSONS) { Text("+ Дзвінок") }
-                OutlinedButton(onClick = actions.removeLastBell, enabled = draft.bells.size > 1) { Text("− Останній") }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                GameButton(
+                    "Дзвінок",
+                    actions.addBell,
+                    Modifier.weight(1f),
+                    enabled = draft.bells.size < SchoolSchedule.MAX_LESSONS,
+                    leading = "＋",
+                )
+                GameButton(
+                    "Останній",
+                    actions.removeLastBell,
+                    Modifier.weight(1f),
+                    color = c.card,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    enabled = draft.bells.size > 1,
+                    leading = "−",
+                )
             }
         }
     }
@@ -104,6 +130,18 @@ internal fun BellsTab(draft: SchoolSchedule, actions: EditorActions) {
     }
 }
 
+/** Час дзвінка — натискна «плитка». */
+@Composable
+private fun TimeChip(text: String, onClick: () -> Unit) {
+    GameSurface(shape = ButtonShape, color = RozkladTheme.colors.soft, depth = 3.dp, onClick = onClick) {
+        Text(
+            text,
+            Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TimeDialog(title: String, initial: LocalTime, onDismiss: () -> Unit, onConfirm: (LocalTime) -> Unit) {
@@ -120,32 +158,44 @@ private fun TimeDialog(title: String, initial: LocalTime, onDismiss: () -> Unit,
 @Composable
 internal fun HolidaysTab(draft: SchoolSchedule, actions: EditorActions) {
     var adding by rememberSaveable { mutableStateOf(false) }
-    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        item(key = "hint") {
-            Text(
-                "У канікули таймер і рюкзак не показуються, а «наступний урок» для домашки їх пропускає.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+    val c = RozkladTheme.colors
+    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item(key = "list") {
+            GameSurface {
+                Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                    Text(
+                        "У канікули таймер і рюкзак не показуються, а «наступний урок» для домашки їх пропускає.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = c.muted,
+                    )
+                    if (draft.holidays.isEmpty()) {
+                        Text("Канікул ще немає", Modifier.padding(vertical = 12.dp), fontWeight = FontWeight.Bold)
+                    }
+                    draft.holidays.forEachIndexed { i, h ->
+                        if (i > 0) HorizontalDivider(color = c.line)
+                        Row(Modifier.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("🏖️", style = MaterialTheme.typography.headlineSmall)
+                            Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                                Text(
+                                    "${Format.dayShort(h.start)} — ${Format.dayShort(h.end)}",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.ExtraBold,
+                                )
+                                Text(
+                                    "${ChronoUnit.DAYS.between(h.start, h.end) + 1} дн.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = c.muted,
+                                )
+                            }
+                            IconButton(onClick = { actions.removeHoliday(i) }) {
+                                Icon(Icons.Outlined.Delete, contentDescription = "Видалити канікули", tint = c.muted)
+                            }
+                        }
+                    }
+                }
+            }
         }
-        if (draft.holidays.isEmpty()) {
-            item(key = "empty") { Text("Канікул ще немає", modifier = Modifier.padding(vertical = 16.dp)) }
-        }
-        itemsIndexed(draft.holidays) { i, h ->
-            ListItem(
-                leadingContent = { Text("🏖️", style = MaterialTheme.typography.titleLarge) },
-                headlineContent = { Text("${Format.dayShort(h.start)} — ${Format.dayShort(h.end)}") },
-                supportingContent = { Text("${ChronoUnit.DAYS.between(h.start, h.end) + 1} дн.") },
-                trailingContent = {
-                    IconButton(onClick = {
-                        actions.removeHoliday(i)
-                    }) { Icon(Icons.Outlined.Delete, contentDescription = "Видалити канікули") }
-                },
-            )
-        }
-        item(key = "add") {
-            OutlinedButton(onClick = { adding = true }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text("+ Канікули") }
-        }
+        item(key = "add") { GameButton("Канікули", { adding = true }, Modifier.fillMaxWidth(), leading = "＋") }
     }
     if (adding) {
         HolidayDialog(

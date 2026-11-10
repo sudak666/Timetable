@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,7 +28,6 @@ import androidx.navigation3.ui.NavDisplay
 import com.gifwarno.rozklad.core.designsystem.component.ArenaBackground
 import com.gifwarno.rozklad.core.designsystem.component.GameNavBar
 import com.gifwarno.rozklad.core.designsystem.component.GameNavItem
-import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.component.LoadingState
 import com.gifwarno.rozklad.core.model.SessionState
 import com.gifwarno.rozklad.core.model.SyncStatus
@@ -83,17 +81,16 @@ fun RozkladApp(
         when (session) {
             SessionState.Loading -> LoadingState()
 
-            SessionState.SignedOut -> Panel(Modifier.safeDrawingPadding()) { AuthRoute() }
+            SessionState.SignedOut -> AuthRoute(Modifier.safeDrawingPadding())
 
-            is SessionState.NoFamily -> Panel(Modifier.safeDrawingPadding()) { JoinFamilyRoute() }
+            is SessionState.NoFamily -> JoinFamilyRoute(Modifier.safeDrawingPadding())
 
-            is SessionState.Unavailable -> Panel(Modifier.safeDrawingPadding()) {
-                UnavailableScreen(
-                    message = session.message,
-                    onRetry = actions.onRetrySession,
-                    onSignOut = actions.onSignOut,
-                )
-            }
+            is SessionState.Unavailable -> UnavailableScreen(
+                message = session.message,
+                onRetry = actions.onRetrySession,
+                onSignOut = actions.onSignOut,
+                modifier = Modifier.safeDrawingPadding(),
+            )
 
             is SessionState.Ready -> MainShell(sync, hasFamilyData, actions, alert, deepLink)
         }
@@ -158,17 +155,14 @@ private fun MainShell(
                 rememberViewModelStoreNavEntryDecorator(),
             ),
             entryProvider = entryProvider<NavKey> {
-                // Вкладки — прямо на тлі арени; редактори поверх них поки що — у великій картці-панелі.
                 entry<TodayKey> { TodayRoute(onEditSchedule = { backStack.add(ScheduleEditorKey) }) }
-                entry<ScheduleEditorKey> {
-                    Panel { ScheduleEditorRoute(onClose = { backStack.removeAt(backStack.lastIndex) }) }
-                }
+                entry<ScheduleEditorKey> { ScheduleEditorRoute(onClose = { backStack.removeAt(backStack.lastIndex) }) }
                 entry<GradesKey> { if (hasData) GradesRoute() else LoadingState() }
                 entry<HomeworkKey> { if (hasData) HomeworkRoute() else LoadingState() }
                 entry<ProfileKey> {
                     if (hasData) ProfileRoute(onPickAlertRegion = { backStack.add(AlertRegionKey) }) else LoadingState()
                 }
-                entry<AlertRegionKey> { Panel { AlertRegionRoute(onClose = { backStack.removeAt(backStack.lastIndex) }) } }
+                entry<AlertRegionKey> { AlertRegionRoute(onClose = { backStack.removeAt(backStack.lastIndex) }) }
             },
         )
         Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), contentAlignment = Alignment.Center) {
@@ -189,14 +183,4 @@ private fun MainShell(
             }
         }
     }
-}
-
-/** Велика картка для екранів, які ще не перемальовані під «арену», — текст лишається читабельним. */
-@Composable
-private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    GameSurface(
-        modifier = modifier.fillMaxSize().padding(start = 12.dp, end = 12.dp, top = 8.dp),
-        shape = RoundedCornerShape(24.dp),
-        depth = 5.dp,
-    ) { content() }
 }

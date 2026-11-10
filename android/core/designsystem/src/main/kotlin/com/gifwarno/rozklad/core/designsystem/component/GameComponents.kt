@@ -52,6 +52,7 @@ import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -138,13 +139,15 @@ fun GameButton(
     color: Color = RozkladTheme.colors.accent,
     contentColor: Color = Color.White,
     leading: String? = null,
+    enabled: Boolean = true,
 ) {
     GameSurface(
-        modifier = modifier,
+        modifier = modifier.semantics { if (!enabled) disabled() },
         shape = ButtonShape,
-        color = color,
-        contentColor = contentColor,
-        onClick = onClick,
+        color = if (enabled) color else RozkladTheme.colors.soft,
+        contentColor = if (enabled) contentColor else RozkladTheme.colors.muted,
+        depth = if (enabled) 4.dp else 2.dp,
+        onClick = if (enabled) onClick else null,
     ) {
         Text(
             text = if (leading != null) "$leading  $text" else text,
