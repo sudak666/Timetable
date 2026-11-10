@@ -155,7 +155,12 @@ private fun MainShell(
                 rememberViewModelStoreNavEntryDecorator(),
             ),
             entryProvider = entryProvider<NavKey> {
-                entry<TodayKey> { TodayRoute(onEditSchedule = { backStack.add(ScheduleEditorKey) }) }
+                entry<TodayKey> {
+                    TodayRoute(
+                        onEditSchedule = { backStack.add(ScheduleEditorKey) },
+                        onOpenPlayer = { backStack.add(GradesKey) },
+                    )
+                }
                 entry<ScheduleEditorKey> { ScheduleEditorRoute(onClose = { backStack.removeAt(backStack.lastIndex) }) }
                 entry<GradesKey> { if (hasData) GradesRoute() else LoadingState() }
                 entry<HomeworkKey> { if (hasData) HomeworkRoute() else LoadingState() }

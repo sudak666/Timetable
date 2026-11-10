@@ -64,6 +64,8 @@ data class TodayUiState(
     val backpack: List<String>,
     /** null — сьогодні не вчимося. */
     val dayProgress: Float?,
+    /** Сьогодні були уроки, і вони вже закінчились — привід для салюту. */
+    val finishedToday: Boolean = false,
 )
 
 private val HM = DateTimeFormatter.ofPattern("H:mm")
@@ -162,5 +164,6 @@ fun buildTodayState(now: LocalDateTime, cal: SchoolCalendar, alertSince: LocalDa
         lessons = rows,
         backpack = lessons.map { it.subject }.distinct(),
         dayProgress = cal.dayProgress(now),
+        finishedToday = status is SchoolStatus.Done && !cal.lessonsOn(today).isNullOrEmpty(),
     )
 }
