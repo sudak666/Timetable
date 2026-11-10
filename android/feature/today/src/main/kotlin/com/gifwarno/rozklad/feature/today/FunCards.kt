@@ -119,11 +119,20 @@ internal fun WeekendStarsCard(weekend: String, stars: Int, onStar: () -> Unit, m
         Text(weekend, style = MaterialTheme.typography.bodyLarge)
         Text("⭐ Мої зірочки за сьогодні", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 6.dp))
         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-            Text(
-                if (stars > 0) "⭐".repeat(stars) else "—",
-                fontSize = 22.sp,
-                modifier = Modifier.weight(1f).semantics { contentDescription = "Зірочок: $stars" },
-            )
+            if (stars > 0) {
+                Text(
+                    "⭐".repeat(stars),
+                    fontSize = 22.sp,
+                    modifier = Modifier.weight(1f).semantics { contentDescription = "Зірочок: $stars" },
+                )
+            } else {
+                Text(
+                    "Ще жодної — постав собі за добру справу",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme.colors.muted,
+                    modifier = Modifier.weight(1f).padding(end = 8.dp),
+                )
+            }
             GameButton("зірка", onStar, enabled = stars < MAX_STARS, leading = "＋")
         }
     }

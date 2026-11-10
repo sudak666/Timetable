@@ -81,3 +81,10 @@ export function nextLessonDate(subject: string, from: Date): string {
   }
   return iso(addDays(from, 1));
 }
+
+/** «3 дні 3 год», «1 день», «менше години» — без «0 д» і з відмінками (як у Android). */
+export function leftText(days: number, hours: number): string {
+  const d = days === 0 ? null : days % 10 === 1 && days % 100 !== 11 ? `${days} день` : days % 10 >= 2 && days % 10 <= 4 && (days % 100 < 12 || days % 100 > 14) ? `${days} дні` : `${days} днів`;
+  const h = hours > 0 ? `${hours} год` : d === null ? 'менше години' : null;
+  return [d, h].filter(Boolean).join(' ');
+}

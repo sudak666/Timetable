@@ -36,8 +36,12 @@ sealed interface HistoryEntry {
     }
 }
 
-/** «Я проти минулого місяця» (одна дитина) або рейтинг місяця (кілька дітей) — як у вебі. */
-data class MonthCompare(val avgNow: Double?, val avgPrev: Double?, val earnedNow: Int, val earnedPrev: Int)
+/**
+ * «Я проти минулого місяця» (одна дитина) або рейтинг місяця (кілька дітей) — як у вебі.
+ * [earnedPrev] — за ті самі дні минулого місяця (1…[upToDay]), інакше на початку місяця
+ * завжди виходило б «гірше». [upToDay] == null — місяць уже закінчився, порівнюємо цілі місяці.
+ */
+data class MonthCompare(val avgNow: Double?, val avgPrev: Double?, val earnedNow: Int, val earnedPrev: Int, val upToDay: Int? = null)
 
 data class RankRow(val userId: String, val name: String, val avatar: String, val earned: Int)
 
@@ -53,13 +57,13 @@ internal object GradesStats {
             .take(HISTORY_LIMIT)
 
     /** Зароблено дитиною за місяць: підтверджені оцінки + бонуси (зі штрафами) + автонагороди. */
-    fun earnedIn(childId: String, data: FamilyData, month: YearMonth): Int {
+    fun earnedIn(childId: String, data: FamilyData, month: YearMonth, upToDay: Int = 31): Int {
         val approved = data.grades.filter { it.childId == childId && it.status == GradeStatus.APPROVED }
         val auto = Rewards.autoRewards(approved, data.challenges.filter { it.childId == childId }, data.settings.streak)
         val items = approved.map { it.date to Rewards.gradeValue(it, data.settings.rates) } +
             data.ledger.filter { it.childId == childId && it.kind == LedgerKind.BONUS }.map { it.date to it.amount } +
             auto.map { it.date to it.amount }
-        return items.sumOf { (d, v) -> if (YearMonth.from(d) == month) v else 0 }
+        return items.sumOf { (d, v) -> if (YearMonth.from(d) == month && d.dayOfMonth <= upToDay) v else 0 }
     }
 
     fun avgIn(approved: List<Grade>, month: YearMonth): Double? =
@@ -68,7 +72,15 @@ internal object GradesStats {
     fun compare(childId: String, approved: List<Grade>, data: FamilyData, today: LocalDate): MonthCompare {
         val now = YearMonth.from(today)
         val prev = now.minusMonths(1)
-        return MonthCompare(avgIn(approved, now), avgIn(approved, prev), earnedIn(childId, data, now), earnedIn(childId, data, prev))
+        // Гроші — накопичувальні: порівнюємо з тими самими днями минулого місяця. Середній бал — і так середній.
+        val day = today.dayOfMonth.takeIf { it < now.lengthOfMonth() }
+        return MonthCompare(
+            avgNow = avgIn(approved, now),
+            avgPrev = avgIn(approved, prev),
+            earnedNow = earnedIn(childId, data, now),
+            earnedPrev = earnedIn(childId, data, prev, day ?: 31),
+            upToDay = day,
+        )
     }
 
     fun rank(data: FamilyData, today: LocalDate): List<RankRow> {

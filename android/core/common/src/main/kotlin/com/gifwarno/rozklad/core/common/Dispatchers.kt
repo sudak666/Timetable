@@ -1,10 +1,12 @@
 package com.gifwarno.rozklad.core.common
 
+import dagger.BindsOptionalOf
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import java.time.Clock
+import java.util.Optional
 import javax.inject.Qualifier
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
@@ -40,7 +42,20 @@ object CommonModule {
     fun applicationScope(@Dispatcher(RozkladDispatchers.Default) dispatcher: CoroutineDispatcher): CoroutineScope =
         CoroutineScope(SupervisorJob() + dispatcher)
 
-    /** Годинник інжектиться — у тестах підставляємо фіксований час. */
+    /** Годинник інжектиться — у тестах підставляємо фіксований час, у демо-режимі (debug) — свій. */
     @Provides
-    fun clock(): Clock = Clock.systemDefaultZone()
+    fun clock(override: Optional<ClockOverride>): Clock = override.orElse(null)?.clock() ?: Clock.systemDefaultZone()
+}
+
+/** Підміна годинника — лише debug-збірка (демо-режим). У релізі не прив'язана: системний час. */
+interface ClockOverride {
+    /** null — без підміни. */
+    fun clock(): Clock?
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+internal interface ClockOverrideSlot {
+    @BindsOptionalOf
+    fun clockOverride(): ClockOverride
 }

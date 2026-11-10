@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -46,7 +47,11 @@ import com.gifwarno.rozklad.core.domain.TrophyReward
 /** Шлях нагород: плитки рівнів з аватарами й кольорами, що відкриваються. */
 @Composable
 fun TrophyRoad(steps: List<RoadStep>, modifier: Modifier = Modifier) {
+    // Одразу показуємо, де гравець зараз: останній відкритий рівень і наступний, а не рівні 2–5.
+    val next = steps.indexOfFirst { it.next }.takeIf { it >= 0 } ?: steps.indexOfLast { it.got }.coerceAtLeast(0)
+    val list = rememberLazyListState(initialFirstVisibleItemIndex = (next - 1).coerceAtLeast(0))
     LazyRow(
+        state = list,
         modifier = modifier.fillMaxWidth(),
         contentPadding = PaddingValues(0.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),

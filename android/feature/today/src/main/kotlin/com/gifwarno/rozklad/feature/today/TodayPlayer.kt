@@ -59,7 +59,7 @@ fun buildQuests(childId: String, data: FamilyData, cal: SchoolCalendar, today: L
     val approved = data.grades.filter { it.childId == childId && it.status == GradeStatus.APPROVED }
     out += Quest(
         "🔥",
-        "Серія: ${streak.len} оцінок від ${streak.min}" + if (streak.bonus > 0) " (+${streak.bonus} ₴)" else "",
+        "Серія: ${streak.len} оцінок від ${streak.min}" + if (streak.bonus > 0) " (+${streak.bonus}\u00A0₴)" else "",
         Rewards.currentRun(approved, streak),
         streak.len,
         daily = false,

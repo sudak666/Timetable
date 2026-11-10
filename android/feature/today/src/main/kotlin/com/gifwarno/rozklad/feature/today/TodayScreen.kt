@@ -185,7 +185,7 @@ internal fun TodayScreen(
         }
         if (week != null && week.days.isNotEmpty()) {
             item(key = "week-title") {
-                StrokeText("📅 Розклад на тиждень", GameTitleStyle.copy(fontSize = 20.sp, lineHeight = 26.sp), strokeWidth = 4.dp)
+                StrokeText("🗓️ Розклад на тиждень", GameTitleStyle.copy(fontSize = 20.sp, lineHeight = 26.sp), strokeWidth = 4.dp)
             }
             item(key = "week") { WeekCard(week) }
         }

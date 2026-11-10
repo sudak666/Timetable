@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyTimetable } from '../../src/data/schedule';
-import { clockOf, hms, iso, lessonsOn, mondayOf, nextLessonDate, nextSchoolDate, statusAt } from '../../src/lib/time';
+import { clockOf, hms, iso, leftText, lessonsOn, mondayOf, nextLessonDate, nextSchoolDate, statusAt } from '../../src/lib/time';
 
 const at = (s: string) => clockOf(new Date(s));
 
@@ -44,5 +44,17 @@ describe('розклад дитини з school_timetables', () => {
     expect(nextLessonDate('Хімія', new Date(2026, 9, 26))).toBe('2026-11-02');
     applyTimetable(null);
     expect(statusAt(at('2026-10-26T09:10')).kind).toBe('done'); // знову канікули з прикладу
+  });
+});
+
+describe('leftText — до вихідних', () => {
+  it('дні з відмінками й години', () => {
+    expect(leftText(3, 20)).toBe('3 дні 20 год');
+    expect(leftText(1, 0)).toBe('1 день');
+    expect(leftText(5, 2)).toBe('5 днів 2 год');
+  });
+  it('без «0 д»', () => {
+    expect(leftText(0, 4)).toBe('4 год');
+    expect(leftText(0, 0)).toBe('менше години');
   });
 });

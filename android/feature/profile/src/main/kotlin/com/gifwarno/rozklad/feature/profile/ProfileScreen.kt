@@ -221,7 +221,7 @@ internal fun ProfileScreen(
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
-                    "🔥 Серія: ${s.streak.len} оцінок поспіль ≥ ${s.streak.min} → +${s.streak.bonus} ₴",
+                    "🔥 Серія: ${s.streak.len} оцінок поспіль ≥ ${s.streak.min} → +${s.streak.bonus}\u00A0₴",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

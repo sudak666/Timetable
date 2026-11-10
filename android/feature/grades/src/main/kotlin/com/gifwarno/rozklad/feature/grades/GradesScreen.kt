@@ -387,7 +387,7 @@ private fun PlayerCard(state: GradesUiState.Ready, onMoney: (Money) -> Unit, onE
                     )
                     val left = state.child.goalAmount - state.totals.balance.coerceAtLeast(0)
                     Text(
-                        "${state.totals.balance.coerceAtLeast(0)} з ${state.child.goalAmount} ₴ · " +
+                        "${state.totals.balance.coerceAtLeast(0)} з ${state.child.goalAmount}\u00A0₴ · " +
                             if (left <= 0) "🎉 можна купувати!" else "ще $left ₴",
                         style = MaterialTheme.typography.labelMedium,
                     )

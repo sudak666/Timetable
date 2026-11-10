@@ -11,9 +11,10 @@ object Format {
     private val dayLong = DateTimeFormatter.ofPattern("EEEE, d MMMM", uk)
     private val date = DateTimeFormatter.ofPattern("d MMMM", uk)
 
-    fun money(v: Int): String = (if (v > 0) "+" else "") + "$v ₴"
+    // Нерозривний пробіл: «₴» ніколи не відривається від суми на інший рядок.
+    fun money(v: Int): String = (if (v > 0) "+" else "") + "$v\u00A0₴"
 
-    fun balance(v: Int): String = "$v ₴"
+    fun balance(v: Int): String = "$v\u00A0₴"
 
     fun dayShort(d: LocalDate): String = dayShort.format(d)
 
