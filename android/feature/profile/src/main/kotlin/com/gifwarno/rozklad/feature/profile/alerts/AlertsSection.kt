@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -15,6 +14,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.gifwarno.rozklad.core.designsystem.component.GameButton
+import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 
 @Immutable
 data class AlertsSectionActions(val onPick: () -> Unit, val onClear: () -> Unit, val onPushToggle: (Boolean) -> Unit, val error: String?)
@@ -25,16 +26,16 @@ data class AlertsSectionActions(val onPick: () -> Unit, val onClear: () -> Unit,
  */
 @Composable
 fun AlertsSection(region: String?, isParent: Boolean, alertsPush: Boolean?, actions: AlertsSectionActions, modifier: Modifier = Modifier) {
-    Card(modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Повітряні тривоги", style = MaterialTheme.typography.titleMedium)
+    GameSurface(modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("🚨 Повітряні тривоги", style = MaterialTheme.typography.titleMedium)
             Text(
                 region?.let(::shortName) ?: if (isParent) "Місце не обрано" else "Батьки ще не обрали місце",
                 style = MaterialTheme.typography.bodyLarge,
             )
             if (isParent) {
-                Row {
-                    TextButton(onClick = actions.onPick) { Text(if (region == null) "Обрати місце" else "Змінити") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    GameButton(if (region == null) "Обрати місце" else "Змінити", onClick = actions.onPick, leading = "📍")
                     if (region != null) TextButton(onClick = actions.onClear) { Text("Вимкнути") }
                 }
             }

@@ -19,49 +19,90 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
-/** Фірмові кольори — ті самі, що у вебі (#6c5ce7). */
-private object Brand {
-    val Violet = Color(0xFF6C5CE7)
-    val VioletDark = Color(0xFFC9BFFF)
-    val Teal = Color(0xFF00866B)
-    val TealDark = Color(0xFF6FDBBE)
-    val Amber = Color(0xFF8A5C00)
-    val AmberDark = Color(0xFFFFB95C)
+/** Токени — ті самі, що у вебі (src/styles.css: --accent, --bg, --card, --line …). */
+private object Web {
+    val Accent = Color(0xFF6C5CE7)
+    val Pink = Color(0xFFFD79A8)
+    val Ink = Color(0xFF1B1C33)
+
+    val Bg = Color(0xFFF3F4FB)
+    val Card = Color.White
+    val Text = Color(0xFF1B1C33)
+    val Muted = Color(0xFF5F6384)
+    val Line = Color(0xFFE4E6F3)
+    val Brk = Color(0xFFF0F1FA)
+
+    val BgDark = Color(0xFF0F1024)
+    val CardDark = Color(0xFF1A1B36)
+    val TextDark = Color(0xFFECEEFE)
+    val MutedDark = Color(0xFFA3A6CC)
+    val LineDark = Color(0xFF2A2C4F)
+    val BrkDark = Color(0xFF15162D)
 }
 
 private val LightColors = lightColorScheme(
-    primary = Brand.Violet,
+    primary = Web.Accent,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFE6DEFF),
-    onPrimaryContainer = Color(0xFF1D0F66),
-    secondary = Brand.Teal,
+    primaryContainer = Color(0xFFE6E1FF),
+    onPrimaryContainer = Color(0xFF22126E),
+    secondary = Color(0xFF00705A),
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFB8F2DE),
-    onSecondaryContainer = Color(0xFF002118),
-    tertiary = Brand.Amber,
+    secondaryContainer = Color(0xFFC4F2E4),
+    onSecondaryContainer = Color(0xFF00201A),
+    tertiary = Color(0xFF8A5C00),
     onTertiary = Color.White,
-    tertiaryContainer = Color(0xFFFFDDB3),
+    tertiaryContainer = Color(0xFFFFE3B8),
     onTertiaryContainer = Color(0xFF2B1700),
-    background = Color(0xFFFCF8FF),
-    surface = Color(0xFFFCF8FF),
+    error = Color(0xFFC0392B),
+    errorContainer = Color(0xFFFFF1E6),
+    onErrorContainer = Color(0xFFA4301A),
+    background = Web.Bg,
+    onBackground = Web.Text,
+    surface = Web.Card,
+    onSurface = Web.Text,
+    surfaceVariant = Web.Brk,
+    onSurfaceVariant = Web.Muted,
+    outline = Color(0xFFB9BCD6),
+    outlineVariant = Web.Line,
+    surfaceContainerLowest = Web.Card,
+    surfaceContainerLow = Web.Card,
+    surfaceContainer = Web.Brk,
+    surfaceContainerHigh = Color(0xFFEAEBF7),
+    surfaceContainerHighest = Color(0xFFE4E6F3),
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Brand.VioletDark,
-    onPrimary = Color(0xFF2F1E85),
-    primaryContainer = Color(0xFF4636B5),
-    onPrimaryContainer = Color(0xFFE6DEFF),
-    secondary = Brand.TealDark,
+    primary = Color(0xFFA29BFE),
+    onPrimary = Web.Ink,
+    primaryContainer = Color(0xFF3D2F9E),
+    onPrimaryContainer = Color(0xFFE6E1FF),
+    secondary = Color(0xFF4FD1A5),
     onSecondary = Color(0xFF00382C),
     secondaryContainer = Color(0xFF005141),
-    onSecondaryContainer = Color(0xFFB8F2DE),
-    tertiary = Brand.AmberDark,
+    onSecondaryContainer = Color(0xFFC4F2E4),
+    tertiary = Color(0xFFFFB95C),
     onTertiary = Color(0xFF462A00),
     tertiaryContainer = Color(0xFF643F00),
-    onTertiaryContainer = Color(0xFFFFDDB3),
+    onTertiaryContainer = Color(0xFFFFE3B8),
+    error = Color(0xFFFF8A80),
+    errorContainer = Color(0xFF3B1F1A),
+    onErrorContainer = Color(0xFFFFB4A2),
+    background = Web.BgDark,
+    onBackground = Web.TextDark,
+    surface = Web.CardDark,
+    onSurface = Web.TextDark,
+    surfaceVariant = Web.BrkDark,
+    onSurfaceVariant = Web.MutedDark,
+    outline = Color(0xFF4A4D7A),
+    outlineVariant = Web.LineDark,
+    surfaceContainerLowest = Web.BgDark,
+    surfaceContainerLow = Web.CardDark,
+    surfaceContainer = Web.BrkDark,
+    surfaceContainerHigh = Color(0xFF22244A),
+    surfaceContainerHighest = Color(0xFF2A2C4F),
 )
 
-/** Семантичні кольори поза Material: оцінки, гроші. */
+/** Семантичні й «ігрові» кольори поза Material. */
 @Immutable
 data class RozkladColors(
     val positive: Color,
@@ -69,38 +110,84 @@ data class RozkladColors(
     val gradeExcellent: Color,
     val gradeGood: Color,
     val gradeFair: Color,
-    val gradeLow: Color,
     val gradePass: Color,
+    val gradeLow: Color,
+    /** Обведення й «тверда» тінь карток і кнопок (ігровий стиль). */
+    val ink: Color,
+    /** Фірмовий акцент для заливок з білим текстом (у темній темі теж #6c5ce7, як у вебі). */
+    val accent: Color,
+    val accentEnd: Color,
+    val glow: Color,
+    /** Тло рядків, перерв, плиток (--brk). */
+    val soft: Color,
+    val card: Color,
+    val line: Color,
+    val muted: Color,
+    /** Небо «арени» за картками: верх → низ. */
+    val skyTop: Color,
+    val skyBottom: Color,
+    val gold: Color,
+    val goldEnd: Color,
+    val dark: Boolean,
 )
 
 private val LightExtra = RozkladColors(
-    positive = Color(0xFF00866B),
-    negative = Color(0xFFC62828),
+    positive = Color(0xFF00705A),
+    negative = Color(0xFFC0392B),
     gradeExcellent = Color(0xFF00866B),
     gradeGood = Color(0xFF0869B5),
-    gradeFair = Color(0xFF8A5C00),
+    gradeFair = Color(0xFFB35900),
     gradeLow = Color(0xFFC62828),
     gradePass = Color(0xFF5B6472),
+    ink = Web.Ink,
+    accent = Web.Accent,
+    accentEnd = Web.Pink,
+    glow = Web.Accent.copy(alpha = 0.22f),
+    soft = Web.Brk,
+    card = Web.Card,
+    line = Web.Line,
+    muted = Web.Muted,
+    skyTop = Color(0xFF3A1F8F),
+    skyBottom = Color(0xFF7B4FD8),
+    gold = Color(0xFFFDCB6E),
+    goldEnd = Color(0xFFE17055),
+    dark = false,
 )
 
 private val DarkExtra = RozkladColors(
-    positive = Color(0xFF6FDBBE),
-    negative = Color(0xFFFFB4AB),
-    gradeExcellent = Color(0xFF6FDBBE),
-    gradeGood = Color(0xFF9ECAFF),
-    gradeFair = Color(0xFFFFB95C),
-    gradeLow = Color(0xFFFFB4AB),
-    gradePass = Color(0xFFC4C6D0),
+    positive = Color(0xFF4FD1A5),
+    negative = Color(0xFFFF8A80),
+    gradeExcellent = Color(0xFF00866B),
+    gradeGood = Color(0xFF0869B5),
+    gradeFair = Color(0xFFB35900),
+    gradeLow = Color(0xFFC62828),
+    gradePass = Color(0xFF5B6472),
+    ink = Color.Black,
+    accent = Web.Accent,
+    accentEnd = Web.Pink,
+    glow = Web.Accent.copy(alpha = 0.45f),
+    soft = Web.BrkDark,
+    card = Web.CardDark,
+    line = Web.LineDark,
+    muted = Web.MutedDark,
+    skyTop = Color(0xFF0B0820),
+    skyBottom = Color(0xFF2A1866),
+    gold = Color(0xFFFDCB6E),
+    goldEnd = Color(0xFFE17055),
+    dark = true,
 )
 
 // Свідомий виняток: токени теми — класичний випадок для CompositionLocal (як MaterialTheme.colorScheme).
 @Suppress("ComposeCompositionLocalUsage")
 val LocalRozkladColors = staticCompositionLocalOf { LightExtra }
 
+/** Радіуси як у вебі: 12 (кнопки), 20 (картки), 24 (вікна). */
 private val RozkladShapes = Shapes(
-    small = RoundedCornerShape(8.dp),
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(12.dp),
     medium = RoundedCornerShape(16.dp),
-    large = RoundedCornerShape(24.dp),
+    large = RoundedCornerShape(20.dp),
+    extraLarge = RoundedCornerShape(24.dp),
 )
 
 @Composable

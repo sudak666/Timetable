@@ -1,8 +1,10 @@
 package com.gifwarno.rozklad
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -30,7 +32,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // Сплеш тримаємо, поки не відомо, чи користувач увійшов (без миготіння екрана входу).
         splash.setKeepOnScreenCondition { viewModel.sessionState.value == SessionState.Loading }
-        enableEdgeToEdge()
+        // Тло «арени» темне в обох темах — значки системних панелей завжди світлі.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+        )
         deepLink.value = intent?.getStringExtra(EXTRA_URL)
         handleOAuthRedirect(intent)
         val actions = AppActions(

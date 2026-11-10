@@ -6,10 +6,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.ErrorOutline
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -19,8 +19,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.gifwarno.rozklad.core.designsystem.component.EmojiBadge
+import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.component.ValueBadge
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.domain.Rewards
@@ -93,11 +96,21 @@ fun ChildSelector(children: List<Member>, selectedId: String?, onSelect: (String
     if (children.size < 2) return
     LazyRow(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items(children, key = { it.userId }) { kid ->
-            FilterChip(
-                selected = kid.userId == selectedId,
+            val selected = kid.userId == selectedId
+            GameSurface(
+                shape = RoundedCornerShape(50),
+                color = if (selected) RozkladTheme.colors.accent else RozkladTheme.colors.card,
+                contentColor = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
+                depth = 3.dp,
                 onClick = { onSelect(kid.userId) },
-                label = { Text("${kid.avatar.ifBlank { "🙂" }} ${kid.name}") },
-            )
+                modifier = Modifier.semantics { this.selected = selected },
+            ) {
+                Text(
+                    "${kid.avatar.ifBlank { "🙂" }} ${kid.name}",
+                    Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
         }
     }
 }

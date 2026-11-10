@@ -50,6 +50,10 @@ data class LessonRow(
     val state: LessonState,
     /** Урок збігся з поточною повітряною тривогою — швидше за все, проходить в укритті. */
     val inShelter: Boolean = false,
+    /** Перерва після уроку, хв; null — це останній урок. */
+    val breakAfter: Long? = null,
+    /** Саме зараз триває перерва після цього уроку. */
+    val breakNow: Boolean = false,
 )
 
 data class TodayUiState(
@@ -135,7 +139,17 @@ fun buildTodayState(now: LocalDateTime, cal: SchoolCalendar, alertSince: LocalDa
         }
         // Урок [початок, кінець) перетинається з тривогою [alertSince, зараз].
         val inShelter = showToday && alertStart != null && state != LessonState.UPCOMING && bell.end.isAfter(alertStart)
-        LessonRow(i + 1, l.subject, "${HM.format(bell.start)}–${HM.format(bell.end)}", l.optional, state, inShelter)
+        val nextBell = if (i < lessons.lastIndex) cal.bell(i + 1) else null
+        LessonRow(
+            number = i + 1,
+            subject = l.subject,
+            time = "${HM.format(bell.start)}–${HM.format(bell.end)}",
+            optional = l.optional,
+            state = state,
+            inShelter = inShelter,
+            breakAfter = nextBell?.let { Duration.between(bell.end, it.start).toMinutes() },
+            breakNow = status is SchoolStatus.OnBreak && status.nextIndex == i + 1,
+        )
     }
     return TodayUiState(
         now = card,
