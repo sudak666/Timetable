@@ -129,15 +129,20 @@ internal fun WidgetContent(state: WidgetState, open: Action?, alert: String? = n
     }
 }
 
-/** Градієнтна шапка; на малому віджеті — це весь віджет. */
+/**
+ * Градієнтна шапка. [fill] — коли під нею нічого показувати (малий віджет, вхід, порожній розклад):
+ * тоді вона займає весь віджет, щоб не лишалося порожньої темної області.
+ */
 @Composable
-private fun Header(title: String, detail: String, alert: String?) {
+private fun ColumnScope.Header(title: String, detail: String, alert: String?, fill: Boolean = true) {
+    val m = GlanceModifier
+        .fillMaxWidth()
+        .background(ImageProvider(R.drawable.widget_header))
+        .cornerRadius(20.dp)
+        .padding(horizontal = 14.dp, vertical = 10.dp)
     Column(
-        GlanceModifier
-            .fillMaxWidth()
-            .background(ImageProvider(R.drawable.widget_header))
-            .cornerRadius(20.dp)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+        if (fill) m.defaultWeight() else m,
+        verticalAlignment = if (fill) Alignment.CenterVertically else Alignment.Top,
     ) {
         if (alert != null) {
             Text(alert, style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 13.sp, color = AlertYellow), maxLines = 1)
@@ -151,7 +156,7 @@ private fun Header(title: String, detail: String, alert: String?) {
 private fun ColumnScope.Ready(state: WidgetState.Ready, alert: String?) {
     // Список уроків — лише якщо віджет достатньо високий.
     val showList = LocalSize.current.height >= LIST_MIN_HEIGHT.dp && state.lessons.isNotEmpty()
-    Header("${state.emoji} ${state.headline}", state.detail, alert)
+    Header("${state.emoji} ${state.headline}", state.detail, alert, fill = !showList)
     if (showList) {
         Column(GlanceModifier.fillMaxWidth().defaultWeight().padding(start = 10.dp, end = 10.dp, top = 8.dp, bottom = 6.dp)) {
             Text(

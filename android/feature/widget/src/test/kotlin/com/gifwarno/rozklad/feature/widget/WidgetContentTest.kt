@@ -6,6 +6,7 @@ import androidx.glance.appwidget.testing.unit.runGlanceAppWidgetUnitTest
 import androidx.glance.testing.unit.hasText
 import com.gifwarno.rozklad.core.domain.Timetable
 import java.time.LocalDateTime
+import kotlin.time.Duration.Companion.seconds
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -16,11 +17,16 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class WidgetContentTest {
+    // Перший тест класу холодно запускає Robolectric (буває ~30 с при паралельній збірці) — 2 с за замовчуванням замало.
+    private companion object {
+        val COLD_START = 60.seconds
+    }
+
     // Понеділок прикладу — 7 уроків, 7-й (факультатив) раніше обрізався.
     private val monday = buildWidgetState(LocalDateTime.parse("2026-11-09T09:40"), "Сашко", Timetable.EXAMPLE)
 
     @Test
-    fun `великий віджет показує всі уроки дня`() = runGlanceAppWidgetUnitTest {
+    fun `великий віджет показує всі уроки дня`() = runGlanceAppWidgetUnitTest(timeout = COLD_START) {
         setAppWidgetSize(DpSize(300.dp, 400.dp))
         provideComposable { WidgetContent(monday, null) }
         onAllNodes(hasText("Всесв. історія")).assertCountEquals(2) // заголовок + рядок у списку
@@ -31,7 +37,7 @@ class WidgetContentTest {
     }
 
     @Test
-    fun `малий віджет — лише що зараз, без списку`() = runGlanceAppWidgetUnitTest {
+    fun `малий віджет — лише що зараз, без списку`() = runGlanceAppWidgetUnitTest(timeout = COLD_START) {
         setAppWidgetSize(DpSize(180.dp, 60.dp))
         provideComposable { WidgetContent(monday, null) }
         onNode(hasText("до 10:10")).assertExists()
@@ -39,7 +45,7 @@ class WidgetContentTest {
     }
 
     @Test
-    fun `не увійшов — підказка`() = runGlanceAppWidgetUnitTest {
+    fun `не увійшов — підказка`() = runGlanceAppWidgetUnitTest(timeout = COLD_START) {
         provideComposable { WidgetContent(WidgetState.SignedOut, null) }
         onNode(hasText("Увійди")).assertExists()
     }
