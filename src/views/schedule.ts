@@ -3,7 +3,7 @@ import { classMap } from 'lit-html/directives/class-map.js';
 import { styleMap } from 'lit-html/directives/style-map.js';
 import { BELLS, RANGES, SUBJECTS, WEEK, bellEnd, bellStart, isSubject } from '../data/schedule';
 import { emo, emojiSrc } from '../lib/emoji';
-import { addDays, clockOf, fmtDay, hms, holidayOf, iso, lessonsOn, mondayOf, nextSchoolDate, statusAt } from '../lib/time';
+import { addDays, clockOf, fmtDate, fmtDay, hms, holidayOf, iso, lessonsOn, mondayOf, nextSchoolDate, statusAt } from '../lib/time';
 import { set, state, store } from '../state';
 import { boom } from '../ui/confetti';
 import { alert } from '../ui/dialog';
@@ -34,7 +34,7 @@ export function nowCard(): TemplateResult {
     const nd = nextSchoolDate(c.date), d = WEEK[clockOf(nd).weekday], h = holidayOf(c.date), first = d?.lessons[0];
     body = !d || !first
       ? html`<small>${emo('🗓️')} Розклад ще не заповнено</small><h2>Заповни його — кнопка «Заповнити розклад» під тижнем</h2>`
-      : html`<small>${h ? html`Канікули до ${fmtDay(h[1])} ${emo('🏖️')}` : html`Уроки закінчились ${emo('🎉')}`}</small><h2>Далі: ${d.name}${h ? ', ' + fmtDay(iso(nd)) : ''}</h2><div>Перший урок — ${first.subject} о ${bellStart(0)}</div>`;
+      : html`<small>${h ? html`Канікули до ${fmtDay(h[1])} ${emo('🏖️')}` : html`Уроки закінчились ${emo('🎉')}`}</small><h2>Далі: ${d.name}${h ? ', ' + fmtDate(iso(nd)) : ''}</h2><div>Перший урок — ${first.subject} о ${bellStart(0)}</div>`;
   }
   const src = emojiSrc(subject ? subjEmoji(subject) : '🎉');
   return html`<div class="nowwrap">

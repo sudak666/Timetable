@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -226,50 +227,67 @@ private fun PlayerStripView(p: PlayerStrip, onOpen: () -> Unit) {
     }
 }
 
-/** Завдання дня з прогресом. */
+/** Завдання дня з прогресом; серія (на кілька днів) — окремо, поза лічильником дня. */
 @Composable
 private fun QuestsCard(quests: List<Quest>) {
     val c = RozkladTheme.colors
-    val allDone = quests.all { it.done }
+    val daily = quests.filter { it.daily }
+    val ongoing = quests.filterNot { it.daily }
+    val allDone = daily.isNotEmpty() && daily.all { it.done }
     GameSurface {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("🎯 Завдання дня", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                Pill(
-                    "${quests.count {
-                        it.done
-                    }}/${quests.size}",
-                    color = if (allDone) c.positive else c.soft,
-                    contentColor = if (allDone) Color.White else c.muted,
-                )
-            }
-            quests.forEach { q ->
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.semantics(mergeDescendants = true) { }) {
-                    Text(q.emoji, fontSize = 22.sp)
-                    Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
-                        Text(
-                            q.title,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = if (q.done) c.muted else MaterialTheme.colorScheme.onSurface,
-                        )
-                        if (!q.done && q.target > 1) {
-                            GameProgressBar(
-                                q.progress / q.target.toFloat(),
-                                Modifier.padding(top = 4.dp),
-                                fill = Brush.horizontalGradient(listOf(Color(0xFF55EFC4), Color(0xFF00B894))),
-                                height = 10.dp,
-                            )
-                        }
-                    }
-                    if (q.done) {
-                        Pill("✓ готово", color = c.positive, contentColor = Color.White)
-                    } else {
-                        Text("${q.progress}/${q.target}", style = MaterialTheme.typography.labelLarge, color = c.muted)
-                    }
+            if (daily.isNotEmpty()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("🎯 Завдання дня", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    Pill(
+                        "${daily.count { it.done }}/${daily.size}",
+                        color = if (allDone) c.positive else c.soft,
+                        contentColor = if (allDone) Color.White else c.muted,
+                    )
+                }
+                daily.forEach { QuestRow(it) }
+                if (allDone) {
+                    Text(
+                        "🏆 Усі завдання виконано — так тримати!",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = c.positive,
+                    )
                 }
             }
-            if (allDone) Text("🏆 Усі завдання виконано — так тримати!", style = MaterialTheme.typography.labelLarge, color = c.positive)
+            if (ongoing.isNotEmpty()) {
+                if (daily.isNotEmpty()) Box(Modifier.fillMaxWidth().padding(vertical = 2.dp).height(1.dp).background(c.soft))
+                Text("На кілька днів", style = MaterialTheme.typography.labelLarge, color = c.muted)
+                ongoing.forEach { QuestRow(it) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuestRow(q: Quest) {
+    val c = RozkladTheme.colors
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.semantics(mergeDescendants = true) { }) {
+        Text(q.emoji, fontSize = 22.sp)
+        Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
+            Text(
+                q.title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = if (q.done) c.muted else MaterialTheme.colorScheme.onSurface,
+            )
+            if (!q.done && q.target > 1) {
+                GameProgressBar(
+                    q.progress / q.target.toFloat(),
+                    Modifier.padding(top = 4.dp),
+                    fill = Brush.horizontalGradient(listOf(Color(0xFF55EFC4), Color(0xFF00B894))),
+                    height = 10.dp,
+                )
+            }
+        }
+        if (q.done) {
+            Pill("✓ готово", color = c.positive, contentColor = Color.White)
+        } else {
+            Text("${q.progress}/${q.target}", style = MaterialTheme.typography.labelLarge, color = c.muted)
         }
     }
 }
@@ -333,7 +351,7 @@ private fun NowCardView(card: NowCard, onDoneTap: (() -> Unit)? = null) {
 
                 is NowCard.Done -> {
                     Caption(card.holidayUntil?.let { "Канікули до ${Format.dayShort(it)}" } ?: "Уроки закінчились!")
-                    Headline("Далі: ${card.nextDayName}, ${Format.dayShort(card.nextDate)}")
+                    Headline("Далі: ${card.nextDayName}, ${Format.date(card.nextDate)}")
                     Subline("Перший урок — ${card.firstSubject} о ${card.startsAt}")
                 }
             }

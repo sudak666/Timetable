@@ -67,7 +67,7 @@ internal fun BellsTab(draft: SchoolSchedule, actions: EditorActions) {
             GameSurface {
                 Column(Modifier.fillMaxWidth().padding(12.dp)) {
                     Text(
-                        "Натисни на час, щоб змінити. i-й урок кожного дня йде за i-м дзвінком.",
+                        "Натисни на час, щоб змінити. Перший урок кожного дня йде за першим дзвінком, другий — за другим і так далі.",
                         style = MaterialTheme.typography.bodySmall,
                         color = c.muted,
                         modifier = Modifier.padding(bottom = 8.dp),
@@ -164,7 +164,7 @@ internal fun HolidaysTab(draft: SchoolSchedule, actions: EditorActions) {
             GameSurface {
                 Column(Modifier.fillMaxWidth().padding(12.dp)) {
                     Text(
-                        "У канікули таймер і рюкзак не показуються, а «наступний урок» для домашки їх пропускає.",
+                        "Під час канікул таймер і рюкзак не показуються, а «наступний урок» для домашки їх пропускає.",
                         style = MaterialTheme.typography.bodySmall,
                         color = c.muted,
                     )

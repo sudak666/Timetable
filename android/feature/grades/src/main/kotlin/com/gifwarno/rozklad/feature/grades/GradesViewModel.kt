@@ -161,6 +161,13 @@ class GradesViewModel @Inject constructor(
 
     fun approve(grade: Grade) = onContext { families.approveGrade(it.familyId, grade) }
 
+    /** «Підтвердити все» — лише для батьків; кожна оцінка окремим записом, як по одній. */
+    fun approveAll(grades: List<Grade>) = onContext { ctx ->
+        if (!ctx.isParent || grades.isEmpty()) return@onContext
+        grades.forEach { families.approveGrade(ctx.familyId, it) }
+        _message.value = "Підтверджено: ${grades.size} ✓"
+    }
+
     fun unapprove(grade: Grade) = onContext { families.unapproveGrade(it.familyId, grade.id) }
 
     fun delete(grade: Grade) = onContext { families.deleteGrade(it.familyId, grade.id) }

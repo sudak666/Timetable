@@ -215,7 +215,7 @@ private fun Stepper(label: String, value: Int, range: IntRange, onChange: (Int) 
 
 /** Бонус, штраф або виплата: сума й (для бонусу й штрафу) за що. */
 @Composable
-internal fun LedgerDialog(money: Money, onDismiss: () -> Unit, onConfirm: (Int, String) -> Unit) {
+internal fun LedgerDialog(money: Money, balance: Int?, onDismiss: () -> Unit, onConfirm: (Int, String) -> Unit) {
     var amount by rememberSaveable { mutableStateOf("") }
     var note by rememberSaveable { mutableStateOf("") }
     val value = amount.toIntOrNull()?.takeIf { it in 1..MAX_AMOUNT }
@@ -234,6 +234,9 @@ internal fun LedgerDialog(money: Money, onDismiss: () -> Unit, onConfirm: (Int, 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (money == Money.FINE) {
                     Text("Сума спишеться з гаманця дитини.", style = MaterialTheme.typography.bodySmall)
+                }
+                if (money != Money.BONUS && balance != null) {
+                    Text("У гаманці зараз: ${Format.balance(balance)}", style = MaterialTheme.typography.bodySmall)
                 }
                 OutlinedTextField(
                     value = amount,

@@ -10,8 +10,11 @@ import java.time.LocalDate
 /** Смужка «гравця» зверху «Сьогодні»: ті самі рівень, XP і гаманець, що й на «Оцінках». */
 data class PlayerStrip(val name: String, val avatar: String, val level: Int, val xpInLevel: Int, val balance: Int)
 
-/** Завдання дня — лише показ прогресу з наявних даних, без окремих нагород. */
-data class Quest(val emoji: String, val title: String, val progress: Int, val target: Int) {
+/**
+ * Завдання дня — лише показ прогресу з наявних даних, без окремих нагород.
+ * [daily] = false — триває кілька днів (серія): не входить у лічильник «x/y» дня.
+ */
+data class Quest(val emoji: String, val title: String, val progress: Int, val target: Int, val daily: Boolean = true) {
     val done: Boolean get() = progress >= target
 }
 
@@ -36,7 +39,7 @@ fun buildPlayer(child: Member, data: FamilyData, today: LocalDate): PlayerStrip 
  * Завдання дня:
  * - домашка на наступний навчальний день (якщо її задали);
  * - оцінка сьогодні (лише в день з уроками);
- * - поточна серія хороших оцінок.
+ * - поточна серія хороших оцінок (окремо, не входить у лічильник дня).
  */
 fun buildQuests(childId: String, data: FamilyData, cal: SchoolCalendar, today: LocalDate): List<Quest> {
     val out = mutableListOf<Quest>()
@@ -59,6 +62,7 @@ fun buildQuests(childId: String, data: FamilyData, cal: SchoolCalendar, today: L
         "Серія: ${streak.len} оцінок від ${streak.min}" + if (streak.bonus > 0) " (+${streak.bonus} ₴)" else "",
         Rewards.currentRun(approved, streak),
         streak.len,
+        daily = false,
     )
     return out
 }

@@ -9,11 +9,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CheckBox
+import androidx.compose.material.icons.outlined.CheckBoxOutlineBlank
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
@@ -164,18 +167,17 @@ private fun LessonsTab(state: ScheduleEditorState.Editing, actions: EditorAction
                 }
             }
         }
+        item(key = "saturday") {
+            // Налаштування всього тижня, а не вибраного дня — тому окремо від картки дня.
+            Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Навчання в суботу", style = MaterialTheme.typography.bodyMedium, color = c.muted, modifier = Modifier.weight(1f))
+                Switch(checked = state.draft.week.size > SchoolSchedule.MIN_DAYS, onCheckedChange = actions.setSaturday)
+            }
+        }
         item(key = "lessons") {
             GameSurface {
                 Column(Modifier.fillMaxWidth().padding(12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(Timetable.DAY_NAMES[state.day], style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                        Text("субота", style = MaterialTheme.typography.labelMedium, color = c.muted)
-                        Switch(
-                            checked = state.draft.week.size > SchoolSchedule.MIN_DAYS,
-                            onCheckedChange = actions.setSaturday,
-                            modifier = Modifier.padding(start = 6.dp),
-                        )
-                    }
+                    Text(Timetable.DAY_NAMES[state.day], style = MaterialTheme.typography.titleLarge)
                     if (state.lessons.isEmpty()) {
                         Text("Уроків ще немає — додай перший.", Modifier.padding(vertical = 12.dp), color = c.muted)
                     }
@@ -266,7 +268,8 @@ private fun LessonEditRow(
             NumberTile(index + 1, Color(info.color))
             Column(Modifier.weight(1f).padding(start = 10.dp)) {
                 Text("${info.emoji} $subject", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.ExtraBold)
-                if (time != null) Text(time, style = MaterialTheme.typography.bodySmall, color = c.muted)
+                val meta = listOfNotNull(time, if (optional) "факультатив" else null).joinToString(" · ")
+                if (meta.isNotEmpty()) Text(meta, style = MaterialTheme.typography.bodySmall, color = c.muted, maxLines = 1)
             }
             IconButton(onClick = { actions.moveLesson(index, -1) }, enabled = index > 0) {
                 Icon(Icons.Outlined.KeyboardArrowUp, contentDescription = "Вище")
@@ -280,8 +283,14 @@ private fun LessonEditRow(
         }
         Row(Modifier.padding(start = 34.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onPick) { Text("Змінити предмет") }
-            TextButton(onClick = { actions.toggleOptional(index) }) { Text(if (optional) "Обов’язковий" else "Факультатив") }
-            if (optional) Pill("факультатив")
+            TextButton(onClick = { actions.toggleOptional(index) }) {
+                Icon(
+                    if (optional) Icons.Outlined.CheckBox else Icons.Outlined.CheckBoxOutlineBlank,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 6.dp).size(18.dp),
+                )
+                Text("Факультатив", maxLines = 1)
+            }
         }
     }
 }

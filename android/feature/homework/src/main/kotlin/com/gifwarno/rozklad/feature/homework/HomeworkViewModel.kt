@@ -7,6 +7,7 @@ import com.gifwarno.rozklad.core.data.repository.FamilyRepository
 import com.gifwarno.rozklad.core.domain.SchoolCalendar
 import com.gifwarno.rozklad.core.model.FamilyContext
 import com.gifwarno.rozklad.core.model.Homework
+import com.gifwarno.rozklad.core.model.Lesson
 import com.gifwarno.rozklad.core.model.Member
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Clock
@@ -32,7 +33,22 @@ sealed interface HomeworkUiState {
         val upcoming: List<Homework>,
         val done: List<Homework>,
         val today: LocalDate,
+        /** Предмети з розкладу дитини: спершу сьогоднішні, далі решта тижня. */
+        val scheduleSubjects: List<String> = emptyList(),
     ) : HomeworkUiState
+}
+
+/**
+ * Предмети розкладу в порядку «від сьогодні»: уроки сьогодні, завтра… і по колу тижня.
+ * У вихідні (дня немає в розкладі) починаємо з понеділка.
+ */
+internal fun scheduleSubjects(week: List<List<Lesson>>, today: LocalDate): List<String> {
+    if (week.isEmpty()) return emptyList()
+    val start = (today.dayOfWeek.value - 1).takeIf { it < week.size } ?: 0
+    return week.indices
+        .flatMap { week[(start + it) % week.size] }
+        .map { it.subject }
+        .distinct()
 }
 
 @HiltViewModel
@@ -61,6 +77,7 @@ class HomeworkViewModel @Inject constructor(
             upcoming = open.filter { it.due >= today }.sortedBy { it.due },
             done = done.sortedByDescending { it.due }.take(DONE_LIMIT),
             today = today,
+            scheduleSubjects = ctx.schedule?.let { scheduleSubjects(it.week, today) }.orEmpty(),
         )
     }
 

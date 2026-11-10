@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -25,6 +27,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -109,6 +112,7 @@ internal fun HomeworkScreen(
     }
     if (showAdd) {
         AddHomeworkSheet(
+            mine = (state as? HomeworkUiState.Ready)?.scheduleSubjects.orEmpty(),
             suggestedDue = suggestedDue,
             onDismiss = { showAdd = false },
             onAdd = { s, d, t ->
@@ -125,7 +129,11 @@ private fun AllDone() {
         Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text("🎉", fontSize = 44.sp)
             Text("Усе зроблено!", style = MaterialTheme.typography.titleLarge)
-            Text("Можна відпочивати.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                "Невиконаних завдань немає — можна відпочивати.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -182,34 +190,30 @@ private fun HomeworkRow(hw: Homework, overdue: Boolean, onToggle: (Homework) -> 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-private fun AddHomeworkSheet(suggestedDue: (String) -> LocalDate, onDismiss: () -> Unit, onAdd: (String, LocalDate, String) -> Unit) {
-    var subject by rememberSaveable { mutableStateOf(Timetable.SUBJECTS.first().name) }
+private fun AddHomeworkSheet(
+    mine: List<String>,
+    suggestedDue: (String) -> LocalDate,
+    onDismiss: () -> Unit,
+    onAdd: (String, LocalDate, String) -> Unit,
+) {
+    // Спершу предмети з розкладу дитини (сьогоднішні першими); решта — за кнопкою.
+    val others = Timetable.SUBJECTS.map { it.name }.filterNot { it in mine }
+    var subject by rememberSaveable { mutableStateOf(mine.firstOrNull() ?: others.first()) }
+    var showAll by rememberSaveable { mutableStateOf(mine.isEmpty()) }
     var text by rememberSaveable { mutableStateOf("") }
     val due = suggestedDue(subject)
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
-            Modifier.padding(horizontal = 16.dp).padding(bottom = 16.dp).navigationBarsPadding(),
+            Modifier.padding(horizontal = 16.dp).padding(bottom = 16.dp).navigationBarsPadding().verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text("Нове завдання", style = MaterialTheme.typography.titleLarge)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Timetable.SUBJECTS.forEach { s ->
-                    val on = s.name == subject
-                    GameSurface(
-                        shape = RoundedCornerShape(50),
-                        color = if (on) Color(s.color) else RozkladTheme.colors.soft,
-                        contentColor = if (on) Color.White else MaterialTheme.colorScheme.onSurface,
-                        depth = if (on) 3.dp else 0.dp,
-                        borderWidth = if (on) 2.dp else 0.dp,
-                        onClick = { subject = s.name },
-                        modifier = Modifier.padding(bottom = 6.dp),
-                    ) {
-                        Text(
-                            "${s.emoji} ${s.name}",
-                            Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                    }
+                (if (showAll) mine + others else mine).forEach { name ->
+                    SubjectChip(name, on = name == subject, onClick = { subject = name })
+                }
+                if (!showAll) {
+                    TextButton(onClick = { showAll = true }, modifier = Modifier.padding(bottom = 6.dp)) { Text("Усі предмети…") }
                 }
             }
             OutlinedTextField(
@@ -227,6 +231,22 @@ private fun AddHomeworkSheet(suggestedDue: (String) -> LocalDate, onDismiss: () 
                 color = if (text.isNotBlank()) RozkladTheme.colors.accent else RozkladTheme.colors.muted,
             )
         }
+    }
+}
+
+@Composable
+private fun SubjectChip(name: String, on: Boolean, onClick: () -> Unit) {
+    val s = Timetable.subject(name)
+    GameSurface(
+        shape = RoundedCornerShape(50),
+        color = if (on) Color(s.color) else RozkladTheme.colors.soft,
+        contentColor = if (on) Color.White else MaterialTheme.colorScheme.onSurface,
+        depth = if (on) 3.dp else 0.dp,
+        borderWidth = if (on) 2.dp else 0.dp,
+        onClick = onClick,
+        modifier = Modifier.padding(bottom = 6.dp),
+    ) {
+        Text("${s.emoji} $name", Modifier.padding(horizontal = 12.dp, vertical = 7.dp), style = MaterialTheme.typography.labelLarge)
     }
 }
 

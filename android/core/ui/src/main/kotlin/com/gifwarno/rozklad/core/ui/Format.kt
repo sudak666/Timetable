@@ -9,6 +9,7 @@ object Format {
     private val uk: Locale = Locale.forLanguageTag("uk-UA")
     private val dayShort = DateTimeFormatter.ofPattern("EEE, d MMM", uk)
     private val dayLong = DateTimeFormatter.ofPattern("EEEE, d MMMM", uk)
+    private val date = DateTimeFormatter.ofPattern("d MMMM", uk)
 
     fun money(v: Int): String = (if (v > 0) "+" else "") + "$v ₴"
 
@@ -17,6 +18,9 @@ object Format {
     fun dayShort(d: LocalDate): String = dayShort.format(d)
 
     fun dayLong(d: LocalDate): String = dayLong.format(d).replaceFirstChar { it.titlecase(uk) }
+
+    /** Дата без дня тижня: «11 листопада». */
+    fun date(d: LocalDate): String = date.format(d)
 
     /** Секунди → «h:mm:ss» або «m:ss». */
     fun timer(totalSeconds: Long): String {
