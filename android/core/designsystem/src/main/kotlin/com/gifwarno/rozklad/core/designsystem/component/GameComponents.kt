@@ -99,13 +99,15 @@ fun GameSurface(
     val ink = if (classic) c.line else c.ink
     val shadow = if (classic) Color.Black.copy(alpha = CLASSIC_SHADOW) else c.ink
     val border = if (classic) minOf(borderWidth, 1.dp) else borderWidth
+    // «Звичайний» — лише ледь помітний «підйом», без важкої плити під кнопкою.
+    val lift = if (classic) minOf(depth, CLASSIC_DEPTH.dp) else depth
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val press by animateDpAsState(if (pressed && onClick != null) depth else 0.dp, spring(stiffness = 1400f), label = "press")
+    val press by animateDpAsState(if (pressed && onClick != null) lift else 0.dp, spring(stiffness = 1400f), label = "press")
     val haptics = LocalHapticFeedback.current
     Box(
         modifier.drawBehind {
-            val d = depth.toPx()
+            val d = lift.toPx()
             if (d > 0f) {
                 val outline = shape.createOutline(Size(size.width, size.height - d), layoutDirection, this)
                 translate(top = d) { drawOutline(outline, shadow) }
@@ -116,7 +118,7 @@ fun GameSurface(
     ) {
         Box(
             Modifier
-                .padding(bottom = depth)
+                .padding(bottom = lift)
                 .offset { IntOffset(0, press.roundToPx()) }
                 .clip(shape)
                 .then(if (brush != null) Modifier.background(brush) else Modifier.background(color))
@@ -162,7 +164,12 @@ fun GameButton(
         onClick = if (enabled) onClick else null,
     ) {
         Text(
-            text = if (leading != null) "$leading  $text" else text,
+            // «+» і «−» — впритул до слова; емодзі — з невеликим відступом.
+            text = when {
+                leading == null -> text
+                leading in TIGHT_SIGNS -> "${leading.replace('＋', '+')} $text"
+                else -> "$leading  $text"
+            },
             modifier = Modifier.align(Alignment.Center).padding(horizontal = 18.dp, vertical = 12.dp),
             style = MaterialTheme.typography.labelLarge,
             textAlign = TextAlign.Center,
@@ -382,7 +389,9 @@ private val CLOUDS = listOf(
     Triple(0.55f, 0.86f, 24f),
 )
 
-private const val CLASSIC_SHADOW = 0.12f
+private const val CLASSIC_SHADOW = 0.08f
+private const val CLASSIC_DEPTH = 2
+private val TIGHT_SIGNS = setOf("＋", "+", "−", "-")
 private const val CLASSIC_TEXT_SHADOW = 0.35f
 private const val BLOCK_STEP = 16
 
