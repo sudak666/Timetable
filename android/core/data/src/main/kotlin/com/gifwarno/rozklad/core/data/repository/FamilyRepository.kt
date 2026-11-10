@@ -39,6 +39,9 @@ interface FamilyRepository {
 
     suspend fun addLedger(familyId: String, childId: String, kind: LedgerKind, amount: Int, note: String)
 
+    /** Свій аватар і/або колір (null — не змінювати). Сервер пускає лише свій рядок (або батьків). */
+    suspend fun setMyLook(familyId: String, userId: String, avatar: String?, theme: String?)
+
     suspend fun parentInviteCode(familyId: String): Result<String?>
 
     /** Зберегти розклад дитини (офлайн-черга, повна заміна на сервері). */

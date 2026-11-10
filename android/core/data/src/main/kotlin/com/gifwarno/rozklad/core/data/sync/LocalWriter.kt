@@ -28,9 +28,14 @@ internal object Tables {
     const val HOMEWORK = "school_homework"
     const val LEDGER = "school_ledger"
     const val TIMETABLES = "school_timetables"
+    const val MEMBERS = "school_members"
 
     /** Колонка-ключ рядка (для upsert/update/delete). */
-    fun keyOf(table: String): String = if (table == TIMETABLES) "child_id" else "id"
+    fun keyOf(table: String): String = when (table) {
+        TIMETABLES -> "child_id"
+        MEMBERS -> "user_id"
+        else -> "id"
+    }
 }
 
 /**
@@ -97,6 +102,13 @@ internal class LocalWriter @Inject constructor(
                 familyDao.upsertTimetables(
                     listOf(json.decodeFromJsonElement(NetworkTimetable.serializer(), w.body).asEntity(familyId, json)),
                 )
+
+            Tables.MEMBERS to WriteKind.UPDATE -> familyDao.setMemberLook(
+                familyId = familyId,
+                userId = w.rowId,
+                avatar = w.body["avatar"]?.jsonPrimitive?.content,
+                theme = w.body["theme"]?.jsonPrimitive?.content,
+            )
 
             else -> error("Непідтримувана локальна зміна: ${w.table} ${w.kind}")
         }

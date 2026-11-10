@@ -16,6 +16,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
@@ -195,6 +196,8 @@ fun RozkladTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     /** Material You (Android 12+). Вимкнено за замовчуванням, щоб зберегти впізнаваний стиль. */
     dynamicColor: Boolean = false,
+    /** Обраний людиною колір (відкривається з рівнями); null — фірмовий фіолетовий. */
+    accent: Color? = null,
     content: @Composable () -> Unit,
 ) {
     val colors: ColorScheme = when {
@@ -207,10 +210,18 @@ fun RozkladTheme(
 
         else -> LightColors
     }
-    CompositionLocalProvider(LocalRozkladColors provides if (darkTheme) DarkExtra else LightExtra) {
-        MaterialTheme(colorScheme = colors, typography = RozkladTypography, shapes = RozkladShapes, content = content)
+    val baseExtra = if (darkTheme) DarkExtra else LightExtra
+    val extra = accent?.let { baseExtra.copy(accent = it, glow = it.copy(alpha = if (darkTheme) DARK_GLOW else LIGHT_GLOW)) } ?: baseExtra
+    // У темній темі текст акцентного кольору має бути світлішим, щоб читався на темних картках.
+    val scheme = accent?.let { colors.copy(primary = if (darkTheme) lerp(it, Color.White, DARK_PRIMARY_LIFT) else it) } ?: colors
+    CompositionLocalProvider(LocalRozkladColors provides extra) {
+        MaterialTheme(colorScheme = scheme, typography = RozkladTypography, shapes = RozkladShapes, content = content)
     }
 }
+
+private const val LIGHT_GLOW = 0.22f
+private const val DARK_GLOW = 0.45f
+private const val DARK_PRIMARY_LIFT = 0.45f
 
 object RozkladTheme {
     val colors: RozkladColors
