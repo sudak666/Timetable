@@ -74,15 +74,12 @@ class RozkladWidget : GlanceAppWidget() {
             null
         }
         val now = LocalDateTime.now(deps.clock())
-        val child = family?.child
-        val state = when {
-            family == null -> WidgetState.SignedOut
-            child == null -> WidgetState.NoSchedule("")
-            else -> buildWidgetState(now, child.name, family.schedule)
-        }
+        val state = resolveWidgetState(session, family) { f -> buildWidgetState(now, checkNotNull(f.child).name, f.schedule) }
         val clock = deps.clock()
         val alert = widgetAlertLine(family?.data?.airAlert, clock.instant(), clock.zone)
-        WidgetRefreshScheduler.scheduleAt(context, now, nextRefreshAt(now, family?.schedule))
+        // Не дочекались даних — пробуємо знову скоро, а не на наступному дзвінку чи опівночі.
+        val refreshAt = if (state == WidgetState.Loading) now.plusSeconds(RETRY_SECONDS) else nextRefreshAt(now, family?.schedule)
+        WidgetRefreshScheduler.scheduleAt(context, now, refreshAt)
 
         val open = context.packageManager.getLaunchIntentForPackage(context.packageName)?.let { actionStartActivity(it) }
         provideContent {
@@ -102,7 +99,8 @@ class RozkladWidget : GlanceAppWidget() {
         val PREVIEW_TIME: LocalDateTime = LocalDateTime.parse("2026-11-09T09:40")
         val COMPACT = DpSize(110.dp, 48.dp)
         val EXPANDED = DpSize(220.dp, 140.dp)
-        const val SESSION_WAIT_MS = 5_000L
+        const val SESSION_WAIT_MS = 10_000L
+        const val RETRY_SECONDS = 30L
     }
 }
 
@@ -114,7 +112,7 @@ internal fun WidgetContent(state: WidgetState, open: Action?, alert: String? = n
         .cornerRadius(16.dp)
         .padding(12.dp)
     Column(modifier = if (open != null) base.clickable(open) else base) {
-        if (alert != null && state != WidgetState.SignedOut) {
+        if (alert != null && state != WidgetState.SignedOut && state != WidgetState.Loading) {
             Text(
                 alert,
                 style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 13.sp, color = GlanceTheme.colors.error),
@@ -123,6 +121,7 @@ internal fun WidgetContent(state: WidgetState, open: Action?, alert: String? = n
         }
         when (state) {
             WidgetState.SignedOut -> Message("Дванадцятка", "Увійди в застосунок, щоб бачити розклад")
+            WidgetState.Loading -> Message("Дванадцятка", "Завантажую розклад…")
             is WidgetState.NoSchedule -> Message("🗓️ Розклад не заповнено", "Відкрий «Сьогодні» → «Розклад»")
             is WidgetState.Ready -> Ready(state)
         }
