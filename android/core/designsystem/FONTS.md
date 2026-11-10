@@ -7,5 +7,6 @@
 |---|---|---|---|
 | `nunito_*.ttf` | Nunito | The Nunito Project Authors | SIL Open Font License 1.1 |
 | `russo_one.ttf` | Russo One | Jovanny Lemonad | SIL Open Font License 1.1 |
+| `pixelify_*.ttf` | Pixelify Sans | Stefie Justprince | SIL Open Font License 1.1 |
 
 Текст ліцензії: https://openfontlicense.org/open-font-license-official-text/
