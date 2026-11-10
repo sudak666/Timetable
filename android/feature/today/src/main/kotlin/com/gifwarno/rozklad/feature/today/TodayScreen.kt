@@ -125,6 +125,8 @@ fun TodayRoute(
                     onEditSchedule = if (s.canEdit) onEditSchedule else null,
                     player = s.player,
                     quests = s.quests,
+                    week = s.week,
+                    weekend = s.weekend,
                     onOpenPlayer = onOpenPlayer,
                     onCelebrate = { burst++ },
                 )
@@ -144,7 +146,10 @@ internal fun TodayScreen(
     quests: List<Quest> = emptyList(),
     onOpenPlayer: () -> Unit = {},
     onCelebrate: () -> Unit = {},
+    week: WeekSchedule? = null,
+    weekend: String = "",
 ) {
+    val (stars, addStar) = rememberStars()
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
@@ -159,6 +164,25 @@ internal fun TodayScreen(
         item(key = "lessons") { LessonsCard(state.lessons) }
         if (state.backpack.isNotEmpty()) {
             item(key = "bag") { Backpack(state.backpack, state.isToday) }
+        }
+        if (weekend.isNotEmpty()) {
+            item(key = "fun-title") {
+                StrokeText("🎮 На перерві", GameTitleStyle.copy(fontSize = 20.sp, lineHeight = 26.sp), strokeWidth = 4.dp)
+            }
+            item(key = "quiz") {
+                QuizCard(onCorrect = {
+                    addStar()
+                    onCelebrate()
+                })
+            }
+            item(key = "fact") { FactCard() }
+            item(key = "weekend") { WeekendStarsCard(weekend, stars, onStar = addStar) }
+        }
+        if (week != null && week.days.isNotEmpty()) {
+            item(key = "week-title") {
+                StrokeText("📅 Розклад на тиждень", GameTitleStyle.copy(fontSize = 20.sp, lineHeight = 26.sp), strokeWidth = 4.dp)
+            }
+            item(key = "week") { WeekCard(week) }
         }
     }
 }

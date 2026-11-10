@@ -64,6 +64,18 @@ interface FamilyDao {
 
     @Upsert suspend fun upsertChallenges(rows: List<ChallengeEntity>)
 
+    @Query("DELETE FROM ledger WHERE id = :id")
+    suspend fun deleteLedgerEntry(id: String)
+
+    @Query("UPDATE members SET goalTitle = :title, goalAmount = :amount WHERE familyId = :familyId AND userId = :userId")
+    suspend fun setMemberGoal(familyId: String, userId: String, title: String, amount: Int)
+
+    @Query("DELETE FROM challenges WHERE id = :id")
+    suspend fun deleteChallenge(id: String)
+
+    @Query("UPDATE families SET settingsJson = :json WHERE id = :familyId")
+    suspend fun setSettingsJson(familyId: String, json: String)
+
     /** Аватар і колір учасника (null — не змінювати). */
     @Query(
         "UPDATE members SET avatar = COALESCE(:avatar, avatar), theme = COALESCE(:theme, theme) " +

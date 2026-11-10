@@ -22,8 +22,10 @@ import com.gifwarno.rozklad.core.model.FamilyData
 import com.gifwarno.rozklad.core.model.Grade
 import com.gifwarno.rozklad.core.model.LedgerKind
 import com.gifwarno.rozklad.core.model.SchoolSchedule
+import com.gifwarno.rozklad.core.model.Streak
 import com.gifwarno.rozklad.core.model.SyncStatus
 import com.gifwarno.rozklad.core.network.RozkladNetworkDataSource
+import com.gifwarno.rozklad.core.network.model.NetworkChallenge
 import com.gifwarno.rozklad.core.network.model.NetworkGrade
 import com.gifwarno.rozklad.core.network.model.NetworkHomework
 import com.gifwarno.rozklad.core.network.model.NetworkLedger
@@ -187,6 +189,58 @@ internal class OfflineFirstFamilyRepository @Inject constructor(
         submit(familyId, NetworkWrite(Tables.LEDGER, WriteKind.INSERT, dto.id, body))
     }
 
+    override suspend fun addChallenge(
+        familyId: String,
+        childId: String,
+        title: String,
+        subject: String?,
+        minGrade: Int,
+        need: Int,
+        days: Int,
+        reward: Int,
+    ) {
+        // Дата початку — місцева «сьогодні» (сервер за замовчуванням бере дату в UTC).
+        val today = LocalDate.now(clock)
+        val dto = NetworkChallenge(
+            id = UUID.randomUUID().toString(),
+            childId = childId,
+            title = title.trim(),
+            subject = subject,
+            minGrade = minGrade,
+            need = need,
+            reward = reward,
+            startDate = today.toString(),
+            endDate = today.plusDays((days - 1).toLong()).toString(),
+        )
+        val body = withFamily(json.encodeToJsonElement(NetworkChallenge.serializer(), dto).jsonObject, familyId)
+        submit(familyId, NetworkWrite(Tables.CHALLENGES, WriteKind.INSERT, dto.id, body))
+    }
+
+    override suspend fun deleteChallenge(familyId: String, challengeId: String) =
+        submit(familyId, NetworkWrite(Tables.CHALLENGES, WriteKind.DELETE, challengeId, JsonObject(emptyMap())))
+
+    override suspend fun deleteLedger(familyId: String, entryId: String) =
+        submit(familyId, NetworkWrite(Tables.LEDGER, WriteKind.DELETE, entryId, JsonObject(emptyMap())))
+
+    override suspend fun setGoal(familyId: String, childId: String, title: String, amount: Int) {
+        val body = buildJsonObject {
+            put("goal_title", title.trim().take(GOAL_TITLE_MAX))
+            put("goal_amount", amount.coerceAtLeast(0))
+        }
+        submit(familyId, NetworkWrite(Tables.MEMBERS, WriteKind.UPDATE, childId, body))
+    }
+
+    override suspend fun saveRates(familyId: String, rates: Map<Int, Int>, streak: Streak) {
+        // Формат — як у вебі: «1».. «12» → гривні, streak_* — серія.
+        val value = buildJsonObject {
+            rates.toSortedMap().forEach { (g, v) -> put(g.toString(), v) }
+            put("streak_len", streak.len)
+            put("streak_min", streak.min)
+            put("streak_bonus", streak.bonus)
+        }
+        submit(familyId, NetworkWrite(Tables.FAMILIES, WriteKind.UPDATE, familyId, buildJsonObject { put("rates", value) }))
+    }
+
     override suspend fun setMyLook(familyId: String, userId: String, avatar: String?, theme: String?) {
         if (avatar == null && theme == null) return
         val body = buildJsonObject {
@@ -246,3 +300,6 @@ internal val AlertStatus.code: String
         AlertStatus.PARTIAL -> "P"
         AlertStatus.NONE -> "N"
     }
+
+/** Довжина назви цілі — як у вебі. */
+private const val GOAL_TITLE_MAX = 80

@@ -6,6 +6,7 @@ import com.gifwarno.rozklad.core.database.FamilyDao
 import com.gifwarno.rozklad.core.database.OutboxDao
 import com.gifwarno.rozklad.core.database.OutboxEntity
 import com.gifwarno.rozklad.core.database.RozkladDatabase
+import com.gifwarno.rozklad.core.network.model.NetworkChallenge
 import com.gifwarno.rozklad.core.network.model.NetworkGrade
 import com.gifwarno.rozklad.core.network.model.NetworkHomework
 import com.gifwarno.rozklad.core.network.model.NetworkLedger
@@ -29,6 +30,8 @@ internal object Tables {
     const val LEDGER = "school_ledger"
     const val TIMETABLES = "school_timetables"
     const val MEMBERS = "school_members"
+    const val CHALLENGES = "school_challenges"
+    const val FAMILIES = "school_families"
 
     /** Колонка-ключ рядка (для upsert/update/delete). */
     fun keyOf(table: String): String = when (table) {
@@ -103,12 +106,29 @@ internal class LocalWriter @Inject constructor(
                     listOf(json.decodeFromJsonElement(NetworkTimetable.serializer(), w.body).asEntity(familyId, json)),
                 )
 
-            Tables.MEMBERS to WriteKind.UPDATE -> familyDao.setMemberLook(
-                familyId = familyId,
-                userId = w.rowId,
-                avatar = w.body["avatar"]?.jsonPrimitive?.content,
-                theme = w.body["theme"]?.jsonPrimitive?.content,
-            )
+            Tables.LEDGER to WriteKind.DELETE -> familyDao.deleteLedgerEntry(w.rowId)
+
+            Tables.CHALLENGES to WriteKind.INSERT ->
+                familyDao.upsertChallenges(listOf(json.decodeFromJsonElement(NetworkChallenge.serializer(), w.body).asEntity(familyId)))
+
+            Tables.CHALLENGES to WriteKind.DELETE -> familyDao.deleteChallenge(w.rowId)
+
+            Tables.FAMILIES to WriteKind.UPDATE ->
+                w.body["rates"]?.let { familyDao.setSettingsJson(familyId, it.toString()) }
+
+            Tables.MEMBERS to WriteKind.UPDATE -> {
+                val goal = w.body["goal_title"]?.jsonPrimitive?.content
+                if (goal != null) {
+                    familyDao.setMemberGoal(familyId, w.rowId, goal, w.body["goal_amount"]?.jsonPrimitive?.intOrNull ?: 0)
+                } else {
+                    familyDao.setMemberLook(
+                        familyId = familyId,
+                        userId = w.rowId,
+                        avatar = w.body["avatar"]?.jsonPrimitive?.content,
+                        theme = w.body["theme"]?.jsonPrimitive?.content,
+                    )
+                }
+            }
 
             else -> error("Непідтримувана локальна зміна: ${w.table} ${w.kind}")
         }

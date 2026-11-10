@@ -61,4 +61,28 @@ class TodayPlayerTest {
         assertFalse(checkNotNull(buildTodayState(LocalDateTime.parse("2026-11-09T09:00"), cal)).finishedToday)
         assertFalse(checkNotNull(buildTodayState(LocalDateTime.parse("2026-11-14T18:00"), cal)).finishedToday)
     }
+
+    @Test
+    fun `тиждень — дні з часом уроків і лічильник предметів`() {
+        val w = buildWeek(Timetable.EXAMPLE, monday)
+        assertTrue(w.days.first().isToday)
+        assertEquals("8:30–9:15", w.days.first().lessons.first().time)
+        assertEquals(w.days.sumOf { it.lessons.size }, w.counts.sumOf { it.count })
+        assertTrue(w.counts.zipWithNext().all { (a, b) -> a.count >= b.count })
+    }
+
+    @Test
+    fun `до вихідних — як у вебі`() {
+        // Пт у прикладі — 6 уроків, кінець о 14:20. Понеділок 18:00 → 3 д 20 год 20 хв.
+        assertEquals("Ще 3 д 20 год — і вихідні! 🏖️", weekendText(LocalDateTime.parse("2026-11-09T18:00"), cal, 6))
+        assertEquals("Ура, вихідні! Відпочивай 🎉", weekendText(LocalDateTime.parse("2026-11-14T10:00"), cal, 6))
+        assertEquals("Вихідні вже тут! 🥳", weekendText(LocalDateTime.parse("2026-11-13T15:00"), cal, 6))
+    }
+
+    @Test
+    fun `вікторина — три різні питання, правильна відповідь серед варіантів`() {
+        val r = quizRound(42)
+        assertEquals(3, r.map { it.question }.distinct().size)
+        assertTrue(r.all { it.right in it.options && it.options.size == 4 })
+    }
 }

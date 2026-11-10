@@ -13,15 +13,11 @@ import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,7 +39,6 @@ import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.domain.Rewards
 import com.gifwarno.rozklad.core.domain.Timetable
 import com.gifwarno.rozklad.core.model.Grade
-import com.gifwarno.rozklad.core.model.LedgerKind
 import com.gifwarno.rozklad.core.ui.gradeColor
 import java.time.LocalDate
 
@@ -128,41 +122,3 @@ internal fun AddGradeSheet(onDismiss: () -> Unit, onAdd: (String, Int, LocalDate
 private const val SUBJECT_ROWS = 3
 private const val SUBJECT_ROW_DP = 40
 private const val GRADE_COLUMNS = 6
-
-@Composable
-internal fun LedgerDialog(kind: LedgerKind, onDismiss: () -> Unit, onConfirm: (Int, String) -> Unit) {
-    var amount by rememberSaveable { mutableStateOf("") }
-    var note by rememberSaveable { mutableStateOf("") }
-    val value = amount.toIntOrNull()?.takeIf { it in 1..MAX_AMOUNT }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (kind == LedgerKind.PAYOUT) "Виплатити" else "Бонус") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = amount,
-                    onValueChange = { amount = it.filter(Char::isDigit).take(MAX_DIGITS) },
-                    label = { Text("Сума, ₴") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                )
-                if (kind == LedgerKind.BONUS) {
-                    OutlinedTextField(
-                        value = note,
-                        onValueChange = { note = it.take(MAX_NOTE) },
-                        label = { Text("За що") },
-                        singleLine = true,
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { value?.let { onConfirm(it, note) } }, enabled = value != null) { Text("Зберегти") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Скасувати") } },
-    )
-}
-
-private const val MAX_AMOUNT = 100_000
-private const val MAX_DIGITS = 6
-private const val MAX_NOTE = 80

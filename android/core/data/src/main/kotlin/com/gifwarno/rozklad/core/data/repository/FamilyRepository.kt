@@ -6,6 +6,7 @@ import com.gifwarno.rozklad.core.model.FamilyData
 import com.gifwarno.rozklad.core.model.Grade
 import com.gifwarno.rozklad.core.model.LedgerKind
 import com.gifwarno.rozklad.core.model.SchoolSchedule
+import com.gifwarno.rozklad.core.model.Streak
 import com.gifwarno.rozklad.core.model.SyncStatus
 import java.time.Instant
 import java.time.LocalDate
@@ -38,6 +39,29 @@ interface FamilyRepository {
     suspend fun deleteHomework(familyId: String, homeworkId: String)
 
     suspend fun addLedger(familyId: String, childId: String, kind: LedgerKind, amount: Int, note: String)
+
+    /** Челендж для дитини: [need] оцінок ≥ [minGrade] (з [subject] або будь-якого) за [days] днів → [reward] ₴. */
+    suspend fun addChallenge(
+        familyId: String,
+        childId: String,
+        title: String,
+        subject: String?,
+        minGrade: Int,
+        need: Int,
+        days: Int,
+        reward: Int,
+    )
+
+    suspend fun deleteChallenge(familyId: String, challengeId: String)
+
+    /** Видалити бонус, штраф чи виплату (лише батьки). */
+    suspend fun deleteLedger(familyId: String, entryId: String)
+
+    /** Ціль дитини: на що збирає і скільки коштує. */
+    suspend fun setGoal(familyId: String, childId: String, title: String, amount: Int)
+
+    /** Курс оцінок і правила серії сім'ї (school_families.rates) — діє для нових підтверджень. */
+    suspend fun saveRates(familyId: String, rates: Map<Int, Int>, streak: Streak)
 
     /** Свій аватар і/або колір (null — не змінювати). Сервер пускає лише свій рядок (або батьків). */
     suspend fun setMyLook(familyId: String, userId: String, avatar: String?, theme: String?)

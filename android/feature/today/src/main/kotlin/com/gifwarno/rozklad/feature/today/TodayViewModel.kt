@@ -36,6 +36,9 @@ sealed interface TodayScreenState {
         val childId: String,
         val player: PlayerStrip,
         val quests: List<Quest>,
+        val week: WeekSchedule? = null,
+        /** Текст «до вихідних» (оновлюється разом із таймером). */
+        val weekend: String = "",
     ) : TodayScreenState
 }
 
@@ -53,6 +56,7 @@ class TodayViewModel @Inject constructor(private val active: ActiveFamily, priva
         val alertSince = ctx.data.airAlert?.takeIf { it.isActive }?.since?.let { alertLocal(it, clock.zone) }
         val cal = schedule?.let(::SchoolCalendar)
         val today = cal?.let { buildTodayState(now, it, alertSince) }
+        // today ≠ null ⇒ cal і schedule теж не null (компілятор це знає — smart cast).
         return if (today == null) {
             TodayScreenState.NoSchedule(child.name, ctx.canEditSchedule, ctx.data.children, child.userId)
         } else {
@@ -62,7 +66,9 @@ class TodayViewModel @Inject constructor(private val active: ActiveFamily, priva
                 children = ctx.data.children,
                 childId = child.userId,
                 player = buildPlayer(child, ctx.data, now.toLocalDate()),
-                quests = buildQuests(child.userId, ctx.data, checkNotNull(cal), now.toLocalDate()),
+                quests = buildQuests(child.userId, ctx.data, cal, now.toLocalDate()),
+                week = buildWeek(schedule, now.toLocalDate()),
+                weekend = weekendText(now, cal, schedule.week.getOrNull(FRIDAY_INDEX)?.size ?: 0),
             )
         }
     }
@@ -73,6 +79,7 @@ class TodayViewModel @Inject constructor(private val active: ActiveFamily, priva
 
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L
+        const val FRIDAY_INDEX = 4
 
         fun alertLocal(since: java.time.Instant, zone: ZoneId): LocalDateTime = LocalDateTime.ofInstant(since, zone)
     }
