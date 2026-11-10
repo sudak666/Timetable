@@ -63,7 +63,9 @@ import com.gifwarno.rozklad.core.designsystem.component.NumberTile
 import com.gifwarno.rozklad.core.designsystem.component.Pill
 import com.gifwarno.rozklad.core.designsystem.component.StrokeText
 import com.gifwarno.rozklad.core.designsystem.theme.GameFont
+import com.gifwarno.rozklad.core.designsystem.theme.GameStyle
 import com.gifwarno.rozklad.core.designsystem.theme.GameTitleStyle
+import com.gifwarno.rozklad.core.designsystem.theme.LocalGameStyle
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.designsystem.theme.TimerTextStyle
 import com.gifwarno.rozklad.core.domain.Rewards
@@ -281,8 +283,20 @@ private fun NowCardView(card: NowCard, onDoneTap: (() -> Unit)? = null) {
         is NowCard.Before -> NowLook(listOf(c.accent, Color(0xFFA29BFE)), "⏰")
         is NowCard.Done -> NowLook(listOf(Color(0xFF4834D4), c.accentEnd), if (card.holidayUntil != null) "🏖️" else "🎉")
     }
+    // «Блоки»: трава зверху, земля знизу — як у вебі.
+    val blocks = LocalGameStyle.current == GameStyle.BLOCKS
+    val brush = if (blocks) {
+        Brush.verticalGradient(
+            0f to Color(0xFF6ABE30),
+            GRASS to Color(0xFF5AA526),
+            GRASS to Color(0xFF8B5A2B),
+            1f to Color(0xFF7A4E25),
+        )
+    } else {
+        Brush.linearGradient(look.colors)
+    }
     GameSurface(
-        brush = Brush.linearGradient(look.colors),
+        brush = brush,
         contentColor = Color.White,
         depth = 6.dp,
         onClick = onDoneTap,
@@ -461,6 +475,9 @@ private fun LessonItem(row: LessonRow) {
         }
     }
 }
+
+/** Частка висоти картки під «траву» в стилі «Блоки». */
+private const val GRASS = 0.12f
 
 /** Велика перерва — від 15 хвилин (час поїсти). */
 private const val LONG_BREAK_MIN = 15

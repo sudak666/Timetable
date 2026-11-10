@@ -40,6 +40,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -55,6 +56,7 @@ import com.gifwarno.rozklad.core.designsystem.component.LoadingState
 import com.gifwarno.rozklad.core.designsystem.component.Pill
 import com.gifwarno.rozklad.core.designsystem.component.StrokeText
 import com.gifwarno.rozklad.core.designsystem.theme.GameFont
+import com.gifwarno.rozklad.core.designsystem.theme.GameStyle
 import com.gifwarno.rozklad.core.designsystem.theme.GameTitleStyle
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.domain.Trophies
@@ -63,6 +65,7 @@ import com.gifwarno.rozklad.core.model.Streak
 import com.gifwarno.rozklad.core.ui.Format
 import com.gifwarno.rozklad.core.ui.LookPicker
 import com.gifwarno.rozklad.core.ui.PrivacyPolicyLink
+import com.gifwarno.rozklad.core.ui.shareInvite
 import com.gifwarno.rozklad.feature.profile.alerts.AlertsSection
 import com.gifwarno.rozklad.feature.profile.alerts.AlertsSectionActions
 
@@ -118,6 +121,7 @@ fun ProfileRoute(onPickAlertRegion: () -> Unit, modifier: Modifier = Modifier, v
             alerts = alerts,
             onLook = viewModel::setLook,
             onSaveRates = viewModel::saveRates,
+            onGameStyle = viewModel::setGameStyle,
             modifier = modifier,
         )
     }
@@ -138,6 +142,7 @@ internal fun ProfileScreen(
     alerts: AlertsSectionActions? = null,
     onLook: (avatar: String?, accent: String?) -> Unit = { _, _ -> },
     onSaveRates: (Map<Int, Int>, Streak) -> Unit = { _, _ -> },
+    onGameStyle: (GameStyle) -> Unit = {},
 ) {
     var ratesSheet by rememberSaveable { mutableStateOf(false) }
     var confirmSignOut by rememberSaveable { mutableStateOf(false) }
@@ -190,6 +195,14 @@ internal fun ProfileScreen(
         if (state.isParent) {
             GameCard("🎟️ Запросити в сім’ю") {
                 CodeRow("Код для дитини", state.childInviteCode)
+                val context = LocalContext.current
+                GameButton(
+                    "Надіслати запрошення",
+                    { shareInvite(context, state.childInviteCode) },
+                    Modifier.fillMaxWidth(),
+                    color = RozkladTheme.colors.positive,
+                    leading = "📨",
+                )
                 val parent = state.parentInviteCode
                 if (parent == null) {
                     TextButton(onClick = onShowParentCode) { Text("Показати код для другого батька") }
@@ -256,6 +269,14 @@ internal fun ProfileScreen(
                 isParent = state.isParent,
                 alertsPush = pushState?.let { it.enabled && it.alerts },
                 actions = alerts,
+            )
+        }
+
+        GameCard("🎮 Стиль") {
+            GameSegmented(
+                options = GameStyle.entries.map { it to it.label },
+                selected = state.gameStyle,
+                onSelect = onGameStyle,
             )
         }
 

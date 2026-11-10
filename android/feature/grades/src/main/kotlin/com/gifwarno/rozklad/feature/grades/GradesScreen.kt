@@ -30,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -39,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,6 +48,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gifwarno.rozklad.core.designsystem.component.ArenaTitle
 import com.gifwarno.rozklad.core.designsystem.component.ButtonShape
+import com.gifwarno.rozklad.core.designsystem.component.ConfettiBurst
 import com.gifwarno.rozklad.core.designsystem.component.EmptyState
 import com.gifwarno.rozklad.core.designsystem.component.GameButton
 import com.gifwarno.rozklad.core.designsystem.component.GameFab
@@ -69,6 +72,7 @@ import com.gifwarno.rozklad.core.ui.ChildSelector
 import com.gifwarno.rozklad.core.ui.Format
 import com.gifwarno.rozklad.core.ui.TrophyRoad
 import com.gifwarno.rozklad.core.ui.gradeColor
+import com.gifwarno.rozklad.core.ui.shareInvite
 import java.time.LocalDate
 
 @Composable
@@ -82,23 +86,33 @@ fun GradesRoute(modifier: Modifier = Modifier, viewModel: GradesViewModel = hilt
             viewModel.messageShown()
         }
     }
-    GradesScreen(
-        state = state,
-        snackbar = snackbar,
-        onAddGrade = viewModel::addGrade,
-        onApprove = viewModel::approve,
-        onUnapprove = viewModel::unapprove,
-        onDelete = viewModel::delete,
-        onSelectChild = viewModel::selectChild,
-        onLedger = viewModel::addLedger,
-        onFine = viewModel::addFine,
-        onAddChallenge = viewModel::addChallenge,
-        onDeleteChallenge = viewModel::deleteChallenge,
-        onDeleteLedger = viewModel::deleteLedger,
-        onSetGoal = viewModel::setGoal,
-        modifier = modifier,
-    )
+    // Салют за підтверджену оцінку від 10 — як у вебі.
+    var burst by remember { mutableIntStateOf(0) }
+    Box(modifier) {
+        GradesScreen(
+            state = state,
+            snackbar = snackbar,
+            onAddGrade = viewModel::addGrade,
+            onApprove = { g ->
+                viewModel.approve(g)
+                if (g.value in TEN..TWELVE) burst++
+            },
+            onUnapprove = viewModel::unapprove,
+            onDelete = viewModel::delete,
+            onSelectChild = viewModel::selectChild,
+            onLedger = viewModel::addLedger,
+            onFine = viewModel::addFine,
+            onAddChallenge = viewModel::addChallenge,
+            onDeleteChallenge = viewModel::deleteChallenge,
+            onDeleteLedger = viewModel::deleteLedger,
+            onSetGoal = viewModel::setGoal,
+        )
+        ConfettiBurst(burst, Modifier.matchParentSize())
+    }
 }
+
+private const val TEN = 10
+private const val TWELVE = 12
 
 @Composable
 internal fun GradesScreen(
@@ -133,12 +147,21 @@ internal fun GradesScreen(
         when (state) {
             GradesUiState.Loading -> LoadingState(Modifier.padding(padding))
 
-            is GradesUiState.NoChild -> EmptyState(
-                emoji = "👨‍👩‍👧",
-                title = if (state.isParent) "Додай дитину" else "Немає даних",
-                message = if (state.isParent) "Дай дитині код сім’ї: ${state.inviteCode}" else null,
-                modifier = Modifier.padding(padding),
-            )
+            is GradesUiState.NoChild -> {
+                val context = LocalContext.current
+                EmptyState(
+                    emoji = "👋",
+                    title = if (state.isParent) "Запросіть дитину" else "Немає даних",
+                    message = if (state.isParent) {
+                        "Дитина встановлює застосунок або відкриває сайт, входить і вводить код ${state.inviteCode}."
+                    } else {
+                        null
+                    },
+                    actionLabel = if (state.isParent) "📨 Надіслати запрошення" else null,
+                    onAction = if (state.isParent) ({ shareInvite(context, state.inviteCode) }) else null,
+                    modifier = Modifier.padding(padding),
+                )
+            }
 
             is GradesUiState.Ready -> ReadyContent(
                 state = state,
@@ -221,6 +244,7 @@ private fun ReadyContent(
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item(key = "kids") { ChildSelector(state.children, state.child.userId, onSelectChild) }
+        if (!state.isParent) item(key = "intro") { IntroCard() }
         item(key = "player") { PlayerCard(state, onMoney, onEditGoal) }
         if (state.road.isNotEmpty()) {
             item(key = "road-title") { ArenaTitle("🏆 Шлях нагород") }

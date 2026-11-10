@@ -266,3 +266,35 @@ private const val MAX_DAYS = 90
 private const val MAX_AMOUNT = 100_000
 private const val MAX_DIGITS = 6
 private const val MAX_NOTE = 200
+
+/** «Як це працює» для дитини — показується, доки не натиснули «Зрозуміло» (як у вебі). */
+@Composable
+internal fun IntroCard() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefs = androidx.compose.runtime.remember { context.getSharedPreferences(INTRO_PREFS, android.content.Context.MODE_PRIVATE) }
+    var seen by rememberSaveable { mutableStateOf(prefs.getBoolean(INTRO_KEY, false)) }
+    if (seen) return
+    GameSurface {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("✨ Як це працює", style = MaterialTheme.typography.titleMedium)
+            listOf(
+                "➕ Отримав оцінку — постав її тут",
+                "✅ Батьки підтверджують — і гроші йдуть у скарбничку",
+                "🔥 Серії й 🏅 челенджі дають бонуси",
+                "🎯 Постав ціль — і дивись, скільки лишилось до мрії",
+            ).forEachIndexed { i, t -> Text("${i + 1}. $t", style = MaterialTheme.typography.bodyMedium) }
+            GameButton(
+                "Зрозуміло, поїхали!",
+                {
+                    prefs.edit().putBoolean(INTRO_KEY, true).apply()
+                    seen = true
+                },
+                Modifier.fillMaxWidth(),
+                leading = "🚀",
+            )
+        }
+    }
+}
+
+private const val INTRO_PREFS = "fun"
+private const val INTRO_KEY = "intro_seen"

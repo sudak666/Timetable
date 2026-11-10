@@ -7,6 +7,7 @@ import com.gifwarno.rozklad.core.data.repository.FamilyRepository
 import com.gifwarno.rozklad.core.data.repository.SessionRepository
 import com.gifwarno.rozklad.core.datastore.ThemeMode
 import com.gifwarno.rozklad.core.datastore.UserPreferencesDataSource
+import com.gifwarno.rozklad.core.designsystem.theme.GameStyle
 import com.gifwarno.rozklad.core.domain.Rewards
 import com.gifwarno.rozklad.core.domain.Trophies
 import com.gifwarno.rozklad.core.model.GradeStatus
@@ -53,6 +54,7 @@ sealed interface ProfileUiState {
         val accent: String = "",
         /** Курс оцінок і правила серії сім'ї. */
         val settings: RewardSettings = Rewards.DEFAULT_SETTINGS,
+        val gameStyle: GameStyle = GameStyle.ARENA,
     ) : ProfileUiState
 }
 
@@ -164,6 +166,7 @@ class ProfileViewModel @Inject constructor(
             },
             accent = ctx.me?.theme.orEmpty(),
             settings = ctx.data.settings,
+            gameStyle = GameStyle.of(prefs.gameStyle),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ProfileUiState.Loading)
 
@@ -188,6 +191,10 @@ class ProfileViewModel @Inject constructor(
             val ctx = active.context.filterNotNull().first()
             if (ctx.isParent) families.saveRates(ctx.familyId, rates, streak)
         }
+    }
+
+    fun setGameStyle(style: GameStyle) {
+        viewModelScope.launch { preferences.setGameStyle(style.name) }
     }
 
     fun setTheme(mode: ThemeMode) {
