@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
+  <!-- Власне тло «арени» (як в Android): сяйво, іскри-зірки, летючі кубики. Без чужих персонажів. -->
+  <defs>
+    <radialGradient id="g" cx="80%" cy="8%" r="75%">
+      <stop offset="0" stop-color="#fd79a8" stop-opacity=".3"/>
+      <stop offset="1" stop-color="#fd79a8" stop-opacity="0"/>
+    </radialGradient>
+    <path id="s" d="M0-10Q0 0 10 0Q0 0 0 10Q0 0-10 0Q0 0 0-10Z" fill="#fff3c4" fill-opacity=".6"/>
+    <g id="b">
+      <rect y="14" width="120" height="120" rx="22" fill="#000" fill-opacity=".18"/>
+      <rect width="120" height="120" rx="22" fill="#fff" fill-opacity=".1"/>
+    </g>
+  </defs>
+  <rect width="1000" height="1000" fill="url(#g)"/>
+  <use href="#s" transform="translate(80 60) scale(1.4)"/>
+  <use href="#s" transform="translate(270 130) scale(1)"/>
+  <use href="#s" transform="translate(520 40) scale(1.8)"/>
+  <use href="#s" transform="translate(710 170) scale(1.1)"/>
+  <use href="#s" transform="translate(920 90) scale(1.3)"/>
+  <use href="#s" transform="translate(150 310) scale(1.1)"/>
+  <use href="#s" transform="translate(860 360) scale(1.6)"/>
+  <use href="#s" transform="translate(400 420) scale(.8)"/>
+  <use href="#s" transform="translate(50 550) scale(1.3)"/>
+  <use href="#s" transform="translate(630 580) scale(1)"/>
+  <use href="#s" transform="translate(950 660) scale(1.1)"/>
+  <use href="#s" transform="translate(220 740) scale(1.6)"/>
+  <use href="#s" transform="translate(480 830) scale(1)"/>
+  <use href="#s" transform="translate(780 880) scale(1.4)"/>
+  <use href="#s" transform="translate(100 940) scale(1)"/>
+  <use href="#b" transform="translate(-40 180) scale(1.3)"/>
+  <use href="#b" transform="translate(880 240) scale(1)"/>
+  <use href="#b" transform="translate(800 700) scale(1.5)"/>
+  <use href="#b" transform="translate(-60 800) scale(1.7)"/>
+  <use href="#b" transform="translate(550 950) scale(1.2)"/>
+</svg>
