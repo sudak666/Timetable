@@ -3,7 +3,9 @@ package com.gifwarno.rozklad.feature.grades
 import app.cash.turbine.test
 import com.gifwarno.rozklad.core.data.repository.ActiveFamily
 import com.gifwarno.rozklad.core.datastore.UserPreferencesDataSource
+import com.gifwarno.rozklad.core.model.Challenge
 import com.gifwarno.rozklad.core.model.GradeStatus
+import com.gifwarno.rozklad.core.model.LedgerKind
 import com.gifwarno.rozklad.core.testing.FakeFamilyRepository
 import com.gifwarno.rozklad.core.testing.FakeSessionRepository
 import com.gifwarno.rozklad.core.testing.MainDispatcherRule
@@ -11,6 +13,7 @@ import com.gifwarno.rozklad.core.testing.TestData
 import com.gifwarno.rozklad.core.testing.fakePreferences
 import java.time.Clock
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneOffset
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -59,6 +62,46 @@ class GradesViewModelTest {
             assertTrue(added.byParent)
             assertEquals(11, added.value)
             cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `штраф — від'ємний бонус із поясненням`() = runTest {
+        val families = FakeFamilyRepository(TestData.familyData())
+        val vm = vm(families)
+        vm.uiState.test {
+            skipItems(1)
+            vm.addFine(150, "")
+            assertEquals(Triple(LedgerKind.BONUS, -150, "Штраф"), families.ledgerAdded.single())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `прогрес челенджу рахує лише підтверджені оцінки з потрібного предмета`() = runTest {
+        val ch =
+            Challenge(
+                "c1", TestData.child.userId, "3 десятки", "Математика", 10, 3, 100,
+                LocalDate.parse(
+                    "2026-11-03",
+                ),
+                LocalDate.parse("2026-11-09"),
+            )
+        val families = FakeFamilyRepository(
+            TestData.familyData(
+                grades = listOf(
+                    TestData.grade("a", 10, "2026-11-04"),
+                    TestData.grade("b", 12, "2026-11-05"),
+                    TestData.grade("c", 11, "2026-11-06", GradeStatus.PENDING),
+                ),
+            ).copy(challenges = listOf(ch)),
+        )
+        vm(families).uiState.test {
+            val ready = awaitItem().let { if (it is GradesUiState.Loading) awaitItem() else it } as GradesUiState.Ready
+            val item = ready.challenges.single()
+            assertEquals(2, item.hits)
+            assertTrue(item.over)
+            assertEquals(false, item.done)
         }
     }
 }

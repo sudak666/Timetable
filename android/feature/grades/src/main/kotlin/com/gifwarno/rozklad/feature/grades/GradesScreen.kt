@@ -2,6 +2,7 @@ package com.gifwarno.rozklad.feature.grades
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -38,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,6 +48,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gifwarno.rozklad.core.designsystem.component.ArenaTitle
 import com.gifwarno.rozklad.core.designsystem.component.ButtonShape
+import com.gifwarno.rozklad.core.designsystem.component.ConfettiBurst
 import com.gifwarno.rozklad.core.designsystem.component.EmptyState
 import com.gifwarno.rozklad.core.designsystem.component.GameButton
 import com.gifwarno.rozklad.core.designsystem.component.GameFab
@@ -55,6 +59,8 @@ import com.gifwarno.rozklad.core.designsystem.component.LoadingState
 import com.gifwarno.rozklad.core.designsystem.component.Pill
 import com.gifwarno.rozklad.core.designsystem.component.StatTile
 import com.gifwarno.rozklad.core.designsystem.component.StrokeText
+import com.gifwarno.rozklad.core.designsystem.component.outlineWidth
+import com.gifwarno.rozklad.core.designsystem.component.outlinedBackground
 import com.gifwarno.rozklad.core.designsystem.theme.GameFont
 import com.gifwarno.rozklad.core.designsystem.theme.GameTitleStyle
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
@@ -68,6 +74,7 @@ import com.gifwarno.rozklad.core.ui.ChildSelector
 import com.gifwarno.rozklad.core.ui.Format
 import com.gifwarno.rozklad.core.ui.TrophyRoad
 import com.gifwarno.rozklad.core.ui.gradeColor
+import com.gifwarno.rozklad.core.ui.shareInvite
 import java.time.LocalDate
 
 @Composable
@@ -81,18 +88,33 @@ fun GradesRoute(modifier: Modifier = Modifier, viewModel: GradesViewModel = hilt
             viewModel.messageShown()
         }
     }
-    GradesScreen(
-        state = state,
-        snackbar = snackbar,
-        onAddGrade = viewModel::addGrade,
-        onApprove = viewModel::approve,
-        onUnapprove = viewModel::unapprove,
-        onDelete = viewModel::delete,
-        onSelectChild = viewModel::selectChild,
-        onLedger = viewModel::addLedger,
-        modifier = modifier,
-    )
+    // Салют за підтверджену оцінку від 10 — як у вебі.
+    var burst by remember { mutableIntStateOf(0) }
+    Box(modifier) {
+        GradesScreen(
+            state = state,
+            snackbar = snackbar,
+            onAddGrade = viewModel::addGrade,
+            onApprove = { g ->
+                viewModel.approve(g)
+                if (g.value in TEN..TWELVE) burst++
+            },
+            onUnapprove = viewModel::unapprove,
+            onDelete = viewModel::delete,
+            onSelectChild = viewModel::selectChild,
+            onLedger = viewModel::addLedger,
+            onFine = viewModel::addFine,
+            onAddChallenge = viewModel::addChallenge,
+            onDeleteChallenge = viewModel::deleteChallenge,
+            onDeleteLedger = viewModel::deleteLedger,
+            onSetGoal = viewModel::setGoal,
+        )
+        ConfettiBurst(burst, Modifier.matchParentSize())
+    }
 }
+
+private const val TEN = 10
+private const val TWELVE = 12
 
 @Composable
 internal fun GradesScreen(
@@ -105,9 +127,16 @@ internal fun GradesScreen(
     onSelectChild: (String) -> Unit,
     onLedger: (LedgerKind, Int, String) -> Unit,
     modifier: Modifier = Modifier,
+    onFine: (Int, String) -> Unit = { _, _ -> },
+    onAddChallenge: (ChallengeDraft) -> Unit = {},
+    onDeleteChallenge: (String) -> Unit = {},
+    onDeleteLedger: (String) -> Unit = {},
+    onSetGoal: (String, Int) -> Unit = { _, _ -> },
 ) {
+    var goalOpen by rememberSaveable { mutableStateOf(false) }
     var showAdd by rememberSaveable { mutableStateOf(false) }
-    var ledgerKind by rememberSaveable { mutableStateOf<LedgerKind?>(null) }
+    var money by rememberSaveable { mutableStateOf<Money?>(null) }
+    var newChallenge by rememberSaveable { mutableStateOf(false) }
     Scaffold(
         modifier = modifier,
         containerColor = Color.Transparent,
@@ -120,12 +149,21 @@ internal fun GradesScreen(
         when (state) {
             GradesUiState.Loading -> LoadingState(Modifier.padding(padding))
 
-            is GradesUiState.NoChild -> EmptyState(
-                emoji = "👨‍👩‍👧",
-                title = if (state.isParent) "Додай дитину" else "Немає даних",
-                message = if (state.isParent) "Дай дитині код сім’ї: ${state.inviteCode}" else null,
-                modifier = Modifier.padding(padding),
-            )
+            is GradesUiState.NoChild -> {
+                val context = LocalContext.current
+                EmptyState(
+                    emoji = "👋",
+                    title = if (state.isParent) "Запросіть дитину" else "Немає даних",
+                    message = if (state.isParent) {
+                        "Дитина встановлює застосунок або відкриває сайт, входить і вводить код ${state.inviteCode}."
+                    } else {
+                        null
+                    },
+                    actionLabel = if (state.isParent) "📨 Надіслати запрошення" else null,
+                    onAction = if (state.isParent) ({ shareInvite(context, state.inviteCode) }) else null,
+                    modifier = Modifier.padding(padding),
+                )
+            }
 
             is GradesUiState.Ready -> ReadyContent(
                 state = state,
@@ -134,7 +172,11 @@ internal fun GradesScreen(
                 onUnapprove = onUnapprove,
                 onDelete = onDelete,
                 onSelectChild = onSelectChild,
-                onLedger = { ledgerKind = it },
+                onMoney = { money = it },
+                onNewChallenge = { newChallenge = true },
+                onDeleteChallenge = onDeleteChallenge,
+                onEditGoal = { goalOpen = true },
+                onDeleteLedger = onDeleteLedger,
             )
         }
     }
@@ -147,13 +189,37 @@ internal fun GradesScreen(
             },
         )
     }
-    ledgerKind?.let { kind ->
+    money?.let { m ->
         LedgerDialog(
-            kind = kind,
-            onDismiss = { ledgerKind = null },
+            money = m,
+            onDismiss = { money = null },
             onConfirm = { amount, note ->
-                onLedger(kind, amount, note)
-                ledgerKind = null
+                when (m) {
+                    Money.BONUS -> onLedger(LedgerKind.BONUS, amount, note)
+                    Money.PAYOUT -> onLedger(LedgerKind.PAYOUT, amount, note)
+                    Money.FINE -> onFine(amount, note)
+                }
+                money = null
+            },
+        )
+    }
+    if (goalOpen && state is GradesUiState.Ready) {
+        GoalDialog(
+            title = state.child.goalTitle,
+            amount = state.child.goalAmount,
+            onDismiss = { goalOpen = false },
+            onSave = { t, a ->
+                onSetGoal(t, a)
+                goalOpen = false
+            },
+        )
+    }
+    if (newChallenge) {
+        ChallengeSheet(
+            onDismiss = { newChallenge = false },
+            onCreate = {
+                onAddChallenge(it)
+                newChallenge = false
             },
         )
     }
@@ -167,7 +233,11 @@ private fun ReadyContent(
     onUnapprove: (Grade) -> Unit,
     onDelete: (Grade) -> Unit,
     onSelectChild: (String) -> Unit,
-    onLedger: (LedgerKind) -> Unit,
+    onMoney: (Money) -> Unit,
+    onNewChallenge: () -> Unit,
+    onDeleteChallenge: (String) -> Unit,
+    onEditGoal: () -> Unit,
+    onDeleteLedger: (String) -> Unit,
 ) {
     val actions = RowActions(onApprove, onUnapprove, onDelete)
     LazyColumn(
@@ -176,36 +246,40 @@ private fun ReadyContent(
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item(key = "kids") { ChildSelector(state.children, state.child.userId, onSelectChild) }
-        item(key = "player") { PlayerCard(state, onLedger) }
+        if (!state.isParent) item(key = "intro") { IntroCard() }
+        item(key = "player") { PlayerCard(state, onMoney, onEditGoal) }
         if (state.road.isNotEmpty()) {
             item(key = "road-title") { ArenaTitle("🏆 Шлях нагород") }
             item(key = "road") { TrophyRoad(state.road) }
         }
         if (state.badges.isNotEmpty()) item(key = "badges") { BadgesCard(state.badges) }
+        if (state.challenges.isNotEmpty() || state.isParent) {
+            item(key = "ch-title") { ArenaTitle("🏅 Челенджі") }
+            item(key = "challenges") {
+                ChallengesCard(
+                    items = state.challenges,
+                    isParent = state.isParent,
+                    onNew = onNewChallenge,
+                    onDelete = onDeleteChallenge,
+                )
+            }
+        }
         if (state.pending.isNotEmpty()) {
             item(key = "pending-title") { ArenaTitle("⏳ Чекають підтвердження") }
             item(key = "pending") { GradeList(state.pending, actions) }
         }
-        item(key = "recent-title") { ArenaTitle("⭐ Оцінки") }
-        item(key = "recent") {
-            if (state.recent.isEmpty()) {
-                GameSurface {
-                    Text(
-                        "Ще немає оцінок — додай першу кнопкою «Оцінка».",
-                        Modifier.padding(16.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            } else {
-                GradeList(state.recent, actions)
-            }
+        if (state.compare != null || state.rank.isNotEmpty() || state.subjectAvgs.isNotEmpty()) {
+            item(key = "stats-title") { ArenaTitle("📊 Статистика") }
+            item(key = "stats") { StatsCard(state) }
         }
+        item(key = "history-title") { ArenaTitle("🧾 Історія") }
+        item(key = "history") { HistoryCard(state.history, actions, onDeleteLedger) }
     }
 }
 
 /** «Профіль гравця»: аватар, рівень, гаманець, серія й ціль. */
 @Composable
-private fun PlayerCard(state: GradesUiState.Ready, onLedger: (LedgerKind) -> Unit) {
+private fun PlayerCard(state: GradesUiState.Ready, onMoney: (Money) -> Unit, onEditGoal: () -> Unit) {
     val c = RozkladTheme.colors
     val tile = Color.White.copy(alpha = 0.16f)
     GameSurface(brush = Brush.linearGradient(listOf(c.accent, Color(0xFFB062E8), c.accentEnd)), contentColor = Color.White, depth = 6.dp) {
@@ -248,26 +322,55 @@ private fun PlayerCard(state: GradesUiState.Ready, onLedger: (LedgerKind) -> Uni
             }
             if (state.child.goalTitle.isNotBlank() && state.child.goalAmount > 0) {
                 Column(Modifier.clip(ButtonShape).background(tile).padding(12.dp)) {
-                    Text("🎯 Ціль: ${state.child.goalTitle}", style = MaterialTheme.typography.titleSmall)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "🎯 Ціль: ${state.child.goalTitle}",
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Pill(
+                            "змінити",
+                            Modifier.clickable(onClickLabel = "Змінити ціль", onClick = onEditGoal),
+                            color = Color.White.copy(alpha = 0.25f),
+                            contentColor = Color.White,
+                        )
+                    }
                     GameProgressBar(
                         (state.totals.balance.toFloat() / state.child.goalAmount).coerceIn(0f, 1f),
                         Modifier.padding(vertical = 6.dp),
                         fill = Brush.horizontalGradient(listOf(Color(0xFF55EFC4), Color(0xFF00B894))),
                         track = Color.Black.copy(alpha = 0.2f),
                     )
+                    val left = state.child.goalAmount - state.totals.balance.coerceAtLeast(0)
                     Text(
-                        "${state.totals.balance.coerceAtLeast(0)} з ${state.child.goalAmount} ₴",
+                        "${state.totals.balance.coerceAtLeast(0)} з ${state.child.goalAmount} ₴ · " +
+                            if (left <= 0) "🎉 можна купувати!" else "ще $left ₴",
                         style = MaterialTheme.typography.labelMedium,
                     )
                 }
+            } else {
+                GameButton(
+                    "Постав ціль — на що збираєш?",
+                    onEditGoal,
+                    Modifier.fillMaxWidth(),
+                    color = Color.White.copy(alpha = 0.9f),
+                    contentColor = c.ink,
+                    leading = "🎯",
+                )
             }
             if (state.isParent) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    GameButton("Бонус", {
-                        onLedger(LedgerKind.BONUS)
-                    }, Modifier.weight(1f), color = c.gold, contentColor = c.ink, leading = "🎁")
-                    GameButton("Виплатити", { onLedger(LedgerKind.PAYOUT) }, Modifier.weight(1f), color = Color(0xFF00A383), leading = "💸")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GameButton("Бонус", { onMoney(Money.BONUS) }, Modifier.weight(1f), color = c.gold, contentColor = c.ink, leading = "🎁")
+                    GameButton("Штраф", { onMoney(Money.FINE) }, Modifier.weight(1f), color = Color(0xFFC0392B), leading = "⚠️")
                 }
+                GameButton(
+                    "Виплатити",
+                    { onMoney(Money.PAYOUT) },
+                    Modifier.fillMaxWidth(),
+                    color = Color(0xFF00A383),
+                    leading = "💸",
+                    enabled = state.totals.balance > 0,
+                )
             }
         }
     }
@@ -279,16 +382,14 @@ private fun Avatar(emoji: String) {
     Box(
         Modifier
             .size(60.dp)
-            .clip(CircleShape)
-            .background(Brush.linearGradient(listOf(c.gold, c.goldEnd)))
-            .border(3.dp, c.ink, CircleShape),
+            .outlinedBackground(Brush.linearGradient(listOf(c.gold, c.goldEnd)), CircleShape, outlineWidth(3.dp), c.ink),
         contentAlignment = Alignment.Center,
     ) {
         Text(emoji.ifBlank { "🙂" }, fontSize = 32.sp)
     }
 }
 
-private class RowActions(val onApprove: (Grade) -> Unit, val onUnapprove: (Grade) -> Unit, val onDelete: (Grade) -> Unit)
+internal class RowActions(val onApprove: (Grade) -> Unit, val onUnapprove: (Grade) -> Unit, val onDelete: (Grade) -> Unit)
 
 @Composable
 private fun GradeList(items: List<GradeItem>, actions: RowActions) {
@@ -303,7 +404,7 @@ private fun GradeList(items: List<GradeItem>, actions: RowActions) {
 }
 
 @Composable
-private fun GradeRow(item: GradeItem, actions: RowActions) {
+internal fun GradeRow(item: GradeItem, actions: RowActions) {
     val c = RozkladTheme.colors
     val g = item.grade
     val pending = g.status != GradeStatus.APPROVED

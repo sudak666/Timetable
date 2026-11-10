@@ -146,7 +146,41 @@ class FakeFamilyRepository(initial: FamilyData?) : FamilyRepository {
         d?.copy(homework = d.homework.filterNot { it.id == homeworkId })
     }
 
-    override suspend fun addLedger(familyId: String, childId: String, kind: LedgerKind, amount: Int, note: String) = Unit
+    val ledgerAdded = mutableListOf<Triple<LedgerKind, Int, String>>()
+
+    override suspend fun addLedger(familyId: String, childId: String, kind: LedgerKind, amount: Int, note: String) {
+        ledgerAdded += Triple(kind, amount, note)
+    }
+
+    val challengesAdded = mutableListOf<String>()
+    var savedRates: Pair<Map<Int, Int>, com.gifwarno.rozklad.core.model.Streak>? = null
+
+    override suspend fun addChallenge(
+        familyId: String,
+        childId: String,
+        title: String,
+        subject: String?,
+        minGrade: Int,
+        need: Int,
+        days: Int,
+        reward: Int,
+    ) {
+        challengesAdded += title
+    }
+
+    override suspend fun deleteChallenge(familyId: String, challengeId: String) = Unit
+
+    override suspend fun deleteLedger(familyId: String, entryId: String) = Unit
+
+    var goal: Pair<String, Int>? = null
+
+    override suspend fun setGoal(familyId: String, childId: String, title: String, amount: Int) {
+        goal = title to amount
+    }
+
+    override suspend fun saveRates(familyId: String, rates: Map<Int, Int>, streak: com.gifwarno.rozklad.core.model.Streak) {
+        savedRates = rates to streak
+    }
 
     val looks = mutableListOf<Triple<String, String?, String?>>()
 

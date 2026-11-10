@@ -173,6 +173,21 @@ fun GradeTile(label: String, color: Color, modifier: Modifier = Modifier, size: 
         modifier.size(size).clip(RoundedCornerShape(14.dp)).background(color),
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, color = Color.White, fontFamily = GameFont, fontSize = (size.value * 0.42f).sp)
+        // Довгі мітки («Зар.») — дрібніше, щоб влазили в плитку.
+        Text(
+            label,
+            color = Color.White,
+            fontFamily = GameFont,
+            fontSize = (
+                size.value * if (label.length >
+                    2
+                ) {
+                    0.27f
+                } else {
+                    0.42f
+                }
+                ).sp,
+            maxLines = 1,
+        )
     }
 }

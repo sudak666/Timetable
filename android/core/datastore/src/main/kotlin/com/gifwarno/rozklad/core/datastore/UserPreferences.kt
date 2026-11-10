@@ -23,6 +23,8 @@ data class UserPreferences(
     /** Дитина, яку зараз дивиться батько (у дитини — завжди вона сама). */
     val selectedChildId: String?,
     val themeMode: ThemeMode,
+    /** Ігровий стиль (ім'я GameStyle з designsystem); null — за замовчуванням. */
+    val gameStyle: String? = null,
 )
 
 /** Налаштування пристрою (не сім'ї): що вибрано, яка тема. Не містить секретів. */
@@ -32,6 +34,7 @@ class UserPreferencesDataSource @Inject constructor(private val store: DataStore
         UserPreferences(
             selectedChildId = p[SELECTED_CHILD],
             themeMode = p[THEME]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.SYSTEM,
+            gameStyle = p[GAME_STYLE],
         )
     }
 
@@ -41,6 +44,10 @@ class UserPreferencesDataSource @Inject constructor(private val store: DataStore
 
     suspend fun setThemeMode(mode: ThemeMode) {
         store.edit { it[THEME] = mode.name }
+    }
+
+    suspend fun setGameStyle(name: String) {
+        store.edit { it[GAME_STYLE] = name }
     }
 
     /** Остання відома сім'я користувача — щоб застосунок відкривався офлайн. */
@@ -99,6 +106,7 @@ class UserPreferencesDataSource @Inject constructor(private val store: DataStore
         val PUSH_ENABLED = booleanPreferencesKey("push_enabled")
         val PUSH_TOKEN = stringPreferencesKey("push_token")
         val ALERTS_PUSH = booleanPreferencesKey("alerts_push")
+        val GAME_STYLE = stringPreferencesKey("game_style")
     }
 }
 

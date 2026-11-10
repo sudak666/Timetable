@@ -198,6 +198,8 @@ fun RozkladTheme(
     dynamicColor: Boolean = false,
     /** Обраний людиною колір (відкривається з рівнями); null — фірмовий фіолетовий. */
     accent: Color? = null,
+    /** Ігровий стиль: форма, шрифти, небо. */
+    style: GameStyle = GameStyle.ARENA,
     content: @Composable () -> Unit,
 ) {
     val colors: ColorScheme = when {
@@ -211,10 +213,17 @@ fun RozkladTheme(
         else -> LightColors
     }
     val baseExtra = if (darkTheme) DarkExtra else LightExtra
-    val extra = accent?.let { baseExtra.copy(accent = it, glow = it.copy(alpha = if (darkTheme) DARK_GLOW else LIGHT_GLOW)) } ?: baseExtra
+    val accented =
+        accent?.let { baseExtra.copy(accent = it, glow = it.copy(alpha = if (darkTheme) DARK_GLOW else LIGHT_GLOW)) } ?: baseExtra
+    // «Блоки» — денне блакитне небо (уночі — темно-синє), як у вебі.
+    val extra = when {
+        style != GameStyle.BLOCKS -> accented
+        darkTheme -> accented.copy(skyTop = Color(0xFF1B2A4A), skyBottom = Color(0xFF0F1024))
+        else -> accented.copy(skyTop = Color(0xFF4FA9EC), skyBottom = Color(0xFFA9DEFF))
+    }
     // У темній темі текст акцентного кольору має бути світлішим, щоб читався на темних картках.
     val scheme = accent?.let { colors.copy(primary = if (darkTheme) lerp(it, Color.White, DARK_PRIMARY_LIFT) else it) } ?: colors
-    CompositionLocalProvider(LocalRozkladColors provides extra) {
+    CompositionLocalProvider(LocalRozkladColors provides extra, LocalGameStyle provides style) {
         MaterialTheme(colorScheme = scheme, typography = RozkladTypography, shapes = RozkladShapes, content = content)
     }
 }

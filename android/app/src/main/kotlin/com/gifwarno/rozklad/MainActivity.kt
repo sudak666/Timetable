@@ -54,12 +54,13 @@ class MainActivity : ComponentActivity() {
             val hasData by viewModel.hasFamilyData.collectAsStateWithLifecycle()
             val alert by viewModel.alertBanner.collectAsStateWithLifecycle()
             val accent by viewModel.accent.collectAsStateWithLifecycle()
+            val style by viewModel.gameStyle.collectAsStateWithLifecycle()
             val dark = when (theme) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
             }
-            RozkladTheme(darkTheme = dark, accent = accent?.let { androidx.compose.ui.graphics.Color(it) }) {
+            RozkladTheme(darkTheme = dark, accent = accent?.let { androidx.compose.ui.graphics.Color(it) }, style = style) {
                 RozkladApp(
                     session = session,
                     sync = sync,

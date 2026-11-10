@@ -20,3 +20,14 @@ fun PrivacyPolicyLink(modifier: Modifier = Modifier) {
         Text("Політика конфіденційності", style = MaterialTheme.typography.bodySmall)
     }
 }
+
+/** Текст запрошення в сім'ю — як у вебі («Надіслати запрошення»). */
+fun inviteText(code: String): String = "Приєднуйся до нашого розкладу: ${Links.SITE} — увійди й введи код $code"
+
+/** Системне вікно «Поділитися» з запрошенням (месенджери, пошта тощо). */
+fun shareInvite(context: android.content.Context, code: String) {
+    val send = android.content.Intent(android.content.Intent.ACTION_SEND)
+        .setType("text/plain")
+        .putExtra(android.content.Intent.EXTRA_TEXT, inviteText(code))
+    context.startActivity(android.content.Intent.createChooser(send, "Надіслати запрошення"))
+}

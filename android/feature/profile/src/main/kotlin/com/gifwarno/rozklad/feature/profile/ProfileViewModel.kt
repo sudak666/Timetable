@@ -7,11 +7,14 @@ import com.gifwarno.rozklad.core.data.repository.FamilyRepository
 import com.gifwarno.rozklad.core.data.repository.SessionRepository
 import com.gifwarno.rozklad.core.datastore.ThemeMode
 import com.gifwarno.rozklad.core.datastore.UserPreferencesDataSource
+import com.gifwarno.rozklad.core.designsystem.theme.GameStyle
 import com.gifwarno.rozklad.core.domain.Rewards
 import com.gifwarno.rozklad.core.domain.Trophies
 import com.gifwarno.rozklad.core.model.GradeStatus
 import com.gifwarno.rozklad.core.model.Member
+import com.gifwarno.rozklad.core.model.RewardSettings
 import com.gifwarno.rozklad.core.model.Role
+import com.gifwarno.rozklad.core.model.Streak
 import com.gifwarno.rozklad.core.push.PushSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -49,6 +52,9 @@ sealed interface ProfileUiState {
         val level: Int = Trophies.PARENT_LEVEL,
         /** Обраний колір «#rrggbb» або порожньо. */
         val accent: String = "",
+        /** Курс оцінок і правила серії сім'ї. */
+        val settings: RewardSettings = Rewards.DEFAULT_SETTINGS,
+        val gameStyle: GameStyle = GameStyle.ARENA,
     ) : ProfileUiState
 }
 
@@ -159,6 +165,8 @@ class ProfileViewModel @Inject constructor(
                 )
             },
             accent = ctx.me?.theme.orEmpty(),
+            settings = ctx.data.settings,
+            gameStyle = GameStyle.of(prefs.gameStyle),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ProfileUiState.Loading)
 
@@ -175,6 +183,18 @@ class ProfileViewModel @Inject constructor(
             val ctx = active.context.filterNotNull().first()
             families.setMyLook(ctx.familyId, ctx.user.id, avatar, accent)
         }
+    }
+
+    /** Курс і серія — лише батьки (так само обмежує сервер). */
+    fun saveRates(rates: Map<Int, Int>, streak: Streak) {
+        viewModelScope.launch {
+            val ctx = active.context.filterNotNull().first()
+            if (ctx.isParent) families.saveRates(ctx.familyId, rates, streak)
+        }
+    }
+
+    fun setGameStyle(style: GameStyle) {
+        viewModelScope.launch { preferences.setGameStyle(style.name) }
     }
 
     fun setTheme(mode: ThemeMode) {
