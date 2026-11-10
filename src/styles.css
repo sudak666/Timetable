@@ -357,7 +357,7 @@ table.chart .tr i{display:block;height:100%;border-radius:0 4px 4px 0}
 .page>*{margin:0!important}
 @keyframes pageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .card{margin:0}
-.bnav{display:flex;gap:4px;background:color-mix(in srgb,var(--card) 88%,transparent);backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);border:1px solid var(--line);z-index:40}
+.bnav{display:flex;gap:4px;background:color-mix(in srgb,var(--card) 97%,transparent);backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);border:1px solid var(--line);z-index:40}
 .bnav a{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:52px;padding:6px 4px;border-radius:14px;color:var(--muted);text-decoration:none;font-size:12px;font-weight:800;transition:color .15s,background .15s;-webkit-tap-highlight-color:transparent}
 .bnav a svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s cubic-bezier(.3,1.5,.5,1)}
 .bnav a.on{color:#fff;background:var(--accent);box-shadow:0 4px 14px var(--glow)}

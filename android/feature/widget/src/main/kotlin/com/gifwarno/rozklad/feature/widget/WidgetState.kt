@@ -19,7 +19,15 @@ import java.util.Locale
 
 enum class WidgetLessonState { PAST, CURRENT, UPCOMING }
 
-data class WidgetLesson(val number: Int, val subject: String, val emoji: String, val start: String, val state: WidgetLessonState)
+data class WidgetLesson(
+    val number: Int,
+    val subject: String,
+    val emoji: String,
+    val start: String,
+    val state: WidgetLessonState,
+    /** Колір предмета (ARGB) — для номерка, як у застосунку. */
+    val color: Long = 0xFF6C5CE7,
+)
 
 /**
  * Що показує віджет. Лише абсолютний час («до 9:15»), без зворотного відліку:
@@ -108,7 +116,8 @@ fun buildWidgetState(now: LocalDateTime, childName: String, schedule: SchoolSche
             !t.isBefore(bell.start) -> WidgetLessonState.CURRENT
             else -> WidgetLessonState.UPCOMING
         }
-        WidgetLesson(i + 1, l.subject, Timetable.subject(l.subject).emoji, hm(bell.start), state)
+        val info = Timetable.subject(l.subject)
+        WidgetLesson(i + 1, l.subject, info.emoji, hm(bell.start), state, info.color)
     }
     val dayTitle = when (shownDate) {
         today -> "Сьогодні"

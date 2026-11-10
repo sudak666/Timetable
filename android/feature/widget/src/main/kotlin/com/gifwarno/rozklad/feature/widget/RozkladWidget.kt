@@ -2,12 +2,14 @@ package com.gifwarno.rozklad.feature.widget
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.ImageProvider
 import androidx.glance.LocalSize
 import androidx.glance.action.Action
 import androidx.glance.action.clickable
@@ -20,17 +22,19 @@ import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
 import androidx.glance.layout.Column
+import androidx.glance.layout.ColumnScope
 import androidx.glance.layout.Row
-import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
 import com.gifwarno.rozklad.core.data.repository.ActiveFamily
 import com.gifwarno.rozklad.core.data.repository.FamilyRepository
 import com.gifwarno.rozklad.core.data.repository.SessionRepository
@@ -104,55 +108,57 @@ class RozkladWidget : GlanceAppWidget() {
     }
 }
 
+/**
+ * Ігровий вигляд, як у застосунку: темна «нічна» картка, градієнтна шапка з тим, що зараз,
+ * і кольорові номерки уроків. Кольори сталі (не з теми системи) — віджет завжди впізнаваний.
+ */
 @Composable
 internal fun WidgetContent(state: WidgetState, open: Action?, alert: String? = null) {
     val base = GlanceModifier
         .fillMaxSize()
-        .background(GlanceTheme.colors.widgetBackground)
-        .cornerRadius(16.dp)
-        .padding(12.dp)
+        .background(Card)
+        .cornerRadius(20.dp)
     Column(modifier = if (open != null) base.clickable(open) else base) {
-        if (alert != null && state != WidgetState.SignedOut && state != WidgetState.Loading) {
-            Text(
-                alert,
-                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 13.sp, color = GlanceTheme.colors.error),
-                maxLines = 1,
-            )
-        }
+        val showAlert = alert != null && state != WidgetState.SignedOut && state != WidgetState.Loading
         when (state) {
-            WidgetState.SignedOut -> Message("Дванадцятка", "Увійди в застосунок, щоб бачити розклад")
-            WidgetState.Loading -> Message("Дванадцятка", "Завантажую розклад…")
-            is WidgetState.NoSchedule -> Message("🗓️ Розклад не заповнено", "Відкрий «Сьогодні» → «Розклад»")
-            is WidgetState.Ready -> Ready(state)
+            WidgetState.SignedOut -> Header("Дванадцятка", "Увійди в застосунок, щоб бачити розклад", null)
+            WidgetState.Loading -> Header("Дванадцятка", "Завантажую розклад…", null)
+            is WidgetState.NoSchedule -> Header("🗓️ Розклад не заповнено", "Відкрий «Сьогодні» → «Розклад»", alert.takeIf { showAlert })
+            is WidgetState.Ready -> Ready(state, alert.takeIf { showAlert })
         }
     }
 }
 
+/** Градієнтна шапка; на малому віджеті — це весь віджет. */
 @Composable
-private fun Message(title: String, text: String) {
-    Column {
-        Text(title, style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 15.sp, color = GlanceTheme.colors.onSurface), maxLines = 1)
-        Text(text, style = TextStyle(fontSize = 13.sp, color = GlanceTheme.colors.onSurfaceVariant), maxLines = 2)
+private fun Header(title: String, detail: String, alert: String?) {
+    Column(
+        GlanceModifier
+            .fillMaxWidth()
+            .background(ImageProvider(R.drawable.widget_header))
+            .cornerRadius(20.dp)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+    ) {
+        if (alert != null) {
+            Text(alert, style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 13.sp, color = AlertYellow), maxLines = 1)
+        }
+        Text(title, style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 17.sp, color = White), maxLines = 1)
+        Text(detail, style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 13.sp, color = WhiteSoft), maxLines = 2)
     }
 }
 
 @Composable
-private fun Ready(state: WidgetState.Ready) {
+private fun ColumnScope.Ready(state: WidgetState.Ready, alert: String?) {
     // Список уроків — лише якщо віджет достатньо високий.
     val showList = LocalSize.current.height >= LIST_MIN_HEIGHT.dp && state.lessons.isNotEmpty()
-    Column {
-        Text(
-            "${state.emoji} ${state.headline}",
-            style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 16.sp, color = GlanceTheme.colors.onSurface),
-            maxLines = 1,
-        )
-        Text(state.detail, style = TextStyle(fontSize = 13.sp, color = GlanceTheme.colors.onSurfaceVariant), maxLines = 1)
-        if (showList) {
-            Spacer(GlanceModifier.height(8.dp))
+    Header("${state.emoji} ${state.headline}", state.detail, alert)
+    if (showList) {
+        Column(GlanceModifier.fillMaxWidth().defaultWeight().padding(start = 10.dp, end = 10.dp, top = 8.dp, bottom = 6.dp)) {
             Text(
                 state.dayTitle + if (state.childName.isNotBlank()) " · ${state.childName}" else "",
-                style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 12.sp, color = GlanceTheme.colors.primary),
+                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Muted),
                 maxLines = 1,
+                modifier = GlanceModifier.padding(start = 4.dp, bottom = 4.dp),
             )
             // Glance Column вміщає не більше 10 дочірніх елементів — уроків може бути до 12, тож лише LazyColumn.
             LazyColumn(GlanceModifier.fillMaxWidth().defaultWeight()) {
@@ -164,20 +170,46 @@ private fun Ready(state: WidgetState.Ready) {
 
 @Composable
 private fun LessonRow(l: WidgetLesson) {
-    val color = when (l.state) {
-        WidgetLessonState.CURRENT -> GlanceTheme.colors.primary
-        WidgetLessonState.PAST -> GlanceTheme.colors.outline
-        WidgetLessonState.UPCOMING -> GlanceTheme.colors.onSurface
-    }
-    val weight = if (l.state == WidgetLessonState.CURRENT) FontWeight.Bold else FontWeight.Normal
-    Row(GlanceModifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+    val current = l.state == WidgetLessonState.CURRENT
+    val past = l.state == WidgetLessonState.PAST
+    val row = GlanceModifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 3.dp)
+    Row(
+        if (current) row.background(Highlight).cornerRadius(10.dp) else row,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            GlanceModifier
+                .size(22.dp)
+                .background(if (past) Line else ColorProvider(Color(l.color)))
+                .cornerRadius(7.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("${l.number}", style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (past) Muted else White))
+        }
         Text(
             l.start,
-            style = TextStyle(fontSize = 12.sp, color = GlanceTheme.colors.onSurfaceVariant),
-            modifier = GlanceModifier.width(40.dp),
+            style = TextStyle(fontSize = 12.sp, color = Muted),
+            modifier = GlanceModifier.width(46.dp).padding(start = 8.dp),
         )
-        Text("${l.emoji} ${l.subject}", style = TextStyle(fontSize = 13.sp, fontWeight = weight, color = color), maxLines = 1)
+        Text(
+            "${l.emoji} ${l.subject}",
+            style = TextStyle(
+                fontSize = 13.sp,
+                fontWeight = if (current) FontWeight.Bold else FontWeight.Medium,
+                color = if (past) Muted else White,
+            ),
+            maxLines = 1,
+        )
     }
 }
+
+// Кольори 1:1 з темною темою застосунку (designsystem Theme.kt).
+private val Card = ColorProvider(Color(0xFF1A1B36))
+private val Line = ColorProvider(Color(0xFF2A2C4F))
+private val Highlight = ColorProvider(Color(0xFF2E2A5C))
+private val Muted = ColorProvider(Color(0xFFA3A6CC))
+private val White = ColorProvider(Color.White)
+private val WhiteSoft = ColorProvider(Color(0xE6FFFFFF))
+private val AlertYellow = ColorProvider(Color(0xFFFFE08A))
 
 private const val LIST_MIN_HEIGHT = 120
