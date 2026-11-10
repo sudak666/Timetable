@@ -55,6 +55,8 @@ import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.component.LoadingState
 import com.gifwarno.rozklad.core.designsystem.component.Pill
 import com.gifwarno.rozklad.core.designsystem.component.StrokeText
+import com.gifwarno.rozklad.core.designsystem.component.outlineWidth
+import com.gifwarno.rozklad.core.designsystem.component.outlinedBackground
 import com.gifwarno.rozklad.core.designsystem.theme.GameFont
 import com.gifwarno.rozklad.core.designsystem.theme.GameStyle
 import com.gifwarno.rozklad.core.designsystem.theme.GameTitleStyle
@@ -162,9 +164,7 @@ internal fun ProfileScreen(
                 Box(
                     Modifier
                         .size(76.dp)
-                        .clip(CircleShape)
-                        .background(Brush.linearGradient(listOf(c.gold, c.goldEnd)))
-                        .border(3.dp, c.ink, CircleShape)
+                        .outlinedBackground(Brush.linearGradient(listOf(c.gold, c.goldEnd)), CircleShape, outlineWidth(3.dp), c.ink)
                         .clickable(onClickLabel = "Змінити аватар і колір", role = androidx.compose.ui.semantics.Role.Button) {
                             lookSheet =
                                 true

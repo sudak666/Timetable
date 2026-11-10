@@ -62,6 +62,8 @@ import com.gifwarno.rozklad.core.designsystem.component.LoadingState
 import com.gifwarno.rozklad.core.designsystem.component.NumberTile
 import com.gifwarno.rozklad.core.designsystem.component.Pill
 import com.gifwarno.rozklad.core.designsystem.component.StrokeText
+import com.gifwarno.rozklad.core.designsystem.component.outlineWidth
+import com.gifwarno.rozklad.core.designsystem.component.outlinedBackground
 import com.gifwarno.rozklad.core.designsystem.theme.GameFont
 import com.gifwarno.rozklad.core.designsystem.theme.GameStyle
 import com.gifwarno.rozklad.core.designsystem.theme.GameTitleStyle
@@ -201,9 +203,7 @@ private fun PlayerStripView(p: PlayerStrip, onOpen: () -> Unit) {
             Box(
                 Modifier
                     .size(48.dp)
-                    .clip(CircleShape)
-                    .background(Brush.linearGradient(listOf(c.gold, c.goldEnd)))
-                    .border(2.dp, c.ink, CircleShape),
+                    .outlinedBackground(Brush.linearGradient(listOf(c.gold, c.goldEnd)), CircleShape, outlineWidth(2.dp), c.ink),
                 contentAlignment = Alignment.Center,
             ) { Text(p.avatar, fontSize = 26.sp) }
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {

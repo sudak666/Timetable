@@ -25,6 +25,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -34,6 +35,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
+import com.gifwarno.rozklad.core.designsystem.component.outlineWidth
+import com.gifwarno.rozklad.core.designsystem.component.outlinedBackground
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.domain.Badge
 import com.gifwarno.rozklad.core.domain.RoadStep
@@ -114,15 +117,12 @@ fun BadgesCard(badges: List<Badge>, modifier: Modifier = Modifier) {
                     Text(
                         "${b.emoji} ${b.title}",
                         modifier = Modifier
-                            .clip(shape)
-                            .then(
-                                if (b.got) {
-                                    Modifier.background(Brush.horizontalGradient(listOf(c.gold, Color(0xFFFAB1A0))))
-                                } else {
-                                    Modifier.background(c.soft)
-                                },
+                            .outlinedBackground(
+                                if (b.got) Brush.horizontalGradient(listOf(c.gold, Color(0xFFFAB1A0))) else SolidColor(c.soft),
+                                shape,
+                                if (b.got) outlineWidth(2.dp) else 0.dp,
+                                c.ink,
                             )
-                            .then(if (b.got) Modifier.border(2.dp, c.ink, shape) else Modifier)
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                             .alpha(if (b.got) 1f else LOCKED_ALPHA)
                             .semantics { contentDescription = b.title + if (b.got) " — отримано" else " — ще ні" },

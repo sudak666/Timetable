@@ -34,9 +34,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -45,6 +49,7 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -95,22 +100,30 @@ fun GameSurface(
 ) {
     val c = RozkladTheme.colors
     val classic = LocalGameStyle.current == GameStyle.CLASSIC
-    // «Звичайний» — тонка рамка кольору лінії й м'яка тінь; «Арена» і «Блоки» — темне обведення й тверда тінь.
-    val ink = if (classic) c.line else c.ink
-    val shadow = if (classic) Color.Black.copy(alpha = CLASSIC_SHADOW) else c.ink
-    val border = if (classic) minOf(borderWidth, 1.dp) else borderWidth
-    // «Звичайний» — лише ледь помітний «підйом», без важкої плити під кнопкою.
-    val lift = if (classic) minOf(depth, CLASSIC_DEPTH.dp) else depth
+    val ink = c.ink
+    // «Звичайний» — без рамки, м'яка розмита тінь Android; «Арена» і «Блоки» — обведення й тверда тінь.
+    val border = if (classic) 0.dp else borderWidth
+    val lift = if (classic) 0.dp else depth
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val press by animateDpAsState(if (pressed && onClick != null) lift else 0.dp, spring(stiffness = 1400f), label = "press")
+    val elevation by animateDpAsState(
+        if (!classic || depth == 0.dp) {
+            0.dp
+        } else if (pressed && onClick != null) {
+            1.dp
+        } else {
+            CLASSIC_ELEVATION.dp
+        },
+        label = "elevation",
+    )
     val haptics = LocalHapticFeedback.current
     Box(
         modifier.drawBehind {
             val d = lift.toPx()
             if (d > 0f) {
                 val outline = shape.createOutline(Size(size.width, size.height - d), layoutDirection, this)
-                translate(top = d) { drawOutline(outline, shadow) }
+                translate(top = d) { drawOutline(outline, ink) }
             }
         },
         // Верх займає весь розмір обгортки (fillMaxWidth/weight), інакше тінь ширша за кнопку.
@@ -120,9 +133,27 @@ fun GameSurface(
             Modifier
                 .padding(bottom = lift)
                 .offset { IntOffset(0, press.roundToPx()) }
+                .then(
+                    if (elevation > 0.dp) {
+                        Modifier.shadow(elevation, shape, clip = false, ambientColor = c.ink, spotColor = c.ink)
+                    } else {
+                        Modifier
+                    },
+                )
+                // Рамка й заливка — одна фігура: спершу контур кольором рамки, поверх — заливка, менша на ширину рамки.
+                // Так на краю немає світлого «ореолу», який дає пара clip + border.
+                .drawWithCache {
+                    val bw = border.toPx()
+                    val outer = shape.createOutline(size, layoutDirection, this)
+                    val inner = shape.createOutline(Size(size.width - 2 * bw, size.height - 2 * bw), layoutDirection, this)
+                    onDrawBehind {
+                        if (bw > 0f) drawOutline(outer, ink)
+                        translate(left = bw, top = bw) {
+                            if (brush != null) drawOutline(inner, brush) else drawOutline(inner, color)
+                        }
+                    }
+                }
                 .clip(shape)
-                .then(if (brush != null) Modifier.background(brush) else Modifier.background(color))
-                .border(border, ink, shape)
                 .then(
                     if (onClick != null) {
                         Modifier.clickable(
@@ -229,7 +260,7 @@ fun GameProgressBar(
 ) {
     val c = RozkladTheme.colors
     val gameStyle = LocalGameStyle.current
-    val ink = if (gameStyle == GameStyle.CLASSIC) c.line else c.ink
+    val classic = gameStyle == GameStyle.CLASSIC
     val blocks = gameStyle == GameStyle.BLOCKS
     val p = progress.coerceIn(0f, 1f)
     Box(
@@ -237,38 +268,45 @@ fun GameProgressBar(
             .fillMaxWidth()
             .height(height)
             .semantics { progressBarRangeInfo = ProgressBarRangeInfo(p, 0f..1f) }
-            .clip(if (blocks) RoundedCornerShape(4.dp) else RoundedCornerShape(50))
-            .background(track)
-            .border(2.dp, ink, if (blocks) RoundedCornerShape(4.dp) else RoundedCornerShape(50)),
-    ) {
-        if (p > 0f) {
-            Box(
-                Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(p)
-                    .clip(if (blocks) RoundedCornerShape(4.dp) else RoundedCornerShape(50))
-                    .background(fill)
-                    .drawBehind {
-                        // Відблиск зверху й тінь знизу — «скляна» смужка.
-                        drawRect(Color.White.copy(alpha = 0.35f), size = Size(size.width, size.height * 0.35f))
-                        // «Блоки» — смужка з окремих «кубиків».
-                        if (blocks) {
-                            val step = BLOCK_STEP.dp.toPx()
-                            var x = step
-                            while (x < size.width) {
-                                drawRect(Color.Black.copy(alpha = 0.18f), topLeft = Offset(x, 0f), size = Size(2.dp.toPx(), size.height))
-                                x += step
+            .drawBehind {
+                // Усе малюється вкладеними фігурами без clip+border — краї рівні, без «ореолу».
+                val bw = if (classic) 0f else 2.dp.toPx()
+                fun radius(h: Float) = CornerRadius(if (blocks) 4.dp.toPx() else h / 2)
+                if (bw > 0f) drawRoundRect(c.ink, cornerRadius = radius(size.height))
+                val inner = Size(size.width - 2 * bw, size.height - 2 * bw)
+                val r = radius(inner.height)
+                translate(left = bw, top = bw) {
+                    drawRoundRect(track, size = inner, cornerRadius = r)
+                    if (p > 0f) {
+                        val filled = Size(inner.width * p, inner.height)
+                        val path = Path().apply { addRoundRect(RoundRect(Rect(Offset.Zero, filled), r)) }
+                        clipPath(path) {
+                            drawRect(fill, size = filled)
+                            // Відблиск зверху й тінь знизу — «скляна» смужка.
+                            drawRect(Color.White.copy(alpha = 0.35f), size = Size(filled.width, filled.height * 0.35f))
+                            drawRect(
+                                Color.Black.copy(alpha = 0.15f),
+                                topLeft = Offset(0f, filled.height * 0.75f),
+                                size = Size(filled.width, filled.height * 0.25f),
+                            )
+                            // «Блоки» — смужка з окремих «кубиків».
+                            if (blocks) {
+                                val step = BLOCK_STEP.dp.toPx()
+                                var x = step
+                                while (x < filled.width) {
+                                    drawRect(
+                                        Color.Black.copy(alpha = 0.18f),
+                                        topLeft = Offset(x, 0f),
+                                        size = Size(2.dp.toPx(), filled.height),
+                                    )
+                                    x += step
+                                }
                             }
                         }
-                        drawRect(
-                            Color.Black.copy(alpha = 0.15f),
-                            topLeft = Offset(0f, size.height * 0.75f),
-                            size = Size(size.width, size.height * 0.25f),
-                        )
-                    },
-            )
-        }
-    }
+                    }
+                }
+            },
+    )
 }
 
 /** Квадратик з номером уроку кольору предмета (як .n у вебі). */
@@ -389,8 +427,7 @@ private val CLOUDS = listOf(
     Triple(0.55f, 0.86f, 24f),
 )
 
-private const val CLASSIC_SHADOW = 0.08f
-private const val CLASSIC_DEPTH = 2
+private const val CLASSIC_ELEVATION = 3
 private val TIGHT_SIGNS = setOf("＋", "+", "−", "-")
 private const val CLASSIC_TEXT_SHADOW = 0.35f
 private const val BLOCK_STEP = 16
@@ -443,3 +480,22 @@ fun RowScope.GameNavItem(selected: Boolean, onClick: () -> Unit, icon: ImageVect
         Text(label, color = tint, style = MaterialTheme.typography.labelMedium, maxLines = 1)
     }
 }
+
+/**
+ * Заливка з обведенням без світлого «ореолу» на краю (пара clip + border його дає):
+ * спершу фігура кольором рамки, поверх — заливка, менша на ширину рамки.
+ */
+fun Modifier.outlinedBackground(fill: Brush, shape: Shape, borderWidth: Dp, borderColor: Color): Modifier = drawWithCache {
+    val bw = borderWidth.toPx()
+    val outer = shape.createOutline(size, layoutDirection, this)
+    val inner = shape.createOutline(Size(size.width - 2 * bw, size.height - 2 * bw), layoutDirection, this)
+    onDrawBehind {
+        if (bw > 0f) drawOutline(outer, borderColor)
+        translate(left = bw, top = bw) { drawOutline(inner, fill) }
+    }
+}
+
+/** Ширина обведення в поточному стилі: у «Звичайному» обведень немає. */
+@Composable
+@ReadOnlyComposable
+fun outlineWidth(width: Dp): Dp = if (LocalGameStyle.current == GameStyle.CLASSIC) 0.dp else width

@@ -59,6 +59,8 @@ import com.gifwarno.rozklad.core.designsystem.component.LoadingState
 import com.gifwarno.rozklad.core.designsystem.component.Pill
 import com.gifwarno.rozklad.core.designsystem.component.StatTile
 import com.gifwarno.rozklad.core.designsystem.component.StrokeText
+import com.gifwarno.rozklad.core.designsystem.component.outlineWidth
+import com.gifwarno.rozklad.core.designsystem.component.outlinedBackground
 import com.gifwarno.rozklad.core.designsystem.theme.GameFont
 import com.gifwarno.rozklad.core.designsystem.theme.GameTitleStyle
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
@@ -380,9 +382,7 @@ private fun Avatar(emoji: String) {
     Box(
         Modifier
             .size(60.dp)
-            .clip(CircleShape)
-            .background(Brush.linearGradient(listOf(c.gold, c.goldEnd)))
-            .border(3.dp, c.ink, CircleShape),
+            .outlinedBackground(Brush.linearGradient(listOf(c.gold, c.goldEnd)), CircleShape, outlineWidth(3.dp), c.ink),
         contentAlignment = Alignment.Center,
     ) {
         Text(emoji.ifBlank { "🙂" }, fontSize = 32.sp)
