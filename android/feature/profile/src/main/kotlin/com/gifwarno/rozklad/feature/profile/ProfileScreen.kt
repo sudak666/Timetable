@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -20,10 +22,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,7 +57,9 @@ import com.gifwarno.rozklad.core.designsystem.component.StrokeText
 import com.gifwarno.rozklad.core.designsystem.theme.GameFont
 import com.gifwarno.rozklad.core.designsystem.theme.GameTitleStyle
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
+import com.gifwarno.rozklad.core.domain.Trophies
 import com.gifwarno.rozklad.core.model.Role
+import com.gifwarno.rozklad.core.ui.LookPicker
 import com.gifwarno.rozklad.core.ui.PrivacyPolicyLink
 import com.gifwarno.rozklad.feature.profile.alerts.AlertsSection
 import com.gifwarno.rozklad.feature.profile.alerts.AlertsSectionActions
@@ -107,6 +114,7 @@ fun ProfileRoute(onPickAlertRegion: () -> Unit, modifier: Modifier = Modifier, v
             pushState = pushState,
             onPushToggle = onPushToggle,
             alerts = alerts,
+            onLook = viewModel::setLook,
             modifier = modifier,
         )
     }
@@ -125,8 +133,10 @@ internal fun ProfileScreen(
     onPushToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     alerts: AlertsSectionActions? = null,
+    onLook: (avatar: String?, accent: String?) -> Unit = { _, _ -> },
 ) {
     var confirmSignOut by rememberSaveable { mutableStateOf(false) }
+    var lookSheet by rememberSaveable { mutableStateOf(false) }
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
     val c = RozkladTheme.colors
     Column(
@@ -144,7 +154,11 @@ internal fun ProfileScreen(
                         .size(76.dp)
                         .clip(CircleShape)
                         .background(Brush.linearGradient(listOf(c.gold, c.goldEnd)))
-                        .border(3.dp, c.ink, CircleShape),
+                        .border(3.dp, c.ink, CircleShape)
+                        .clickable(onClickLabel = "Змінити аватар і колір", role = androidx.compose.ui.semantics.Role.Button) {
+                            lookSheet =
+                                true
+                        },
                     contentAlignment = Alignment.Center,
                 ) { Text(state.avatar.ifBlank { "🙂" }, fontSize = 42.sp) }
                 Column(Modifier.weight(1f).padding(start = 14.dp)) {
@@ -159,6 +173,14 @@ internal fun ProfileScreen(
                 }
             }
         }
+        GameButton(
+            "Аватар і колір",
+            onClick = { lookSheet = true },
+            modifier = Modifier.fillMaxWidth(),
+            color = c.card,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            leading = "🎨",
+        )
 
         if (state.isParent) {
             GameCard("🎟️ Запросити в сім’ю") {
@@ -240,6 +262,10 @@ internal fun ProfileScreen(
         }
     }
 
+    if (lookSheet) {
+        LookSheet(state, onDismiss = { lookSheet = false }, onLook = onLook)
+    }
+
     if (confirmDelete) {
         DeleteAccountDialog(
             warnings = state.deletionWarnings,
@@ -295,5 +321,30 @@ private fun CodeRow(label: String, code: String) {
             Text(code, style = MaterialTheme.typography.titleLarge, fontFamily = GameFont, letterSpacing = 3.sp)
         }
         GameButton("Копіювати", onClick = { clipboard.setText(AnnotatedString(code)) })
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LookSheet(state: ProfileUiState.Ready, onDismiss: () -> Unit, onLook: (String?, String?) -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 24.dp).navigationBarsPadding()) {
+            Text("🎨 Аватар і колір", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 12.dp))
+            LookPicker(
+                level = state.level,
+                avatar = state.avatar,
+                accent = state.accent,
+                onAvatar = { onLook(it, null) },
+                onAccent = { onLook(null, it) },
+            )
+            if (state.level < Trophies.PARENT_LEVEL) {
+                Text(
+                    "Нові аватари й кольори відкриваються з рівнями — отримуй оцінки, щоб їх розблокувати!",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 16.dp),
+                )
+            }
+        }
     }
 }

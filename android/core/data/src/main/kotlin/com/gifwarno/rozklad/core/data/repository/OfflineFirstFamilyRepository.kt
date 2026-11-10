@@ -187,6 +187,15 @@ internal class OfflineFirstFamilyRepository @Inject constructor(
         submit(familyId, NetworkWrite(Tables.LEDGER, WriteKind.INSERT, dto.id, body))
     }
 
+    override suspend fun setMyLook(familyId: String, userId: String, avatar: String?, theme: String?) {
+        if (avatar == null && theme == null) return
+        val body = buildJsonObject {
+            avatar?.let { put("avatar", it) }
+            theme?.let { put("theme", it) }
+        }
+        submit(familyId, NetworkWrite(Tables.MEMBERS, WriteKind.UPDATE, userId, body))
+    }
+
     override suspend fun parentInviteCode(familyId: String): Result<String?> = withContext(io) {
         runCatching { network.parentCode(familyId) }
     }

@@ -63,8 +63,10 @@ import com.gifwarno.rozklad.core.domain.Timetable
 import com.gifwarno.rozklad.core.model.Grade
 import com.gifwarno.rozklad.core.model.GradeStatus
 import com.gifwarno.rozklad.core.model.LedgerKind
+import com.gifwarno.rozklad.core.ui.BadgesCard
 import com.gifwarno.rozklad.core.ui.ChildSelector
 import com.gifwarno.rozklad.core.ui.Format
+import com.gifwarno.rozklad.core.ui.TrophyRoad
 import com.gifwarno.rozklad.core.ui.gradeColor
 import java.time.LocalDate
 
@@ -175,6 +177,11 @@ private fun ReadyContent(
     ) {
         item(key = "kids") { ChildSelector(state.children, state.child.userId, onSelectChild) }
         item(key = "player") { PlayerCard(state, onLedger) }
+        if (state.road.isNotEmpty()) {
+            item(key = "road-title") { ArenaTitle("🏆 Шлях нагород") }
+            item(key = "road") { TrophyRoad(state.road) }
+        }
+        if (state.badges.isNotEmpty()) item(key = "badges") { BadgesCard(state.badges) }
         if (state.pending.isNotEmpty()) {
             item(key = "pending-title") { ArenaTitle("⏳ Чекають підтвердження") }
             item(key = "pending") { GradeList(state.pending, actions) }

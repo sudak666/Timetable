@@ -7,6 +7,7 @@ import com.gifwarno.rozklad.core.data.repository.FamilyRepository
 import com.gifwarno.rozklad.core.data.repository.SessionRepository
 import com.gifwarno.rozklad.core.datastore.ThemeMode
 import com.gifwarno.rozklad.core.datastore.UserPreferencesDataSource
+import com.gifwarno.rozklad.core.domain.Trophies
 import com.gifwarno.rozklad.core.model.SessionState
 import com.gifwarno.rozklad.core.model.SyncStatus
 import com.gifwarno.rozklad.core.ui.AlertBannerText
@@ -44,6 +45,12 @@ class MainActivityViewModel @Inject constructor(
     val hasFamilyData: StateFlow<Boolean> = active.context
         .map { it != null }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
+
+    /** Колір, який людина обрала собі (school_members.theme), — як у вебі; null — фірмовий. */
+    val accent: StateFlow<Long?> = active.context
+        .map { Trophies.parseColor(it?.me?.theme) }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     /** Плашка тривоги над вкладками; null — немає тривоги або місце не обрано. */
     val alertBanner: StateFlow<AlertBannerText?> = active.context

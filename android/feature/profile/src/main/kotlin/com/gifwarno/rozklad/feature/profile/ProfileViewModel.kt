@@ -7,6 +7,9 @@ import com.gifwarno.rozklad.core.data.repository.FamilyRepository
 import com.gifwarno.rozklad.core.data.repository.SessionRepository
 import com.gifwarno.rozklad.core.datastore.ThemeMode
 import com.gifwarno.rozklad.core.datastore.UserPreferencesDataSource
+import com.gifwarno.rozklad.core.domain.Rewards
+import com.gifwarno.rozklad.core.domain.Trophies
+import com.gifwarno.rozklad.core.model.GradeStatus
 import com.gifwarno.rozklad.core.model.Member
 import com.gifwarno.rozklad.core.model.Role
 import com.gifwarno.rozklad.core.push.PushSettings
@@ -42,6 +45,10 @@ sealed interface ProfileUiState {
         val pendingChanges: Int,
         /** Місце для повітряних тривог; null — не обрано. */
         val alertRegion: String? = null,
+        /** Рівень для відкриття аватарів і кольорів (батькам — усе). */
+        val level: Int = Trophies.PARENT_LEVEL,
+        /** Обраний колір «#rrggbb» або порожньо. */
+        val accent: String = "",
     ) : ProfileUiState
 }
 
@@ -144,6 +151,14 @@ class ProfileViewModel @Inject constructor(
             deletionWarnings = deletionWarnings(ctx.isParent, ctx.data.members, ctx.user.id, ctx.data.family.name),
             pendingChanges = ctx.sync.pendingChanges,
             alertRegion = ctx.data.airAlert?.regionName,
+            level = if (ctx.isParent) {
+                Trophies.PARENT_LEVEL
+            } else {
+                Rewards.levelOf(
+                    Rewards.xpOf(ctx.data.grades.filter { it.childId == ctx.user.id && it.status == GradeStatus.APPROVED }),
+                )
+            },
+            accent = ctx.me?.theme.orEmpty(),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ProfileUiState.Loading)
 
@@ -151,6 +166,14 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             val ctx = active.context.filterNotNull().first()
             if (ctx.isParent) parentCode.value = families.parentInviteCode(ctx.familyId).getOrNull() ?: "—"
+        }
+    }
+
+    /** Свій аватар і/або колір (як у вебі: school_members.avatar / theme). */
+    fun setLook(avatar: String? = null, accent: String? = null) {
+        viewModelScope.launch {
+            val ctx = active.context.filterNotNull().first()
+            families.setMyLook(ctx.familyId, ctx.user.id, avatar, accent)
         }
     }
 

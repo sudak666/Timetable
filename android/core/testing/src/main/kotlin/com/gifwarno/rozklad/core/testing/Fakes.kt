@@ -148,6 +148,19 @@ class FakeFamilyRepository(initial: FamilyData?) : FamilyRepository {
 
     override suspend fun addLedger(familyId: String, childId: String, kind: LedgerKind, amount: Int, note: String) = Unit
 
+    val looks = mutableListOf<Triple<String, String?, String?>>()
+
+    override suspend fun setMyLook(familyId: String, userId: String, avatar: String?, theme: String?) {
+        looks += Triple(userId, avatar, theme)
+        data.value = data.value?.let { d ->
+            d.copy(
+                members = d.members.map {
+                    if (it.userId == userId) it.copy(avatar = avatar ?: it.avatar, theme = theme ?: it.theme) else it
+                },
+            )
+        }
+    }
+
     override suspend fun parentInviteCode(familyId: String) = Result.success<String?>("PARENT1")
 
     val savedSchedules = mutableMapOf<String, SchoolSchedule>()

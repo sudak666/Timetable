@@ -5,7 +5,9 @@ import com.gifwarno.rozklad.core.domain.SchoolStatus
 import com.gifwarno.rozklad.core.domain.Timetable
 import com.gifwarno.rozklad.core.model.AirAlert
 import com.gifwarno.rozklad.core.model.AlertStatus
+import com.gifwarno.rozklad.core.model.FamilyContext
 import com.gifwarno.rozklad.core.model.SchoolSchedule
+import com.gifwarno.rozklad.core.model.SessionState
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -25,6 +27,9 @@ data class WidgetLesson(val number: Int, val subject: String, val emoji: String,
  */
 sealed interface WidgetState {
     data object SignedOut : WidgetState
+
+    /** Дані ще не піднялися (холодний старт, повільний диск) — не плутати з «не увійшли». */
+    data object Loading : WidgetState
 
     data class NoSchedule(val childName: String) : WidgetState
 
@@ -149,4 +154,16 @@ fun nextRefreshAt(now: LocalDateTime, schedule: SchoolSchedule?): LocalDateTime 
         .firstOrNull { it.isAfter(t) }
         ?.let { now.toLocalDate().atTime(it) }
         ?: midnight
+}
+
+/**
+ * Що показати, коли відомі сесія й дані сім'ї. null — не дочекались (тайм-аут):
+ * це «завантаження», а не «не увійшли» — інакше віджет хибно просить увійти, хоча людина в акаунті.
+ */
+fun resolveWidgetState(session: SessionState?, family: FamilyContext?, build: (FamilyContext) -> WidgetState): WidgetState = when {
+    session == null || session == SessionState.Loading || session is SessionState.Unavailable -> WidgetState.Loading
+    session !is SessionState.Ready -> WidgetState.SignedOut
+    family == null -> WidgetState.Loading
+    family.child == null -> WidgetState.NoSchedule("")
+    else -> build(family)
 }

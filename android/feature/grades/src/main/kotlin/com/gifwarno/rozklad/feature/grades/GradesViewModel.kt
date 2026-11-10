@@ -4,9 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gifwarno.rozklad.core.data.repository.ActiveFamily
 import com.gifwarno.rozklad.core.data.repository.FamilyRepository
+import com.gifwarno.rozklad.core.domain.Badge
 import com.gifwarno.rozklad.core.domain.Rewards
+import com.gifwarno.rozklad.core.domain.RoadStep
 import com.gifwarno.rozklad.core.domain.SchoolCalendar
 import com.gifwarno.rozklad.core.domain.Totals
+import com.gifwarno.rozklad.core.domain.Trophies
 import com.gifwarno.rozklad.core.model.FamilyContext
 import com.gifwarno.rozklad.core.model.Grade
 import com.gifwarno.rozklad.core.model.GradeStatus
@@ -46,6 +49,9 @@ sealed interface GradesUiState {
         val pending: List<GradeItem>,
         val recent: List<GradeItem>,
         val rates: Map<Int, Int>,
+        /** Шлях нагород за рівнями й досягнення — як у вебі. */
+        val road: List<RoadStep> = emptyList(),
+        val badges: List<Badge> = emptyList(),
     ) : GradesUiState
 }
 
@@ -80,12 +86,14 @@ class GradesViewModel @Inject constructor(
             canApprove = ctx.isParent && g.status == GradeStatus.PENDING,
             canDelete = ctx.isParent || g.status == GradeStatus.PENDING,
         )
+        val totals = Rewards.totals(approved, ledger, auto, rates, today, SchoolCalendar.mondayOf(today))
+        val level = Rewards.levelOf(xp)
         return GradesUiState.Ready(
             isParent = ctx.isParent,
             children = ctx.data.children,
             child = child,
-            totals = Rewards.totals(approved, ledger, auto, rates, today, SchoolCalendar.mondayOf(today)),
-            level = Rewards.levelOf(xp),
+            totals = totals,
+            level = level,
             xpInLevel = xp % Rewards.XP_PER_LEVEL,
             run = Rewards.currentRun(approved, ctx.data.settings.streak),
             runTarget = ctx.data.settings.streak.len,
@@ -93,6 +101,8 @@ class GradesViewModel @Inject constructor(
             pending = all.filter { it.status == GradeStatus.PENDING }.map(::item),
             recent = approved.take(RECENT_LIMIT).map(::item),
             rates = rates,
+            road = Trophies.road(level),
+            badges = Trophies.badges(approved, totals.earned, rates, SchoolCalendar.mondayOf(today)),
         )
     }
 

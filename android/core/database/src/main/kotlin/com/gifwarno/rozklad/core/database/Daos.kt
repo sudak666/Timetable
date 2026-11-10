@@ -64,6 +64,13 @@ interface FamilyDao {
 
     @Upsert suspend fun upsertChallenges(rows: List<ChallengeEntity>)
 
+    /** Аватар і колір учасника (null — не змінювати). */
+    @Query(
+        "UPDATE members SET avatar = COALESCE(:avatar, avatar), theme = COALESCE(:theme, theme) " +
+            "WHERE familyId = :familyId AND userId = :userId",
+    )
+    suspend fun setMemberLook(familyId: String, userId: String, avatar: String?, theme: String?)
+
     @Query("UPDATE homework SET done = :done WHERE id = :id")
     suspend fun setHomeworkDone(id: String, done: Boolean)
 
