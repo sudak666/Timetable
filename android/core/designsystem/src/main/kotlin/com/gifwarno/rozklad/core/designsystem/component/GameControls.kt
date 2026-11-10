@@ -8,12 +8,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -42,6 +46,32 @@ import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 @Composable
 fun ArenaTitle(text: String, modifier: Modifier = Modifier) {
     StrokeText(text, GameTitleStyle.copy(fontSize = 20.sp, lineHeight = 26.sp), modifier.padding(top = 6.dp), strokeWidth = 4.dp)
+}
+
+/** Верхня панель на тлі «арени»: кругла кнопка «назад», заголовок з обведенням, дії праворуч. */
+@Composable
+fun GameTopBar(title: String, onBack: () -> Unit, modifier: Modifier = Modifier, actions: @Composable RowScope.() -> Unit = {}) {
+    Row(
+        modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        GameSurface(shape = CircleShape, depth = 3.dp, onClick = onBack, onClickLabel = "Назад") {
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Назад",
+                modifier = Modifier.padding(10.dp).size(22.dp),
+            )
+        }
+        StrokeText(
+            title,
+            GameTitleStyle.copy(fontSize = 20.sp, lineHeight = 24.sp),
+            Modifier.weight(1f),
+            strokeWidth = 4.dp,
+            maxLines = 2,
+        )
+        actions()
+    }
 }
 
 /** Велика «плаваюча» кнопка дії (замість стандартної FAB). */
