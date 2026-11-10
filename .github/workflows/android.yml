@@ -34,8 +34,16 @@ jobs:
       # Спершу release-збірка, потім Lint: двічі (efa1c82, 26e3dc9) KSP2 падав з «could not be resolved»
       # лише тоді, коли release-KSP запускався паралельно з аналізом Lint в одному процесі Gradle.
       # Після збірки release-KSP уже виконано, і Lint лише аналізує.
+      # 10.11 KSP2 знову випадково падав («Context could not be resolved») уже й тут, без Lint.
+      # Код при цьому коректний: повторний запуск у чистому процесі Gradle проходить. Тому — один повтор
+      # без демона й кешу збірки; справжня помилка компіляції впаде і вдруге.
       - name: Release-збірка (R8)
-        run: ./gradlew :app:assembleRelease -PwarningsAsErrors=true
+        run: |
+          ./gradlew :app:assembleRelease -PwarningsAsErrors=true || {
+            echo "::warning::KSP-збій — повтор у новому процесі Gradle"
+            ./gradlew --stop
+            ./gradlew :app:assembleRelease -PwarningsAsErrors=true --no-build-cache
+          }
       - name: Android Lint
         run: ./gradlew :app:lintRelease
       - name: Звіти
