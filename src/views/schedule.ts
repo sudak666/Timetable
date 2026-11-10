@@ -3,7 +3,7 @@ import { classMap } from 'lit-html/directives/class-map.js';
 import { styleMap } from 'lit-html/directives/style-map.js';
 import { BELLS, RANGES, SUBJECTS, WEEK, bellEnd, bellStart, isSubject } from '../data/schedule';
 import { emo, emojiSrc } from '../lib/emoji';
-import { addDays, clockOf, fmtDate, fmtDay, hms, holidayOf, iso, lessonsOn, mondayOf, nextSchoolDate, statusAt } from '../lib/time';
+import { addDays, clockOf, fmtDate, fmtDay, hms, holidayOf, iso, leftText, lessonsOn, mondayOf, nextSchoolDate, statusAt } from '../lib/time';
 import { set, state, store } from '../state';
 import { boom } from '../ui/confetti';
 import { alert } from '../ui/dialog';
@@ -68,10 +68,10 @@ function weekendText(): TemplateResult {
   const fri = WEEK[4]?.lessons.length ?? 0;
   if (!fri) return html`Скоро вихідні! ${emo('🏖️')}`;
   const left = (4 - c.weekday) * 1440 + (RANGES[fri - 1]![1] - c.min);
-  return left <= 0 ? html`Вихідні вже тут! ${emo('🥳')}` : html`Ще <b>${Math.floor(left / 1440)} д ${Math.floor((left % 1440) / 60)} год</b> — і вихідні! ${emo('🏖️')}`;
+  return left <= 0 ? html`Вихідні вже тут! ${emo('🥳')}` : html`Ще <b>${leftText(Math.floor(left / 1440), Math.floor((left % 1440) / 60))}</b> — і вихідні! ${emo('🏖️')}`;
 }
 
-const FACTS = ['Восьминіг має три серця і блакитну кров 🐙', 'Мед ніколи не псується — його знаходили в єгипетських пірамідах 🍯', 'Равлик може спати до 3 років 🐌', 'У космосі неможливо заплакати — сльози не падають 🚀', 'Банани — це ягоди, а полуниця — ні 🍌', 'Серце кита розміром з автомобіль 🐋', 'Блискавка гарячіша за поверхню Сонця ⚡', 'Мурахи ніколи не сплять по-справжньому 🐜', 'Жирафи сплять лише 30 хвилин на добу 🦒', 'На Венері день довший за рік 🪐', 'Коти сплять близько 16 годин на день 🐱', 'Дельфіни дають одне одному імена 🐬', 'Метелики відчувають смак ногами 🦋', 'В Україні понад 70 000 річок 🌊'];
+const FACTS = ['Восьминіг має три серця і блакитну кров 🐙', 'Мед ніколи не псується — його знаходили в єгипетських пірамідах 🍯', 'Равлик може спати до 3 років 🐌', 'У космосі сльози не падають — збираються кулькою біля ока 🚀', 'Банани — це ягоди, а полуниця — ні 🍌', 'Серце кита розміром з автомобіль 🐋', 'Блискавка гарячіша за поверхню Сонця ⚡', 'Мураха може підняти вагу в 10–50 разів більшу за себе 🐜', 'Жирафи сплять лише 30 хвилин на добу 🦒', 'На Венері день довший за рік 🪐', 'Коти сплять близько 16 годин на день 🐱', 'Дельфіни дають одне одному імена 🐬', 'Метелики відчувають смак ногами 🦋', 'В Україні понад 70 000 річок 🌊'];
 
 export function addStar(x?: number, y?: number): void {
   const n = Math.min(10, state.stars + 1);
@@ -88,7 +88,7 @@ export function funCards(quiz: TemplateResult): TemplateResult {
       <div class="row"><span></span><button type="button" @click=${() => set({ factIdx: state.factIdx + 1 })}>Ще факт</button></div></section>
     <section class="side" aria-labelledby="wk-h"><h2 class="h4" id="wk-h">${emo('🌈')} До вихідних</h2><p>${weekendText()}</p>
       <h2 class="h4" style="margin-top:12px">${emo('⭐')} Мої зірочки за сьогодні</h2>
-      <div class="row"><span class="stars" aria-label=${`Зірочок: ${state.stars}`}>${state.stars ? emo('⭐'.repeat(state.stars)) : '—'}</span>
+      <div class="row"><span class="stars" aria-label=${`Зірочок: ${state.stars}`}>${state.stars ? emo('⭐'.repeat(state.stars)) : html`<small class="muted">Ще жодної — постав собі за добру справу</small>`}</span>
         <button type="button" @click=${(e: MouseEvent) => addStar(e.clientX, e.clientY)}>+ зірка</button></div></section>
   </div>`;
 }

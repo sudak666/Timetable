@@ -169,9 +169,12 @@ private fun LessonsTab(state: ScheduleEditorState.Editing, actions: EditorAction
         }
         item(key = "saturday") {
             // Налаштування всього тижня, а не вибраного дня — тому окремо від картки дня.
-            Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Навчання в суботу", style = MaterialTheme.typography.bodyMedium, color = c.muted, modifier = Modifier.weight(1f))
-                Switch(checked = state.draft.week.size > SchoolSchedule.MIN_DAYS, onCheckedChange = actions.setSaturday)
+            // На картці: сірий текст просто на фіолетовому тлі читався як вимкнений.
+            GameSurface {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Навчання в суботу", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    Switch(checked = state.draft.week.size > SchoolSchedule.MIN_DAYS, onCheckedChange = actions.setSaturday)
+                }
             }
         }
         item(key = "lessons") {

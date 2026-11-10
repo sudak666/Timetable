@@ -210,11 +210,14 @@ function cards(d: D): TemplateResult {
   // порівняння місяців / рейтинг
   const mo = iso(state.now).slice(0, 7), pdt = new Date(state.now); pdt.setDate(1); pdt.setMonth(pdt.getMonth() - 1);
   const pm = iso(pdt).slice(0, 7);
-  const earnedIn = (cid: string, m: string) => {
+  // Гроші — накопичувальні: поки місяць триває, порівнюємо з тими самими днями минулого («за 1–10»).
+  const day = state.now.getDate(), monthLen = new Date(state.now.getFullYear(), state.now.getMonth() + 1, 0).getDate();
+  const upTo = day < monthLen ? day : 31;
+  const earnedIn = (cid: string, m: string, last = 31) => {
     const a = state.grades.filter((g) => g.child_id === cid && g.status === 'approved');
     const au = autoRewards(a, state.challenges.filter((c) => c.child_id === cid), state.streak);
     return [...a.map((g) => [g.date, gradeValue(g, state.rates)] as const), ...state.ledger.filter((l) => l.child_id === cid && l.kind === 'bonus').map((l) => [l.date, l.amount] as const), ...au.map((x) => [x.date, x.amount] as const)]
-      .reduce((t, [dt, v]) => (dt.startsWith(m) ? t + v : t), 0);
+      .reduce((t, [dt, v]) => (dt.startsWith(m) && +dt.slice(8, 10) <= last ? t + v : t), 0);
   };
   const avg = (m: string) => { const a = d.A.filter((g) => isScored(g) && g.date.startsWith(m)); return a.length ? a.reduce((t, g) => t + g.grade, 0) / a.length : 0; };
   const kids = state.members.filter((x) => x.role === 'child');
@@ -224,10 +227,10 @@ function cards(d: D): TemplateResult {
     const r = kids.map((c) => [c, earnedIn(c.user_id, mo)] as const).sort((a, b) => b[1] - a[1]);
     rank = html`<h3 class="h5"><span>${emo('🏆')} Рейтинг місяця</span></h3><ol class="rank">${r.map(([c, v], i) => html`<li class=${classMap({ me: c.user_id === state.kid })}><span>${emo(['🥇', '🥈', '🥉'][i] ?? '·')} ${c.name || 'Дитина'}</span><span>${uah(v)}</span></li>`)}</ol>`;
   } else {
-    const a1 = avg(mo), a0 = avg(pm), e1 = state.kid ? earnedIn(state.kid, mo) : 0, e0 = state.kid ? earnedIn(state.kid, pm) : 0;
+    const a1 = avg(mo), a0 = avg(pm), e1 = state.kid ? earnedIn(state.kid, mo) : 0, e0 = state.kid ? earnedIn(state.kid, pm, upTo) : 0;
     rank = html`<h3 class="h5"><span>${emo('🏆')} Я проти минулого місяця</span></h3>
       <div class="kv"><span>Середній бал</span><b>${a1 ? a1.toFixed(1) : '—'} ${arrow(a1, a0)} <small>(${a0 ? a0.toFixed(1) : '—'})</small></b></div>
-      <div class="kv"><span>Заробив</span><b>${uah(e1)} ${arrow(e1, e0)} <small>(${uah(e0)})</small></b></div>`;
+      <div class="kv"><span>${upTo < 31 ? `Заробив за 1–${upTo}` : 'Заробив'}</span><b>${uah(e1)} ${arrow(e1, e0)} <small>(${uah(e0)})</small></b></div>`;
   }
   const s = [...d.A].sort(byTime);
   return html`<div class="cards2">

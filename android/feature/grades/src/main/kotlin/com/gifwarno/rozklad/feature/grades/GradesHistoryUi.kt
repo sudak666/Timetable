@@ -103,7 +103,7 @@ private fun MoneyRow(e: HistoryEntry.Money, onDelete: (String) -> Unit) {
         },
         title = l.note.ifBlank { if (bonus) "Бонус" else "Виплачено" },
         subtitle = Format.dayShort(l.date),
-        amount = if (bonus) Format.money(l.amount) else "−${l.amount} ₴",
+        amount = if (bonus) Format.money(l.amount) else "−${l.amount}\u00A0₴",
         amountColor = if (bonus) moneyColor(l.amount) else c.muted,
         onDelete = if (e.canDelete) ({ onDelete(l.id) }) else null,
     )
@@ -151,7 +151,13 @@ internal fun StatsCard(state: GradesUiState.Ready) {
                     if (m.avgNow == null || m.avgPrev == null) 0 else m.avgNow.compareTo(m.avgPrev),
                 )
                 // Минулий місяць — просто сума («було 1910 ₴»), без «+», щоб не сперечалася зі стрілкою.
-                CompareRow("Заробив", Format.money(m.earnedNow), Format.balance(m.earnedPrev), m.earnedNow.compareTo(m.earnedPrev))
+                // Місяць ще триває — порівнюємо з тими самими днями («за 1–10»), а не з усім минулим місяцем.
+                CompareRow(
+                    if (m.upToDay != null) "Заробив за 1–${m.upToDay}" else "Заробив",
+                    Format.money(m.earnedNow),
+                    Format.balance(m.earnedPrev),
+                    m.earnedNow.compareTo(m.earnedPrev),
+                )
             }
             if (state.rank.isNotEmpty()) {
                 Text("🏆 Рейтинг місяця", style = MaterialTheme.typography.titleSmall)

@@ -103,7 +103,7 @@ internal fun ChallengesCard(items: List<ChallengeItem>, isParent: Boolean, onNew
                             height = 10.dp,
                         )
                     }
-                    Pill("+${ch.reward} ₴", Modifier.padding(start = 10.dp), color = c.positive, contentColor = Color.White)
+                    Pill("+${ch.reward}\u00A0₴", Modifier.padding(start = 10.dp), color = c.positive, contentColor = Color.White)
                     if (isParent) {
                         IconButton(onClick = { onDelete(ch.id) }) {
                             Icon(Icons.Outlined.Delete, contentDescription = "Видалити челендж «${ch.title}»", tint = c.muted)

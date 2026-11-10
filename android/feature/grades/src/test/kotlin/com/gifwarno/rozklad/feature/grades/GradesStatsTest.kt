@@ -42,6 +42,13 @@ class GradesStatsTest {
         assertEquals(10.0, c.avgNow!!, 0.001)
         assertEquals(10.0, c.avgPrev!!, 0.001)
         assertNull(GradesStats.avgIn(data.grades, YearMonth.of(2026, 9)))
+        // Гроші — за ті самі дні: 10 листопада проти 1–10 жовтня (оцінка 20.10 ще не рахується).
+        assertEquals(10, c.upToDay)
+        assertEquals(350, c.earnedNow)
+        assertEquals(0, c.earnedPrev)
+        val end = GradesStats.compare(kid, data.grades, data, LocalDate.parse("2026-11-30"))
+        assertNull(end.upToDay)
+        assertEquals(200, end.earnedPrev)
         assertEquals(listOf("Математика"), GradesStats.subjectAverages(data.grades).map { it.subject })
     }
 

@@ -96,6 +96,26 @@ keyPassword=…
 
 Без цього файлу release збирається непідписаним. Для Google Play використовуй Play App Signing.
 
+### Демо-режим (лише debug)
+
+Вигадана сім'я (шестикласник Тарас і мама Оксана) з оцінками, домашкою, челенджами й розкладом.
+Усе в пам'яті, жодного запиту на сервер, тож можна натискати будь-що. Демо-режим потрібен для огляду екранів
+і скриншотів магазину. У release-збірки він не потрапляє: код лежить в `app/src/debug/.../demo`.
+
+```bash
+# увімкнути (role=child або parent; time — котра зараз година в демо)
+adb shell "run-as com.gifwarno.dvanadtsiatka.debug sh -c 'printf \"role=child\ntime=10:40\n\" > files/demo'"
+adb shell am force-stop com.gifwarno.dvanadtsiatka.debug
+# вимкнути
+adb shell run-as com.gifwarno.dvanadtsiatka.debug rm files/demo
+```
+
+Поки демо-режим увімкнений, debug-застосунок не бачить справжнього акаунта. Тому вмикайте його на емуляторі,
+а не на телефоні, де ви увійшли в справжній акаунт.
+
+Скриншоти магазину лежать у `fastlane/metadata/android/uk-UA/images/phoneScreenshots/` (1080×1920). Їх знято
+в демо-режимі на емуляторі Pixel з годинником статус-бару 10:40, а підписи й рамки додано скриптом `fastlane/store_screenshots.py <знімки> <куди> core/designsystem/src/main/res/font` (потрібен Pillow).
+
 ## Push-сповіщення (Firebase)
 
 Сервер (`supabase/functions/school-push`) надсилає ті самі події і в веб-push, і в Android (FCM HTTP v1, `fcm.ts`).

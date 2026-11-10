@@ -74,10 +74,15 @@ class TodayPlayerTest {
 
     @Test
     fun `до вихідних — як у вебі`() {
-        // Пт у прикладі — 6 уроків, кінець о 14:20. Понеділок 18:00 → 3 д 20 год 20 хв.
-        assertEquals("Ще 3 д 20 год — і вихідні! 🏖️", weekendText(LocalDateTime.parse("2026-11-09T18:00"), cal, 6))
+        // Пт у прикладі — 6 уроків, кінець о 14:20. Понеділок 18:00 → 3 дні 20 год 20 хв.
+        assertEquals("Ще 3 дні 20 год — і вихідні! 🏖️", weekendText(LocalDateTime.parse("2026-11-09T18:00"), cal, 6))
         assertEquals("Ура, вихідні! Відпочивай 🎉", weekendText(LocalDateTime.parse("2026-11-14T10:00"), cal, 6))
         assertEquals("Вихідні вже тут! 🥳", weekendText(LocalDateTime.parse("2026-11-13T15:00"), cal, 6))
+        // П'ятниця зранку: без «0 д»; відмінки днів.
+        assertEquals("Ще 4 год — і вихідні! 🏖️", weekendText(LocalDateTime.parse("2026-11-13T10:00"), cal, 6))
+        assertEquals("1 день", leftText(1, 0))
+        assertEquals("5 днів 2 год", leftText(5, 2))
+        assertEquals("менше години", leftText(0, 0))
     }
 
     @Test
