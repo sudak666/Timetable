@@ -4,24 +4,23 @@ import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,14 +31,27 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gifwarno.rozklad.core.datastore.ThemeMode
+import com.gifwarno.rozklad.core.designsystem.component.ButtonShape
+import com.gifwarno.rozklad.core.designsystem.component.GameButton
+import com.gifwarno.rozklad.core.designsystem.component.GameSegmented
+import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.component.LoadingState
+import com.gifwarno.rozklad.core.designsystem.component.Pill
+import com.gifwarno.rozklad.core.designsystem.component.StrokeText
+import com.gifwarno.rozklad.core.designsystem.theme.GameFont
+import com.gifwarno.rozklad.core.designsystem.theme.GameTitleStyle
+import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.model.Role
 import com.gifwarno.rozklad.core.ui.PrivacyPolicyLink
 import com.gifwarno.rozklad.feature.profile.alerts.AlertsSection
@@ -116,63 +128,81 @@ internal fun ProfileScreen(
 ) {
     var confirmSignOut by rememberSaveable { mutableStateOf(false) }
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    val c = RozkladTheme.colors
     Column(
         modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(state.avatar, style = MaterialTheme.typography.displayMedium)
-            Column {
-                Text(state.name, style = MaterialTheme.typography.titleLarge)
-                Text(state.email, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(if (state.isParent) "Батьки · ${state.familyName}" else state.familyName, style = MaterialTheme.typography.labelLarge)
-            }
-        }
-
-        if (state.isParent) {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Запросити в сім’ю", style = MaterialTheme.typography.titleMedium)
-                    CodeRow("Код для дитини", state.childInviteCode)
-                    val parent = state.parentInviteCode
-                    if (parent == null) {
-                        TextButton(onClick = onShowParentCode) { Text("Показати код для другого батька") }
-                    } else {
-                        CodeRow("Код для другого батька", parent)
-                    }
-                }
-            }
-        }
-
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(vertical = 8.dp)) {
-                Text("Сім’я", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 16.dp))
-                state.members.forEach { m ->
-                    ListItem(
-                        leadingContent = { Text(m.avatar.ifBlank { "🙂" }, style = MaterialTheme.typography.titleLarge) },
-                        headlineContent = { Text(m.name) },
-                        supportingContent = { Text(if (m.role == Role.PARENT) "Батьки" else "Дитина") },
+        GameSurface(
+            brush = Brush.linearGradient(listOf(c.accent, Color(0xFFB062E8), c.accentEnd)),
+            contentColor = Color.White,
+            depth = 6.dp,
+        ) {
+            Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier
+                        .size(76.dp)
+                        .clip(CircleShape)
+                        .background(Brush.linearGradient(listOf(c.gold, c.goldEnd)))
+                        .border(3.dp, c.ink, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) { Text(state.avatar.ifBlank { "🙂" }, fontSize = 42.sp) }
+                Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                    StrokeText(state.name, GameTitleStyle.copy(fontSize = 22.sp, lineHeight = 26.sp), strokeWidth = 4.dp, maxLines = 2)
+                    Text(state.email, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.85f), maxLines = 1)
+                    Pill(
+                        if (state.isParent) "👑 Батьки · ${state.familyName}" else "🏠 ${state.familyName}",
+                        Modifier.padding(top = 6.dp),
+                        color = Color.White.copy(alpha = 0.2f),
+                        contentColor = Color.White,
                     )
                 }
             }
         }
 
-        if (pushState != null) {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Сповіщення на цей телефон", style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                "Нові оцінки, підтвердження, бонуси й домашка на завтра",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Switch(checked = pushState.enabled, onCheckedChange = onPushToggle)
-                    }
-                    pushState.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+        if (state.isParent) {
+            GameCard("🎟️ Запросити в сім’ю") {
+                CodeRow("Код для дитини", state.childInviteCode)
+                val parent = state.parentInviteCode
+                if (parent == null) {
+                    TextButton(onClick = onShowParentCode) { Text("Показати код для другого батька") }
+                } else {
+                    CodeRow("Код для другого батька", parent)
                 }
+            }
+        }
+
+        GameCard("👨‍👩‍👧 Сім’я") {
+            state.members.forEach { m ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(44.dp).clip(CircleShape).background(c.soft), contentAlignment = Alignment.Center) {
+                        Text(m.avatar.ifBlank { "🙂" }, fontSize = 24.sp)
+                    }
+                    Text(
+                        m.name,
+                        Modifier.weight(1f).padding(start = 12.dp),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                    Pill(if (m.role == Role.PARENT) "батьки" else "дитина")
+                }
+            }
+        }
+
+        if (pushState != null) {
+            GameCard("🔔 Сповіщення") {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("На цей телефон", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.ExtraBold)
+                        Text(
+                            "Нові оцінки, підтвердження, бонуси й домашка на завтра",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(checked = pushState.enabled, onCheckedChange = onPushToggle)
+                }
+                pushState.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
             }
         }
 
@@ -185,26 +215,29 @@ internal fun ProfileScreen(
             )
         }
 
-        Text("Тема", style = MaterialTheme.typography.titleMedium)
-        val modes = listOf(ThemeMode.SYSTEM to "Як у системі", ThemeMode.LIGHT to "Світла", ThemeMode.DARK to "Темна")
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            modes.forEachIndexed { i, (mode, label) ->
-                SegmentedButton(
-                    selected = state.themeMode == mode,
-                    onClick = { onTheme(mode) },
-                    shape = SegmentedButtonDefaults.itemShape(i, modes.size),
-                ) { Text(label) }
-            }
+        GameCard("🎨 Тема") {
+            GameSegmented(
+                options = listOf(ThemeMode.SYSTEM to "Як у системі", ThemeMode.LIGHT to "Світла", ThemeMode.DARK to "Темна"),
+                selected = state.themeMode,
+                onSelect = onTheme,
+            )
         }
 
-        HorizontalDivider()
-        OutlinedButton(onClick = { confirmSignOut = true }, modifier = Modifier.fillMaxWidth()) { Text("Вийти") }
-        TextButton(
-            onClick = { confirmDelete = true },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-        ) { Text("Видалити акаунт") }
-        PrivacyPolicyLink(Modifier.fillMaxWidth())
+        GameCard("⚙️ Акаунт") {
+            GameButton(
+                "Вийти",
+                onClick = { confirmSignOut = true },
+                modifier = Modifier.fillMaxWidth(),
+                color = c.soft,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            )
+            TextButton(
+                onClick = { confirmDelete = true },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+            ) { Text("Видалити акаунт") }
+            PrivacyPolicyLink(Modifier.fillMaxWidth())
+        }
     }
 
     if (confirmDelete) {
@@ -236,15 +269,31 @@ internal fun ProfileScreen(
     }
 }
 
+/** Картка розділу профілю із заголовком. */
+@Composable
+internal fun GameCard(title: String, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    GameSurface(modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            content()
+        }
+    }
+}
+
 @Composable
 private fun CodeRow(label: String, code: String) {
     @Suppress("DEPRECATION")
     val clipboard = LocalClipboardManager.current
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        Modifier.fillMaxWidth().clip(
+            ButtonShape,
+        ).background(RozkladTheme.colors.soft).padding(start = 14.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Column(Modifier.weight(1f)) {
-            Text(label, style = MaterialTheme.typography.labelMedium)
-            Text(code, style = MaterialTheme.typography.titleLarge, fontFamily = FontFamily.Monospace)
+            Text(label, style = MaterialTheme.typography.labelMedium, color = RozkladTheme.colors.muted)
+            Text(code, style = MaterialTheme.typography.titleLarge, fontFamily = GameFont, letterSpacing = 3.sp)
         }
-        TextButton(onClick = { clipboard.setText(AnnotatedString(code)) }) { Text("Копіювати") }
+        GameButton("Копіювати", onClick = { clipboard.setText(AnnotatedString(code)) })
     }
 }

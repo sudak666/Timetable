@@ -11,7 +11,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,22 +37,29 @@ fun EmptyState(
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
 ) {
-    Column(
-        modifier = modifier.fillMaxSize().padding(32.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(emoji, style = MaterialTheme.typography.displayMedium)
-        Text(title, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
-        if (message != null) {
-            Text(
-                message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
+    // Картка посередині — читається і на тлі «арени», і на звичайному.
+    Box(modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+        GameSurface {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(emoji, style = MaterialTheme.typography.displayMedium)
+                Text(title, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+                if (message != null) {
+                    Text(
+                        message,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                if (actionLabel != null && onAction != null) {
+                    GameButton(actionLabel, onAction, Modifier.padding(top = 8.dp))
+                }
+            }
         }
-        if (actionLabel != null && onAction != null) TextButton(onClick = onAction) { Text(actionLabel) }
     }
 }
 
