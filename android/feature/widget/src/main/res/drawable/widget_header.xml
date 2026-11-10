@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Шапка віджета: той самий градієнт, що й у картці «Далі» в застосунку (акцент → рожевий). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient
+        android:angle="0"
+        android:endColor="#FFFD79A8"
+        android:startColor="#FF6C5CE7" />
+    <corners android:radius="20dp" />
+</shape>
