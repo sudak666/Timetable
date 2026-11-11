@@ -4,7 +4,21 @@ import { expect, test, type Page } from '@playwright/test';
 const REF = 'vkwkyhjjjmcpmiakxohw';
 const today = '2026-09-22';
 
-async function mockFamily(page: Page, role: 'parent' | 'child', noKids = false) {
+/** Розклад Стаса (як приклад за замовчуванням): у вівторок є Інформатика — під неї домашка h1. */
+const TIMETABLE = {
+  child_id: 'k1',
+  bells: [['8:30', '9:15'], ['9:25', '10:10'], ['10:30', '11:15'], ['11:25', '12:10'], ['12:30', '13:15'], ['13:35', '14:20'], ['14:30', '15:15']],
+  week: [
+    ['Математика', 'Всесв. історія', 'Література', 'Англ. мова', 'Укр. мова', 'STEM'],
+    ['Література', 'Інформатика', 'Укр. мова', 'Географія', 'Математика', 'Фіз-ра'],
+    ['Англ. мова', 'Математика', 'Технології', 'Укр. мова', 'Громад. освіта', 'Довкілля', 'STEM'],
+    ['Математика', 'Укр. мова', 'Географія', 'Фіз-ра', 'Англ. мова', 'Мистецтво', 'ЗБД'],
+    ['Всесв. історія', 'Англ. мова', 'Література', 'Фіз-ра', 'Довкілля', 'Математика'],
+  ].map((d) => d.map((x) => ({ s: x }))),
+  holidays: [],
+};
+
+async function mockFamily(page: Page, role: 'parent' | 'child', noKids = false, { timetable = true, family = true } = {}) {
   const meId = role === 'parent' ? 'p1' : 'k1';
   const user = { id: meId, aud: 'authenticated', role: 'authenticated', email: `${meId}@test.ua`, user_metadata: {}, app_metadata: {} };
   const exp = Math.floor(new Date('2026-09-23').getTime() / 1000);
@@ -25,7 +39,8 @@ async function mockFamily(page: Page, role: 'parent' | 'child', noKids = false) 
     const u = new URL(r.request().url());
     const p = u.pathname, sel = u.searchParams.get('select') ?? '';
     if (p.endsWith('/auth/v1/user')) return r.fulfill(json(user));
-    if (p.endsWith('/school_members')) return r.fulfill(json(sel.startsWith('family_id') ? [{ family_id: 'f1', role }] : members));
+    if (p.endsWith('/school_members')) return r.fulfill(json(sel.startsWith('family_id') ? (family ? [{ family_id: 'f1', role }] : []) : members));
+    if (p.endsWith('/school_timetables')) return r.fulfill(json(timetable && !noKids ? [TIMETABLE] : []));
     if (p.endsWith('/school_families')) return r.fulfill(json({ id: 'f1', name: 'Сімʼя Тест', invite_code: 'ABC123', rates: {} }));
     if (p.endsWith('/school_grades')) return r.fulfill(json(grades));
     if (p.endsWith('/school_ledger')) return r.fulfill(json([{ id: 'l1', child_id: 'k1', kind: 'bonus', amount: 50, note: 'Молодець', date: today, created_at: today + 'T11:00' }]));
@@ -133,8 +148,27 @@ test('Command Palette: Ctrl+K, навігація й швидка оцінка',
   await expect(page).toHaveURL(/#hw\?kid=k1$/);
 });
 
+test('увійшов без розкладу: замість чужого прикладу — «Заповнити розклад»', async ({ page }) => {
+  await mockFamily(page, 'child', false, { timetable: false });
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Розклад ще не заповнено' })).toBeVisible();
+  await expect(page.locator('.day')).toHaveCount(0);
+  await expect(page.locator('.now')).toHaveCount(0);
+  await page.getByRole('button', { name: /Заповнити розклад/ }).click();
+  await expect(page.getByRole('heading', { name: /Розклад · Стас/ })).toBeVisible();
+});
+
+test('увійшов, але ще не в сім’ї: підказка веде в «Профіль»', async ({ page }) => {
+  await mockFamily(page, 'parent', false, { family: false });
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Розклад ще не заповнено' })).toBeVisible();
+  await expect(page.locator('.day')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Перейти в «Профіль»' }).click();
+  await expect(page).toHaveURL(/#me$/);
+});
+
 test('редактор розкладу: заповнити, перевірка помилок, збереження на сервер', async ({ page }) => {
-  await mockFamily(page, 'parent');
+  await mockFamily(page, 'parent', false, { timetable: false });
   await page.goto('/');
   await page.getByRole('button', { name: /Заповнити розклад/ }).click();
   const heading = page.getByRole('heading', { name: /Розклад · Стас/ });
@@ -181,7 +215,7 @@ test('редактор розкладу: заповнити, перевірка 
 });
 
 test('редактор розкладу: незбережені зміни не губляться без підтвердження', async ({ page }) => {
-  await mockFamily(page, 'child');
+  await mockFamily(page, 'child', false, { timetable: false });
   await page.goto('/');
   await page.getByRole('button', { name: /Заповнити розклад/ }).click();
   await page.getByRole('button', { name: '+ Свій предмет' }).click();

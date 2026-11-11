@@ -56,6 +56,17 @@ export let HOLIDAYS: readonly (readonly [string, string])[] = DEFAULT_HOLIDAYS;
 export const bellStart = (i: number): string => BELLS[i]?.split('-')[0] ?? '';
 export const bellEnd = (i: number): string => BELLS[i]?.split('-')[1] ?? '';
 
+/**
+ * Порожній розклад для того, хто увійшов, але розкладу ще не має: не показуємо чужий приклад
+ * (і не шлемо нагадувань про вигадані уроки), а пропонуємо заповнити свій — як в Android.
+ */
+export const EMPTY_TIMETABLE: TimetableRow = {
+  child_id: '',
+  bells: DEFAULT_BELLS.map((b) => b.split('-') as [string, string]),
+  week: [[], [], [], [], []],
+  holidays: [],
+};
+
 let applied: TimetableRow | null = null;
 
 /** Підставляє розклад дитини (null — приклад за замовчуванням). Повертає true, якщо щось змінилося. */
