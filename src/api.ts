@@ -19,6 +19,10 @@ const REF = new globalThis.URL(URL).hostname.split('.')[0]!;
  * лише auth + PostgREST; realtime довантажується окремим чанком після входу.
  * storageKey збігається з supabase-js — наявні сесії користувачів зберігаються.
  */
+/** Відкрили посилання з листа «Забули пароль?» — запам'ятати до того, як AuthClient прибере адресу. */
+const recovering = typeof location !== 'undefined' && /type=recovery/.test(location.hash);
+let recoveryAsked = false;
+
 const auth = new AuthClient({
   url: `${URL}/auth/v1`,
   headers: { apikey: KEY, Authorization: `Bearer ${KEY}` },
@@ -239,8 +243,14 @@ export async function deleteAccount(): Promise<string | null> {
 
 export function watchAuth(): void {
   let cur: string | null | undefined;
-  sb.auth.onAuthStateChange((_ev, session) => {
+  sb.auth.onAuthStateChange((ev, session) => {
     if (session && realtime) realtime.setAuth(session.access_token);
+    // Перехід із листа «Забули пароль?»: сесія вже піднята з адреси — просимо новий пароль.
+    // Подія може прийти ще до підписки (чанк api вантажиться пізніше), тож дублюємо прапорцем з адреси.
+    if (session && !recoveryAsked && (ev === 'PASSWORD_RECOVERY' || recovering)) {
+      recoveryAsked = true;
+      setTimeout(() => void import('./views/password').then((m) => m.finishRecovery()), 0);
+    }
     const id = session?.user.id ?? null;
     if (id === cur) return;
     cur = id;

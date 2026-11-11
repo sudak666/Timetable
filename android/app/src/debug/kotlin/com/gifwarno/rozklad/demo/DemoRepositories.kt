@@ -39,6 +39,10 @@ internal class DemoSessionRepository(private val initial: SessionState) : Sessio
 
     override suspend fun signUp(email: String, password: String): Result<Boolean> = Result.success(false)
 
+    override suspend fun resetPassword(email: String): Result<Unit> = Result.success(Unit)
+
+    override suspend fun changePassword(password: String): Result<Unit> = Result.success(Unit)
+
     override suspend fun createFamily(parentName: String): Result<Unit> = Result.success(Unit)
 
     override suspend fun joinFamily(code: String, name: String): Result<Unit> = Result.success(Unit)

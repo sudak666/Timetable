@@ -47,6 +47,13 @@ class FakeSessionRepository(initial: SessionState) : SessionRepository {
 
     override suspend fun signUp(email: String, password: String) = Result.success(false)
 
+    val resetEmails = mutableListOf<String>()
+    val newPasswords = mutableListOf<String>()
+
+    override suspend fun resetPassword(email: String): Result<Unit> = Result.success(Unit).also { resetEmails += email }
+
+    override suspend fun changePassword(password: String): Result<Unit> = Result.success(Unit).also { newPasswords += password }
+
     override suspend fun createFamily(parentName: String) = Result.success(Unit)
 
     override suspend fun joinFamily(code: String, name: String) = Result.success(Unit)

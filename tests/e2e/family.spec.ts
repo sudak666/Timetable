@@ -204,6 +204,46 @@ test('вступ у сім’ю без імені не пускає', async ({ p
   expect(rpc).toBe(0);
 });
 
+test('«Забули пароль?» надсилає лист на введену пошту', async ({ page }) => {
+  let body: unknown = null, url = '';
+  await page.route(`https://${REF}.supabase.co/auth/v1/recover**`, (r) => {
+    body = r.request().postDataJSON(); url = r.request().url();
+    return r.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+  });
+  await page.goto('/#me');
+  await page.locator('#gEmail').fill('kid@test.ua');
+  await page.getByRole('button', { name: 'Забули пароль?' }).click();
+  await expect(page.getByRole('dialog')).toContainText('kid@test.ua');
+  expect(body).toMatchObject({ email: 'kid@test.ua' });
+  expect(decodeURIComponent(url)).toContain('redirect_to=http://localhost');
+});
+
+test('«Змінити пароль» у профілі: двічі, перевірка збігу, збереження', async ({ page }) => {
+  await mockFamily(page, 'parent');
+  const puts: unknown[] = [];
+  await page.route(`https://${REF}.supabase.co/auth/v1/user`, (r) => {
+    if (r.request().method() === 'PUT') puts.push(r.request().postDataJSON());
+    return r.fallback();
+  });
+  await page.goto('/#me');
+  const change = page.getByRole('button', { name: /Змінити пароль/ });
+  const enter = async (v: string) => { await page.getByRole('dialog').locator('input[type=password]').fill(v); await page.getByRole('button', { name: 'Готово' }).click(); };
+  await change.click(); await enter('newpass1'); await enter('newpass2');
+  await expect(page.locator('.toast')).toContainText('не збігаються');
+  expect(puts).toHaveLength(0);
+  await change.click(); await enter('newpass1'); await enter('newpass1');
+  await expect.poll(() => puts.length).toBe(1);
+  expect(puts[0]).toMatchObject({ password: 'newpass1' });
+});
+
+test('посилання з листа відкриває «Задай новий пароль»', async ({ page }) => {
+  await mockFamily(page, 'parent');
+  await page.addInitScript(() => localStorage.clear());
+  await page.goto('/#access_token=x.eyJzdWIiOiJ4In0.x&expires_at=1790000000&expires_in=3600&refresh_token=r&token_type=bearer&type=recovery');
+  await expect(page.getByRole('dialog')).toContainText('Задай новий пароль');
+  await expect(page).not.toHaveURL(/access_token/);
+});
+
 test('редактор розкладу: заповнити, перевірка помилок, збереження на сервер', async ({ page }) => {
   await mockFamily(page, 'parent', false, { timetable: false });
   await page.goto('/');

@@ -130,6 +130,7 @@ function authView(): TemplateResult {
       <label class="sr-only" for="gPass">Пароль</label><input type="password" id="gPass" placeholder="пароль (від 6 символів)" minlength="6" required autocomplete="current-password">
       <button>Увійти</button><button type="button" @click=${signup}>Зареєструватись</button>
     </form>
+    <p class="legal"><button type="button" class="linkish" @click=${() => void import('./password').then((m) => m.forgotPassword(email()))}>Забули пароль?</button></p>
     ${msg ? html`<p class=${classMap({ msg: true, pos: !!msg.ok, neg: !msg.ok })} role="status">${emo(msg.text)}</p>` : nothing}
     <p class="legal"><a href="privacy.html" target="_blank" rel="noopener">Політика конфіденційності</a></p>`;
 }
@@ -478,6 +479,7 @@ export function tabProfile(): TemplateResult {
     <section class="side card" aria-label="Налаштування застосунку"><div class="acts">
       <button type="button" @click=${togglePush}>${emo(state.pushOn ? '🔕 Вимкнути сповіщення' : '🔔 Сповіщення на телефон')}</button>
       ${state.canInstall ? html`<button type="button" @click=${installApp}>${emo('📱 Встановити застосунок')}</button>` : nothing}
+      <button type="button" @click=${() => void import('./password').then((m) => m.changePassword())}>${emo('🔑 Змінити пароль')}</button>
       <button type="button" @click=${() => void signOut()}>Вийти</button>
       <button type="button" class="danger" @click=${askDeleteAccount}>Видалити акаунт</button>
     </div>

@@ -221,6 +221,29 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch { session.signOut() }
     }
 
+    private val _passwordState = MutableStateFlow<PasswordState>(PasswordState.Idle)
+    val passwordState: StateFlow<PasswordState> = _passwordState.asStateFlow()
+
+    fun changePassword(password: String) {
+        if (_passwordState.value == PasswordState.Saving || password.length < MIN_PASSWORD) return
+        _passwordState.value = PasswordState.Saving
+        viewModelScope.launch {
+            _passwordState.value = session.changePassword(password).fold(
+                onSuccess = { PasswordState.Done },
+                onFailure = { e ->
+                    val m = e.message.orEmpty()
+                    PasswordState.Failed(
+                        if (m.contains("different from the old", ignoreCase = true)) "Новий пароль має відрізнятися від старого" else m,
+                    )
+                },
+            )
+        }
+    }
+
+    fun resetPasswordState() {
+        _passwordState.value = PasswordState.Idle
+    }
+
     private val _deleteState = MutableStateFlow<DeleteAccountState>(DeleteAccountState.Idle)
     val deleteState: StateFlow<DeleteAccountState> = _deleteState.asStateFlow()
 

@@ -21,6 +21,12 @@ interface RozkladNetworkDataSource {
     /** @return true, якщо потрібно підтвердити пошту перед входом. */
     suspend fun signUp(email: String, password: String): Boolean
 
+    /** Лист із посиланням для нового пароля; саме посилання веде на сайт, де пароль і задають. */
+    suspend fun resetPassword(email: String)
+
+    /** Новий пароль для поточного акаунта. */
+    suspend fun changePassword(password: String)
+
     suspend fun signOut()
 
     /** Відкриває вхід Google у браузері; результат прийде deep link'ом на <пакет>://login-callback. */

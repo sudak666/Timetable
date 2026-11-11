@@ -80,6 +80,7 @@ fun ProfileRoute(onPickAlertRegion: () -> Unit, modifier: Modifier = Modifier, v
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val alertError by viewModel.alertError.collectAsStateWithLifecycle()
     val deleteState by viewModel.deleteState.collectAsStateWithLifecycle()
+    val passwordState by viewModel.passwordState.collectAsStateWithLifecycle()
     val pushState by viewModel.pushState.collectAsStateWithLifecycle()
     // Android 13+: системний запит дозволу; вмикаємо лише якщо людина дозволила.
     // Що ввімкнути після дозволу: загальні сповіщення чи тривоги (тривоги вмикають і загальні).
@@ -127,6 +128,7 @@ fun ProfileRoute(onPickAlertRegion: () -> Unit, modifier: Modifier = Modifier, v
             alerts = alerts,
             onLook = viewModel::setLook,
             onRename = viewModel::rename,
+            password = PasswordActions(passwordState, viewModel::changePassword, viewModel::resetPasswordState),
             onSaveRates = viewModel::saveRates,
             onGameStyle = viewModel::setGameStyle,
             modifier = modifier,
@@ -151,7 +153,9 @@ internal fun ProfileScreen(
     onSaveRates: (Map<Int, Int>, Streak) -> Unit = { _, _ -> },
     onGameStyle: (GameStyle) -> Unit = {},
     onRename: (name: String, family: String?) -> Unit = { _, _ -> },
+    password: PasswordActions? = null,
 ) {
+    var passwordDialog by rememberSaveable { mutableStateOf(false) }
     var renameDialog by rememberSaveable { mutableStateOf(false) }
     var ratesSheet by rememberSaveable { mutableStateOf(false) }
     var confirmSignOut by rememberSaveable { mutableStateOf(false) }
@@ -317,6 +321,16 @@ internal fun ProfileScreen(
         }
 
         GameCard("⚙️ Акаунт") {
+            if (password != null) {
+                GameButton(
+                    "Змінити пароль",
+                    onClick = { passwordDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = c.soft,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    leading = "🔑",
+                )
+            }
             GameButton(
                 "Вийти",
                 onClick = { confirmSignOut = true },
@@ -331,6 +345,17 @@ internal fun ProfileScreen(
             ) { Text("Видалити акаунт") }
             PrivacyPolicyLink(Modifier.fillMaxWidth())
         }
+    }
+
+    if (passwordDialog && password != null) {
+        PasswordDialog(
+            state = password.state,
+            onSave = password.onSave,
+            onDismiss = {
+                passwordDialog = false
+                password.onClosed()
+            },
+        )
     }
 
     if (ratesSheet) {
@@ -468,3 +493,6 @@ internal fun RenameDialog(name: String, familyName: String?, onDismiss: () -> Un
         dismissButton = { TextButton(onClick = onDismiss) { Text("Скасувати") } },
     )
 }
+
+/** Зміна пароля: стан і дії з ViewModel (null у прев'ю — кнопки немає). */
+internal class PasswordActions(val state: PasswordState, val onSave: (String) -> Unit, val onClosed: () -> Unit)

@@ -60,6 +60,7 @@ fun AuthRoute(modifier: Modifier = Modifier, viewModel: AuthViewModel = hiltView
         viewModel::toggleMode,
         viewModel::signInWithGoogle,
         modifier,
+        onForgot = viewModel::forgotPassword,
     )
 }
 
@@ -72,6 +73,7 @@ internal fun AuthScreen(
     onToggleMode: () -> Unit,
     onGoogle: () -> Unit,
     modifier: Modifier = Modifier,
+    onForgot: () -> Unit = {},
 ) {
     CenteredForm(header = { Logo() }, modifier = modifier) {
         Text(
@@ -141,6 +143,9 @@ internal fun AuthScreen(
         )
         TextButton(onClick = onToggleMode) {
             Text(if (state.isSignUp) "Вже маю акаунт — увійти" else "Немає акаунта? Зареєструватися")
+        }
+        if (!state.isSignUp) {
+            TextButton(onClick = onForgot, enabled = !state.busy) { Text("Забули пароль?") }
         }
         PrivacyPolicyLink()
     }

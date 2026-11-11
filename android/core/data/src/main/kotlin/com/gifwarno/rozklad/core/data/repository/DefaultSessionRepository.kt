@@ -107,6 +107,10 @@ internal class DefaultSessionRepository @Inject constructor(
 
     override suspend fun signUp(email: String, password: String) = call { network.signUp(email.trim(), password) }
 
+    override suspend fun resetPassword(email: String) = call { network.resetPassword(email.trim()) }
+
+    override suspend fun changePassword(password: String) = call { network.changePassword(password) }
+
     override suspend fun createFamily(parentName: String) = call {
         val name = parentName.trim()
         network.createFamily(familyName = "Сім’я $name", parentName = name)

@@ -447,3 +447,4 @@ kbd{font:600 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;padding:4px 6px;
 .no-sched{display:grid;justify-items:center;gap:6px;margin-bottom:20px;padding:24px 16px}
 .no-sched p{max-width:42ch;color:var(--muted);margin:0 0 8px}
 .me-acts{display:flex;flex-wrap:wrap;gap:8px}
+.linkish{background:none;border:0;padding:4px 0;color:var(--accent);font:inherit;font-weight:700;text-decoration:underline;cursor:pointer}
