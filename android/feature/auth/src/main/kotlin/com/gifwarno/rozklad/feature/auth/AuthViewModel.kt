@@ -52,7 +52,7 @@ class AuthViewModel @Inject constructor(private val session: SessionRepository) 
         }
     }
 
-    fun onEmail(v: String) = _state.update { it.copy(email = v.take(MAX_EMAIL), message = null) }
+    fun onEmail(v: String) = _state.update { it.copy(email = cleanEmail(v), message = null) }
 
     fun onPassword(v: String) = _state.update { it.copy(password = v.take(MAX_PASSWORD), message = null) }
 
@@ -86,7 +86,14 @@ class AuthViewModel @Inject constructor(private val session: SessionRepository) 
     }
 
     private companion object {
-        const val MAX_EMAIL = 254
         const val MAX_PASSWORD = 128
     }
 }
+
+private const val MAX_EMAIL = 254
+
+/**
+ * У пошті не буває пробілів і переносів. Клавіатура (Samsung) або вставка з буфера можуть
+ * додати їх непомітно: однорядкове поле показує лише перший рядок, а кнопка «Увійти» вимкнена.
+ */
+internal fun cleanEmail(v: String): String = v.filterNot(Char::isWhitespace).take(MAX_EMAIL)
