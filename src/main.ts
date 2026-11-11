@@ -1,12 +1,12 @@
 import '@fontsource-variable/nunito/wght.css';
 import './styles.css';
-import { html, render, type TemplateResult } from 'lit-html';
+import { html, nothing, render, type TemplateResult } from 'lit-html';
 import { iso } from './lib/time';
 import { PASS } from './features/rewards';
 import { formatRoute, parseRoute } from './lib/route';
 import { parseQuickGrade } from './lib/command';
 import { addDays } from './lib/time';
-import { WEEK, applyTimetable, scheduleSubjects, subjectList } from './data/schedule';
+import { EMPTY_TIMETABLE, WEEK, applyTimetable, scheduleSubjects, subjectList } from './data/schedule';
 import { openPalette, type Cmd } from './ui/palette';
 import { set, state, store, subscribe, TABS, type GameStyle, type Tab } from './state';
 import { bikeLane } from './ui/bike';
@@ -115,6 +115,9 @@ function page(): TemplateResult {
     default:
       // Редактор розкладу замінює вкладку, поки відкритий (зміни — лише після «Зберегти»).
       if (G && state.editor) return G.scheduleEditor();
+      if (G?.needsSchedule()) {
+        return html`${G.profileBar()}${G.noSchedule()}${below ? funCards(quizView()) : nothing}`;
+      }
       return html`${G?.profileBar() ?? ''}
       ${bikeLane(G ? G.laneLabel() : emo('⚡ Електробайк мрії'))}
       <div class="top">${nowCard()}${sidePanel()}</div>
@@ -168,8 +171,8 @@ addEventListener('hashchange', () => {
 const mount = document.getElementById('app')!;
 mount.textContent = '';
 const draw = () => {
-  // Розклад вибраної дитини (або приклад, якщо не увійшли / ще не заповнено).
-  applyTimetable(state.timetables.find((t) => t.child_id === state.kid) ?? null);
+  // Розклад вибраної дитини; приклад — лише поки не увійшли. Увійшов без розкладу — порожній.
+  applyTimetable(state.timetables.find((t) => t.child_id === state.kid) ?? (G?.needsSchedule() ? EMPTY_TIMETABLE : null));
   render(app(), mount);
   syncUrl();
 };

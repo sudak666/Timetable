@@ -20,7 +20,7 @@ import { dateLabel, pickDate, pickSubject, subjLabel } from '../ui/pickers';
 import { closePop, openPop } from '../ui/popover';
 import { installApp, togglePush } from '../pwa';
 
-export { editScheduleButton, scheduleEditor } from './editor';
+export { editScheduleButton, needsSchedule, noSchedule, scheduleEditor } from './editor';
 
 const uah = (v: number) => (v > 0 ? '+' : '') + v + ' ₴';
 const tone = (v: number) => (v > 0 ? 'pos' : v < 0 ? 'neg' : '');

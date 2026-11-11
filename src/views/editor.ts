@@ -206,6 +206,26 @@ export function scheduleEditor(): TemplateResult {
   </section>`;
 }
 
+/** Увійшов, але розкладу для вибраної дитини (або сім'ї взагалі) ще немає. */
+export const needsSchedule = (): boolean =>
+  !!state.me && (state.view === 'main' || state.view === 'join') && !state.timetables.some((t) => t.child_id === state.kid);
+
+/** «Сьогодні» без розкладу: що зробити далі, замість прикладу чужого розкладу. */
+export function noSchedule(): TemplateResult {
+  const toProfile = () => { location.hash = 'me'; };
+  const [text, button] = state.view === 'join' || !state.family
+    ? ['Спершу створи сім’ю або приєднайся до неї за кодом від батьків.', html`<button type="button" class="pri-btn" @click=${toProfile}>Перейти в «Профіль»</button>`]
+    : canEditSchedule()
+      ? ['Додай уроки й дзвінки — і тут з’явиться таймер до дзвінка, рюкзак на день і розклад тижня.', html`<button type="button" class="pri-btn" @click=${openEditor}>${emo('✏️')} Заповнити розклад</button>`]
+      : ['У сім’ї ще немає дитини. Дай їй код запрошення з «Профілю» — і заповніть розклад разом.', html`<button type="button" class="pri-btn" @click=${toProfile}>Код запрошення</button>`];
+  return html`<section class="side empty no-sched" aria-labelledby="ns-h">
+    <div class="empty-ic">${emo('🗓️')}</div>
+    <h2 class="h4" id="ns-h">Розклад ще не заповнено</h2>
+    <p>${text}</p>
+    ${button}
+  </section>`;
+}
+
 /** Кнопка входу в редактор під розкладом тижня. */
 export function editScheduleButton(): TemplateResult | typeof nothing {
   if (!canEditSchedule() || state.editor) return nothing;
