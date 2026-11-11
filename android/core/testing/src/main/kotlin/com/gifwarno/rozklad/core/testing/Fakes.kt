@@ -182,6 +182,15 @@ class FakeFamilyRepository(initial: FamilyData?) : FamilyRepository {
         savedRates = rates to streak
     }
 
+    override suspend fun setMyName(familyId: String, userId: String, name: String) {
+        data.value =
+            data.value?.let { d -> d.copy(members = d.members.map { if (it.userId == userId) it.copy(name = name.trim()) else it }) }
+    }
+
+    override suspend fun renameFamily(familyId: String, name: String) {
+        data.value = data.value?.let { d -> d.copy(family = d.family.copy(name = name.trim())) }
+    }
+
     val looks = mutableListOf<Triple<String, String?, String?>>()
 
     override suspend fun setMyLook(familyId: String, userId: String, avatar: String?, theme: String?) {

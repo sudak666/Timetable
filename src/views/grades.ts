@@ -136,20 +136,29 @@ function authView(): TemplateResult {
 
 function joinView(): TemplateResult {
   const name = () => (document.getElementById('jName') as HTMLInputElement).value.trim();
+  /** Без імені в сім'ї видно лише пошту — тож ім'я обов'язкове (як в Android). */
+  const named = (): boolean => {
+    if (name()) return true;
+    set({ authMsg: { text: 'Напиши своє ім’я' } });
+    (document.getElementById('jName') as HTMLInputElement).focus();
+    return false;
+  };
   const create = async () => {
+    if (!named()) return;
     const { error } = await sb.rpc('school_create_family', { p_name: 'Сім’я ' + name(), p_parent_name: name() });
     if (error) return set({ authMsg: { text: error.message } });
     await enter();
   };
   const join = async () => {
     const code = (document.getElementById('jCode') as HTMLInputElement).value.trim();
+    if (!named()) return;
     if (!code) return set({ authMsg: { text: 'Введи код' } });
     const { error } = await sb.rpc('school_join_family', { p_code: code, p_name: name() });
     if (error) return set({ authMsg: { text: /Невірний/.test(error.message) ? 'Невірний код' : error.message } });
     await enter();
   };
   return html`<p class="lead">Ти ще не в сім'ї. Батьки створюють сім'ю, дитина приєднується за кодом.</p>
-    <div class="form"><label class="sr-only" for="jName">Ім'я</label><input id="jName" placeholder="Твоє ім'я" maxlength="40" .value=${state.me?.fullName ?? ''}></div>
+    <div class="form"><label class="sr-only" for="jName">Ім'я</label><input id="jName" placeholder="Твоє ім'я" maxlength="40" required autocomplete="given-name" .value=${state.me?.fullName ?? ''}></div>
     <div class="form"><button type="button" @click=${create}>${emo('👨‍👩‍👦 Я батько/мати — створити сім’ю')}</button></div>
     <div class="form"><label class="sr-only" for="jCode">Код запрошення</label><input id="jCode" placeholder="Код запрошення" maxlength="10" autocapitalize="characters"><button type="button" @click=${join}>${emo('🔑 Приєднатись')}</button></div>
     ${state.authMsg ? html`<p class="msg neg" role="status">${state.authMsg.text}</p>` : nothing}`;
@@ -460,7 +469,9 @@ export function tabProfile(): TemplateResult {
   return html`<section class="side card me-card" aria-label="Профіль">
       <div class="me-head"><button type="button" class="pa big" aria-haspopup="dialog" aria-label="Змінити аватар, колір і стиль" @click=${avatarPop}>${emo(m?.avatar || (par ? '👨‍👩‍👦' : '🧒'))}</button>
         <div><h2 class="me-name">${m?.name || state.me!.email}</h2><p class="msg">${par ? 'Батьки' : 'Учень'} · ${state.family?.name}</p>
-        <button type="button" class="pick" @click=${avatarPop}>${emo('🎨 Аватар, колір і стиль')}</button></div></div>
+        <div class="me-acts"><button type="button" class="pick" @click=${avatarPop}>${emo('🎨 Аватар, колір і стиль')}</button>
+          <button type="button" @click=${renameMe}>${emo(m?.name ? '✏️ Ім’я' : '✏️ Вказати ім’я')}</button>
+          ${par ? html`<button type="button" @click=${renameFamily}>${emo('🏠 Назва сім’ї')}</button>` : nothing}</div></div></div>
       ${kidTabs()}${progress(d)}
     </section>
     ${parentTools(d, 'settings')}
@@ -472,6 +483,22 @@ export function tabProfile(): TemplateResult {
     </div>
     <p class="legal"><a href="privacy.html" target="_blank" rel="noopener">Політика конфіденційності</a></p>
     ${state.pushMsg ? html`<p class=${classMap({ msg: true, pos: !!state.pushMsg.ok, neg: !state.pushMsg.ok })} role="status">${emo(state.pushMsg.text)}</p>` : nothing}</section>`;
+}
+
+const NAME_MAX = 40;
+
+/** Своє ім'я в сім'ї (RLS: лише свій рядок). */
+async function renameMe(): Promise<void> {
+  const v = (await prompt('Як тебе звати?', me()?.name ?? '', 'text'))?.trim().slice(0, NAME_MAX);
+  if (!v || v === me()?.name) return;
+  await run(sb.from('school_members').update({ name: v }).eq('family_id', state.family!.id).eq('user_id', state.me!.id), () => toast('Ім’я збережено'));
+}
+
+/** Назва сім'ї — лише батьки (так само обмежує RLS). */
+async function renameFamily(): Promise<void> {
+  const v = (await prompt('Назва сім’ї, наприклад «Сім’я Коваленків»', state.family?.name ?? '', 'text'))?.trim().slice(0, NAME_MAX);
+  if (!v || v === state.family?.name) return;
+  await run(sb.from('school_families').update({ name: v }).eq('id', state.family!.id), () => toast('Назву збережено'));
 }
 
 /** Два кроки: чесний перелік наслідків → введення слова. Безповоротно. */

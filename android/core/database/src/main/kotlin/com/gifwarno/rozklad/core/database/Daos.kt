@@ -73,6 +73,12 @@ interface FamilyDao {
     @Query("DELETE FROM challenges WHERE id = :id")
     suspend fun deleteChallenge(id: String)
 
+    @Query("UPDATE members SET name = :name WHERE familyId = :familyId AND userId = :userId")
+    suspend fun setMemberName(familyId: String, userId: String, name: String)
+
+    @Query("UPDATE families SET name = :name WHERE id = :familyId")
+    suspend fun setFamilyName(familyId: String, name: String)
+
     @Query("UPDATE families SET settingsJson = :json WHERE id = :familyId")
     suspend fun setSettingsJson(familyId: String, json: String)
 

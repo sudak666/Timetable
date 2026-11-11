@@ -167,6 +167,43 @@ test('увійшов, але ще не в сім’ї: підказка веде
   await expect(page).toHaveURL(/#me$/);
 });
 
+test('профіль: батьки змінюють своє ім’я й назву сім’ї', async ({ page }) => {
+  await mockFamily(page, 'parent');
+  await page.goto('/#me');
+  const patch = (table: string) => page.waitForRequest((r) => r.method() === 'PATCH' && r.url().includes(table));
+  await page.getByRole('button', { name: /Ім’я/ }).click();
+  await page.getByRole('dialog').locator('input').fill('  Сергій Петрович  ');
+  let req = patch('school_members');
+  await page.getByRole('button', { name: 'Готово' }).click();
+  expect((await req).postDataJSON()).toEqual({ name: 'Сергій Петрович' });
+  expect((await req).url()).toContain('user_id=eq.p1');
+
+  await page.getByRole('button', { name: /Назва сім’ї/ }).click();
+  await page.getByRole('dialog').locator('input').fill('Сім’я Коваленків');
+  req = patch('school_families');
+  await page.getByRole('button', { name: 'Готово' }).click();
+  expect((await req).postDataJSON()).toEqual({ name: 'Сім’я Коваленків' });
+});
+
+test('профіль: дитина не бачить зміну назви сім’ї', async ({ page }) => {
+  await mockFamily(page, 'child');
+  await page.goto('/#me');
+  await expect(page.getByRole('button', { name: /Ім’я/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Назва сім’ї/ })).toHaveCount(0);
+});
+
+test('вступ у сім’ю без імені не пускає', async ({ page }) => {
+  await mockFamily(page, 'child', false, { family: false });
+  let rpc = 0;
+  await page.route('**/rest/v1/rpc/school_join_family', (r) => { rpc++; return r.fulfill({ status: 204, body: '' }); });
+  await page.goto('/#me');
+  await page.getByPlaceholder('Код запрошення').fill('ABC123');
+  await page.getByRole('button', { name: /Приєднатись/ }).click();
+  await expect(page.getByRole('status')).toContainText('Напиши своє ім’я');
+  await expect(page.getByPlaceholder("Твоє ім'я")).toBeFocused();
+  expect(rpc).toBe(0);
+});
+
 test('редактор розкладу: заповнити, перевірка помилок, збереження на сервер', async ({ page }) => {
   await mockFamily(page, 'parent', false, { timetable: false });
   await page.goto('/');

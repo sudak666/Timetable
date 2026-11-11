@@ -55,6 +55,8 @@ sealed interface ProfileUiState {
         /** Курс оцінок і правила серії сім'ї. */
         val settings: RewardSettings = Rewards.DEFAULT_SETTINGS,
         val gameStyle: GameStyle = GameStyle.ARENA,
+        /** Ім'я в сім'ї як є (може бути порожнім — тоді в шапці пошта). */
+        val myName: String = "",
     ) : ProfileUiState
 }
 
@@ -167,6 +169,7 @@ class ProfileViewModel @Inject constructor(
             accent = ctx.me?.theme.orEmpty(),
             settings = ctx.data.settings,
             gameStyle = GameStyle.of(prefs.gameStyle),
+            myName = ctx.me?.name.orEmpty(),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ProfileUiState.Loading)
 
@@ -182,6 +185,19 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             val ctx = active.context.filterNotNull().first()
             families.setMyLook(ctx.familyId, ctx.user.id, avatar, accent)
+        }
+    }
+
+    /** Своє ім'я; назву сім'ї ([family]) можуть змінити лише батьки — так само обмежує сервер. */
+    fun rename(name: String, family: String?) {
+        viewModelScope.launch {
+            val ctx = active.context.filterNotNull().first()
+            if (name.isNotBlank() && name.trim() != ctx.me?.name) families.setMyName(ctx.familyId, ctx.user.id, name)
+            if (ctx.isParent && !family.isNullOrBlank() &&
+                family.trim() != ctx.data.family.name
+            ) {
+                families.renameFamily(ctx.familyId, family)
+            }
         }
     }
 

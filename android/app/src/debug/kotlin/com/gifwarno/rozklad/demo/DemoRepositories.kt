@@ -177,6 +177,12 @@ internal class DemoFamilyRepository(initial: FamilyData, private val clock: Cloc
         )
     }
 
+    override suspend fun setMyName(familyId: String, userId: String, name: String) = edit { d ->
+        d.copy(members = d.members.map { if (it.userId == userId) it.copy(name = name.trim()) else it })
+    }
+
+    override suspend fun renameFamily(familyId: String, name: String) = edit { d -> d.copy(family = d.family.copy(name = name.trim())) }
+
     override suspend fun parentInviteCode(familyId: String): Result<String?> = Result.success("DEMO34")
 
     override suspend fun saveSchedule(familyId: String, childId: String, schedule: SchoolSchedule) = edit { d ->
