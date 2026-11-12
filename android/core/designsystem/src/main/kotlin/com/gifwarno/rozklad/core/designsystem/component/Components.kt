@@ -45,7 +45,8 @@ fun EmptyState(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(emoji, style = MaterialTheme.typography.displayMedium)
+                // Велике емодзі — щоб картка не здавалася порожньою.
+                Text(emoji, style = MaterialTheme.typography.displayLarge)
                 Text(title, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
                 if (message != null) {
                     Text(

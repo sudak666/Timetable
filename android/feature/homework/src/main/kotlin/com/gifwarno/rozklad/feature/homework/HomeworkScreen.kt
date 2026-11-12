@@ -55,6 +55,7 @@ import com.gifwarno.rozklad.core.domain.Timetable
 import com.gifwarno.rozklad.core.model.Homework
 import com.gifwarno.rozklad.core.ui.ChildSelector
 import com.gifwarno.rozklad.core.ui.Format
+import com.gifwarno.rozklad.core.ui.InviteChildState
 import java.time.LocalDate
 
 @Composable
@@ -93,7 +94,7 @@ internal fun HomeworkScreen(
         when (state) {
             HomeworkUiState.Loading -> LoadingState(Modifier.padding(padding))
 
-            HomeworkUiState.NoChild -> EmptyState("📒", "Немає дитини в сім’ї", Modifier.padding(padding))
+            is HomeworkUiState.NoChild -> InviteChildState("📒", state.isParent, state.inviteCode, Modifier.padding(padding))
 
             is HomeworkUiState.Ready -> LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),

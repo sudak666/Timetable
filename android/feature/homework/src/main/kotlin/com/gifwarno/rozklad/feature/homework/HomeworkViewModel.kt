@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
 sealed interface HomeworkUiState {
     data object Loading : HomeworkUiState
 
-    data object NoChild : HomeworkUiState
+    data class NoChild(val isParent: Boolean, val inviteCode: String) : HomeworkUiState
 
     data class Ready(
         val children: List<Member>,
@@ -65,7 +65,7 @@ class HomeworkViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), HomeworkUiState.Loading)
 
     private fun build(ctx: FamilyContext): HomeworkUiState {
-        val child = ctx.child ?: return HomeworkUiState.NoChild
+        val child = ctx.child ?: return HomeworkUiState.NoChild(ctx.isParent, ctx.data.family.inviteCode)
         calendar = ctx.schedule?.let(::SchoolCalendar)
         val today = LocalDate.now(clock)
         val mine = ctx.data.homework.filter { it.childId == child.userId }

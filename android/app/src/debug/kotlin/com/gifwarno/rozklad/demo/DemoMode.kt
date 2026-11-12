@@ -28,10 +28,12 @@ import javax.inject.Singleton
  * ```
  * role=child      # або parent
  * time=10:40      # який зараз час у демо (далі годинник іде)
+ * kids=0          # сім'я без дитини (порожні стани з запрошенням)
+ * family=none     # увійшли, але сім'ї ще немає (екран «Майже готово!»)
  * ```
  * Вимкнути — видалити файл і перезапустити застосунок.
  */
-class DemoMode(val role: Role, start: LocalTime) {
+class DemoMode(val role: Role, start: LocalTime, noKids: Boolean = false, noFamily: Boolean = false) {
     private val zone: ZoneId = ZoneId.systemDefault()
 
     /** Найближчий навчальний день (сьогодні або останній будній) — щоб у вихідні теж був «шкільний» день. */
@@ -44,7 +46,7 @@ class DemoMode(val role: Role, start: LocalTime) {
         Clock.offset(real, Duration.between(real.instant(), today.atTime(start).atZone(zone).toInstant()))
     }
 
-    private val data = DemoData(today, role)
+    private val data = DemoData(today, role, noKids, noFamily)
     val session: SessionRepository = DemoSessionRepository(data.session)
     val family: FamilyRepository = DemoFamilyRepository(data.family, clock)
 
@@ -57,7 +59,7 @@ class DemoMode(val role: Role, start: LocalTime) {
             }.toMap()
             val role = if (kv["role"] == "parent") Role.PARENT else Role.CHILD
             val time = kv["time"]?.let { runCatching { LocalTime.parse(it.padStart(5, '0')) }.getOrNull() } ?: LocalTime.of(10, 40)
-            return DemoMode(role, time)
+            return DemoMode(role, time, noKids = kv["kids"] == "0", noFamily = kv["family"] == "none")
         }
     }
 }
