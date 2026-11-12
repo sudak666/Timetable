@@ -20,7 +20,7 @@ android {
 
     defaultConfig {
         // Публічний ID у Google Play — після першої публікації змінити неможливо.
-        applicationId = "com.gifwarno.dvanadtsiatka"
+        applicationId = "ua.dvanadtsiatka"
         versionCode = 3
         versionName = "0.2.1"
         androidResources.localeFilters += listOf("uk")
