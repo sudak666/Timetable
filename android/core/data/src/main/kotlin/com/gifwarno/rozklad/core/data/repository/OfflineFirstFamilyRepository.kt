@@ -266,6 +266,15 @@ internal class OfflineFirstFamilyRepository @Inject constructor(
         runCatching { network.parentCode(familyId) }
     }
 
+    // Після успіху підтягуємо знімок; якщо саме він не вдався — зміна на сервері все одно є, тож це не помилка.
+    override suspend fun rotateInviteCode(familyId: String): Result<Unit> = withContext(io) {
+        runNetwork { network.rotateInviteCode(familyId) }.map { }.also { if (it.isSuccess) refresh(familyId) }
+    }
+
+    override suspend fun removeMember(familyId: String, userId: String): Result<Unit> = withContext(io) {
+        runNetwork { network.removeMember(familyId, userId) }.also { if (it.isSuccess) refresh(familyId) }
+    }
+
     override suspend fun saveSchedule(familyId: String, childId: String, schedule: SchoolSchedule) {
         val dto = json.encodeToJsonElement(NetworkTimetable.serializer(), schedule.asNetwork(childId)).jsonObject
         // updated_at ставить тригер на сервері.

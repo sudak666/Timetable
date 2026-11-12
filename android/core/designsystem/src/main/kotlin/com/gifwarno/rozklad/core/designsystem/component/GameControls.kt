@@ -109,7 +109,7 @@ fun RoundCheck(checked: Boolean, onToggle: () -> Unit, label: String, modifier: 
                 .border(2.5.dp, if (checked) c.positive else c.muted, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            if (checked) Text("✓", color = Color.White, fontWeight = FontWeight.Black, fontSize = 18.sp)
+            if (checked) Text("✓", color = c.onPositive, fontWeight = FontWeight.Black, fontSize = 18.sp)
         }
     }
 }

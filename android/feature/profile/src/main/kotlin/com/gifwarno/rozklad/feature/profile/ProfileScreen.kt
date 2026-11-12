@@ -21,9 +21,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.PersonRemove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -82,6 +86,7 @@ fun ProfileRoute(onPickAlertRegion: () -> Unit, modifier: Modifier = Modifier, v
     val deleteState by viewModel.deleteState.collectAsStateWithLifecycle()
     val passwordState by viewModel.passwordState.collectAsStateWithLifecycle()
     val pushState by viewModel.pushState.collectAsStateWithLifecycle()
+    val familyAction by viewModel.familyAction.collectAsStateWithLifecycle()
     // Android 13+: системний запит дозволу; вмикаємо лише якщо людина дозволила.
     // Що ввімкнути після дозволу: загальні сповіщення чи тривоги (тривоги вмикають і загальні).
     var pendingAlerts by rememberSaveable { mutableStateOf(false) }
@@ -131,6 +136,11 @@ fun ProfileRoute(onPickAlertRegion: () -> Unit, modifier: Modifier = Modifier, v
             password = PasswordActions(passwordState, viewModel::changePassword, viewModel::resetPasswordState),
             onSaveRates = viewModel::saveRates,
             onGameStyle = viewModel::setGameStyle,
+            family = FamilyActions(
+                state = familyAction,
+                onRotateCode = viewModel::rotateInviteCode,
+                onRemoveMember = viewModel::removeMember,
+            ),
             modifier = modifier,
         )
     }
@@ -154,8 +164,11 @@ internal fun ProfileScreen(
     onGameStyle: (GameStyle) -> Unit = {},
     onRename: (name: String, family: String?) -> Unit = { _, _ -> },
     password: PasswordActions? = null,
+    family: FamilyActions? = null,
 ) {
     var passwordDialog by rememberSaveable { mutableStateOf(false) }
+    var confirmRotate by rememberSaveable { mutableStateOf(false) }
+    var removeMemberId by rememberSaveable { mutableStateOf<String?>(null) }
     var renameDialog by rememberSaveable { mutableStateOf(false) }
     var ratesSheet by rememberSaveable { mutableStateOf(false) }
     var confirmSignOut by rememberSaveable { mutableStateOf(false) }
@@ -233,6 +246,7 @@ internal fun ProfileScreen(
                     { shareInvite(context, state.childInviteCode) },
                     Modifier.fillMaxWidth(),
                     color = RozkladTheme.colors.positive,
+                    contentColor = RozkladTheme.colors.onPositive,
                     leading = "📨",
                 )
                 val parent = state.parentInviteCode
@@ -240,6 +254,14 @@ internal fun ProfileScreen(
                     TextButton(onClick = onShowParentCode) { Text("Показати код для другого батька") }
                 } else {
                     CodeRow("Код для другого батька", parent)
+                }
+                if (family != null) {
+                    TextButton(onClick = { confirmRotate = true }, enabled = !family.state.busy) {
+                        Text(if (family.state.busy) "Зачекай…" else "Змінити код для дитини")
+                    }
+                    family.state.error?.let {
+                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    }
                 }
             }
         }
@@ -274,6 +296,15 @@ internal fun ProfileScreen(
                         fontWeight = FontWeight.ExtraBold,
                     )
                     Pill(if (m.role == Role.PARENT) "батьки" else "дитина")
+                    if (family != null && state.isParent && m.userId != state.myId) {
+                        IconButton(onClick = { removeMemberId = m.userId }, enabled = !family.state.busy) {
+                            Icon(
+                                Icons.Outlined.PersonRemove,
+                                contentDescription = "Прибрати з сім’ї: ${m.name.ifBlank { "без імені" }}",
+                                tint = c.muted,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -386,6 +417,47 @@ internal fun ProfileScreen(
         )
     }
 
+    if (confirmRotate && family != null) {
+        AlertDialog(
+            onDismissRequest = { confirmRotate = false },
+            title = { Text("Змінити код для дитини?") },
+            text = { Text("Старий код перестане працювати. Хто вже в сім’ї — лишиться. Новий код покажемо тут.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmRotate = false
+                    family.onRotateCode()
+                }) { Text("Змінити") }
+            },
+            dismissButton = { TextButton(onClick = { confirmRotate = false }) { Text("Скасувати") } },
+        )
+    }
+
+    val removing = removeMemberId?.let { id -> state.members.firstOrNull { it.userId == id } }
+    if (removing != null && family != null) {
+        // Ім'я — у називному відмінку на початку речення: відмінювати довільні імена ненадійно.
+        val who = removing.name.ifBlank { "Учасник без імені" }
+        AlertDialog(
+            onDismissRequest = { removeMemberId = null },
+            title = { Text("Прибрати із сім’ї?") },
+            text = {
+                Text(
+                    "$who більше не бачитиме дані сім’ї. Якщо людина увійшла за кодом, який знають інші, — " +
+                        "змініть код, інакше вона зможе приєднатися знову.",
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        removeMemberId = null
+                        family.onRemoveMember(removing.userId)
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                ) { Text("Прибрати") }
+            },
+            dismissButton = { TextButton(onClick = { removeMemberId = null }) { Text("Скасувати") } },
+        )
+    }
+
     if (confirmSignOut) {
         AlertDialog(
             onDismissRequest = { confirmSignOut = false },
@@ -401,6 +473,9 @@ internal fun ProfileScreen(
         )
     }
 }
+
+/** Дії батьків із сім'єю, що потребують мережі: новий код для дитини, прибрати учасника. */
+internal class FamilyActions(val state: FamilyActionState, val onRotateCode: () -> Unit, val onRemoveMember: (String) -> Unit)
 
 /** Картка розділу профілю із заголовком. */
 @Composable

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { enqueue, overlay, type Op } from '../../src/features/outbox';
+import { enqueue, isRetryableStatus, overlay, type Op } from '../../src/features/outbox';
 
 const hw = { id: 'h1', child_id: 'c', subject: 'Математика', due: '2026-10-16', text: 'ст. 5', done: false };
 const ins: Op = { t: 'school_homework', kind: 'insert', row: { ...hw, family_id: 'f' } };
@@ -23,5 +23,14 @@ describe('outbox', () => {
   it('overlay застосовує оновлення', () => {
     const o = overlay([{ t: 'school_homework', kind: 'update', id: 'h1', patch: { done: true } }], [], [hw]);
     expect(o.homework[0]!.done).toBe(true);
+  });
+});
+
+describe('isRetryableStatus', () => {
+  it('збій сервера, ліміти й протермінований токен — лишаємо в черзі', () => {
+    for (const s of [0, 401, 408, 425, 429, 500, 502, 503, 504]) expect(isRetryableStatus(s), String(s)).toBe(true);
+  });
+  it('свідома відмова — відкидаємо', () => {
+    for (const s of [400, 403, 404, 409, 422]) expect(isRetryableStatus(s), String(s)).toBe(false);
   });
 });

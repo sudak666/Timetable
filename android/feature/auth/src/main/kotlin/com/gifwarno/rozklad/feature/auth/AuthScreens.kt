@@ -272,6 +272,7 @@ internal fun JoinFamilyScreen(
                 onCreate,
                 Modifier.fillMaxWidth(),
                 color = RozkladTheme.colors.positive,
+                contentColor = RozkladTheme.colors.onPositive,
                 enabled = state.canCreate,
                 leading = "✨",
             )

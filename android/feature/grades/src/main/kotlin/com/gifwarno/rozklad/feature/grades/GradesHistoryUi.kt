@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -62,7 +63,9 @@ internal fun HistoryCard(items: List<HistoryEntry>, actions: RowActions, onDelet
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            items.forEachIndexed { i, e ->
+            // Історія росте роками; будуємо лише видиму частину, решта — за кнопкою.
+            var shown by rememberSaveable { mutableIntStateOf(HISTORY_PAGE) }
+            items.take(shown).forEachIndexed { i, e ->
                 if (i > 0) HorizontalDivider(Modifier.padding(horizontal = 8.dp), color = c.line)
                 when (e) {
                     is HistoryEntry.GradeRow -> GradeRow(e.item, actions)
@@ -79,9 +82,17 @@ internal fun HistoryCard(items: List<HistoryEntry>, actions: RowActions, onDelet
                     )
                 }
             }
+            if (items.size > shown) {
+                TextButton(onClick = { shown += HISTORY_PAGE }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Показати ще (${items.size - shown})")
+                }
+            }
         }
     }
 }
+
+/** Скільки записів історії показувати за раз. */
+private const val HISTORY_PAGE = 50
 
 @Composable
 private fun MoneyRow(e: HistoryEntry.Money, onDelete: (String) -> Unit) {

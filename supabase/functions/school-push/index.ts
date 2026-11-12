@@ -145,6 +145,14 @@ Deno.serve(async (req) => {
     await send([r.child_id], r.kind === "payout" ? `💸 Виплачено ${r.amount} ₴` : r.amount >= 0 ? `🎁 Бонус ${uah(r.amount)}` : `⚠️ Штраф ${r.amount} ₴`, r.note || "", "l" + r.id);
   } else if (table === "school_challenges" && type === "INSERT") {
     await send([r.child_id], `🏅 Новий челендж: +${r.reward} ₴`, r.title, "c" + r.id);
+  } else if (table === "school_members" && type === "INSERT") {
+    // Хтось увійшов за кодом — батьки мають знати (захист від підібраного чи злитого коду).
+    // Того, хто створив сім'ю, не сповіщаємо: інших батьків ще немає.
+    const to = (await parents(r.family_id)).filter((id) => id !== r.user_id);
+    const who = r.name || (r.role === "parent" ? "Хтось" : "Дитина");
+    await send(to, `👋 ${who} — новий учасник сім'ї`, r.role === "parent"
+      ? "Приєднався за кодом для батьків. Не знаєте цю людину? Приберіть її в профілі й змініть код."
+      : "Приєднався за кодом для дитини. Не знаєте цю людину? Приберіть її в профілі й змініть код.", "m" + r.user_id, "#me");
   }
   return new Response("ok");
 });

@@ -6,6 +6,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.gifwarno.rozklad.core.data.UserMessage
 import com.gifwarno.rozklad.core.database.OutboxDao
 import com.gifwarno.rozklad.core.model.SyncStatus
 import com.gifwarno.rozklad.core.network.RozkladNetworkDataSource
@@ -47,7 +48,8 @@ internal class SyncManager @Inject constructor(
 
                 // Сервер відхилив — повтор не допоможе; показуємо причину, наступний refresh поверне правду сервера.
                 is WriteResult.Rejected -> {
-                    lastError.value = "Зміну не збережено: ${r.message}"
+                    // Без сирого тексту Postgres: дитина має побачити «Недостатньо прав», а не «violates row-level security».
+                    lastError.value = "Зміну не збережено: ${UserMessage.of(IllegalStateException(r.message))}"
                     outboxDao.remove(op.seq)
                 }
             }

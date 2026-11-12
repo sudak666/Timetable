@@ -189,6 +189,12 @@ internal class DemoFamilyRepository(initial: FamilyData, private val clock: Cloc
 
     override suspend fun parentInviteCode(familyId: String): Result<String?> = Result.success("DEMO34")
 
+    override suspend fun rotateInviteCode(familyId: String): Result<Unit> =
+        Result.success(edit { d -> d.copy(family = d.family.copy(inviteCode = "DEMO" + id().take(4).uppercase())) })
+
+    override suspend fun removeMember(familyId: String, userId: String): Result<Unit> =
+        Result.success(edit { d -> d.copy(members = d.members.filterNot { it.userId == userId }) })
+
     override suspend fun saveSchedule(familyId: String, childId: String, schedule: SchoolSchedule) = edit { d ->
         d.copy(timetables = d.timetables + (childId to schedule))
     }

@@ -133,6 +133,8 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
     override suspend fun membership(userId: String): NetworkMembership? = client.from("school_members")
         .select(Columns.list("family_id", "role")) {
             filter { eq("user_id", userId) }
+            // Якщо сімей кілька — завжди та сама (як у вебі), а не випадкова.
+            order("family_id", Order.ASCENDING)
             limit(1)
         }
         .decodeList<NetworkMembership>()
@@ -149,18 +151,36 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
     }
 
     override suspend fun joinFamily(code: String, name: String) {
-        client.postgrest.rpc(
+        // Невірний код сервер повертає як null, а не винятком: так він рахує невдалі спроби (ліміт — 10 на годину).
+        val familyId = client.postgrest.rpc(
             "school_join_family",
             buildJsonObject {
                 put("p_code", code)
                 put("p_name", name)
             },
-        )
+        ).decodeAsOrNull<String>()
+        checkNotNull(familyId) { "Невірний код" }
     }
 
     override suspend fun parentCode(familyId: String): String? = client.postgrest
         .rpc("school_parent_code", buildJsonObject { put("fid", familyId) })
         .decodeAsOrNull<String>()
+
+    override suspend fun rotateInviteCode(familyId: String): String = client.postgrest
+        .rpc("school_rotate_invite_code", buildJsonObject { put("fid", familyId) })
+        .decodeAs<String>()
+
+    override suspend fun removeMember(familyId: String, userId: String) {
+        // RLS мовчки пропускає чужі видалення (0 рядків) — перевіряємо, що рядок справді зник.
+        val removed = client.from("school_members").delete {
+            select(Columns.list("user_id"))
+            filter {
+                eq("family_id", familyId)
+                eq("user_id", userId)
+            }
+        }.decodeList<JsonObject>()
+        check(removed.isNotEmpty()) { "Прибрати учасника можуть лише батьки" }
+    }
 
     override suspend fun snapshot(familyId: String): NetworkSnapshot = coroutineScope {
         val family = async {
@@ -173,38 +193,52 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
                 Columns.list("user_id", "role", "name", "goal_title", "goal_amount", "avatar", "theme"),
             ) { filter { eq("family_id", familyId) } }.decodeList<NetworkMember>()
         }
+        // Оцінки й журнал — усі, без обрізання: з них рахується баланс «до виплати» (Rewards.totals).
+        // Сторінками, бо сервер віддає не більше ~1000 рядків за запит; id — для однозначного порядку.
         val grades = async {
-            client.from("school_grades").select(
-                Columns.list("id", "child_id", "subject", "grade", "date", "status", "amount", "created_at"),
-            ) {
-                filter { eq("family_id", familyId) }
-                order("date", Order.DESCENDING)
-                limit(MAX_ROWS)
-            }.decodeList<NetworkGrade>()
+            allPages { from, to ->
+                client.from("school_grades").select(
+                    Columns.list("id", "child_id", "subject", "grade", "date", "status", "amount", "created_at"),
+                ) {
+                    filter { eq("family_id", familyId) }
+                    order("date", Order.DESCENDING)
+                    order("id", Order.ASCENDING)
+                    range(from, to)
+                }.decodeList<NetworkGrade>()
+            }
         }
         val ledger = async {
-            client.from("school_ledger").select(
-                Columns.list("id", "child_id", "kind", "amount", "note", "date", "created_at"),
-            ) {
-                filter { eq("family_id", familyId) }
-                order("date", Order.DESCENDING)
-                limit(MAX_ROWS)
-            }.decodeList<NetworkLedger>()
+            allPages { from, to ->
+                client.from("school_ledger").select(
+                    Columns.list("id", "child_id", "kind", "amount", "note", "date", "created_at"),
+                ) {
+                    filter { eq("family_id", familyId) }
+                    order("date", Order.DESCENDING)
+                    order("id", Order.ASCENDING)
+                    range(from, to)
+                }.decodeList<NetworkLedger>()
+            }
         }
         val challenges = async {
-            client.from("school_challenges").select(
-                Columns.list("id", "child_id", "title", "subject", "min_grade", "need", "reward", "start_date", "end_date"),
-            ) {
-                filter { eq("family_id", familyId) }
-                limit(MAX_CHALLENGES)
-            }.decodeList<NetworkChallenge>()
+            allPages { from, to ->
+                client.from("school_challenges").select(
+                    Columns.list("id", "child_id", "title", "subject", "min_grade", "need", "reward", "start_date", "end_date"),
+                ) {
+                    filter { eq("family_id", familyId) }
+                    order("id", Order.ASCENDING)
+                    range(from, to)
+                }.decodeList<NetworkChallenge>()
+            }
         }
         val homework = async {
-            client.from("school_homework").select(Columns.list("id", "child_id", "subject", "due", "text", "done")) {
-                filter { eq("family_id", familyId) }
-                order("due", Order.ASCENDING)
-                limit(MAX_HOMEWORK)
-            }.decodeList<NetworkHomework>()
+            allPages { from, to ->
+                client.from("school_homework").select(Columns.list("id", "child_id", "subject", "due", "text", "done")) {
+                    filter { eq("family_id", familyId) }
+                    order("due", Order.ASCENDING)
+                    order("id", Order.ASCENDING)
+                    range(from, to)
+                }.decodeList<NetworkHomework>()
+            }
         }
         val timetables = async {
             client.from("school_timetables").select(Columns.list("child_id", "bells", "week", "holidays", "updated_at")) {
@@ -222,6 +256,18 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
             timetables = timetables.await(),
             alert = familyRow.alertUid?.let { alert(it) },
         )
+    }
+
+    /** Усі рядки запиту, сторінка за сторінкою, доки сторінка не виявиться неповною. */
+    private suspend fun <T> allPages(load: suspend (from: Long, to: Long) -> List<T>): List<T> {
+        val out = mutableListOf<T>()
+        var from = 0L
+        while (true) {
+            val page = load(from, from + PAGE - 1)
+            out += page
+            if (page.size < PAGE) return out
+            from += PAGE
+        }
     }
 
     override suspend fun alertLocations(oblastUid: Int?): List<NetworkAlertLocation> =
@@ -258,20 +304,48 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
     override suspend fun write(op: NetworkWrite): WriteResult = try {
         val table = client.from(op.table)
         when (op.kind) {
-            WriteKind.INSERT -> table.upsert(op.body) {
-                onConflict = op.key
-                ignoreDuplicates = true
+            WriteKind.INSERT -> {
+                table.upsert(op.body) {
+                    onConflict = op.key
+                    ignoreDuplicates = true
+                }
+                WriteResult.Ok
             }
 
-            WriteKind.UPSERT -> table.upsert(op.body) { onConflict = op.key }
+            WriteKind.UPSERT -> {
+                table.upsert(op.body) { onConflict = op.key }
+                WriteResult.Ok
+            }
 
-            WriteKind.UPDATE -> table.update(op.body) { filter { eq(op.key, op.rowId) } }
+            // RLS і видалений рядок дають «0 рядків» без помилки — інакше показали б «збережено», а зміни немає.
+            WriteKind.UPDATE -> {
+                val changed = table.update(op.body) {
+                    select(Columns.list(op.key))
+                    filter { eq(op.key, op.rowId) }
+                }.decodeList<JsonObject>()
+                if (changed.isEmpty()) WriteResult.Rejected(NOT_APPLIED) else WriteResult.Ok
+            }
 
-            WriteKind.DELETE -> table.delete { filter { eq(op.key, op.rowId) } }
+            // Видалення ідемпотентне: рядка вже немає — мета досягнута.
+            WriteKind.DELETE -> {
+                table.delete { filter { eq(op.key, op.rowId) } }
+                WriteResult.Ok
+            }
         }
-        WriteResult.Ok
     } catch (e: RestException) {
-        WriteResult.Rejected(e.description ?: e.error)
+        // Назавжди відкидаємо лише справжню відмову сервера (права, обмеження, некоректні дані).
+        // Збій сервера чи протермінований токен — не привід втратити оцінку, додану офлайн.
+        when (writeFailureOf(e.statusCode)) {
+            WriteFailure.REJECTED -> WriteResult.Rejected(e.description ?: e.error)
+
+            WriteFailure.TRANSIENT -> WriteResult.Retry
+
+            WriteFailure.AUTH -> {
+                // Офлайн довше за годину → токен доступу протермінований. Оновлюємо й пробуємо знову.
+                runCatching { client.auth.refreshCurrentSession() }
+                WriteResult.Retry
+            }
+        }
     } catch (_: HttpRequestException) {
         WriteResult.Retry
     } catch (_: HttpRequestTimeoutException) {
@@ -281,9 +355,11 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
     }
 
     private companion object {
-        const val MAX_ROWS = 2000L
-        const val MAX_HOMEWORK = 1000L
-        const val MAX_CHALLENGES = 200L
+        /** Розмір сторінки: PostgREST у Supabase віддає не більше 1000 рядків за запит. */
+        const val PAGE = 1000L
+
+        /** UPDATE не зачепив жодного рядка: запис видалили на іншому пристрої або бракує прав. */
+        const val NOT_APPLIED = "запис уже видалено або змінити його можуть лише батьки"
 
         /** Підтвердження пошти відкривається у веб-версії — після нього можна увійти в застосунку. */
         const val EMAIL_CONFIRM_REDIRECT = "https://sudak666.github.io/Timetable/"

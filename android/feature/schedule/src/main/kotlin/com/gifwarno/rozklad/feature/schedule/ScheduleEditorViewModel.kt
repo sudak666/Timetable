@@ -1,5 +1,6 @@
 package com.gifwarno.rozklad.feature.schedule
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gifwarno.rozklad.core.data.repository.ActiveFamily
@@ -45,7 +46,11 @@ sealed interface ScheduleEditorState {
  * Усі зміни — чисті перетворення [SchoolSchedule], тому їх легко тестувати.
  */
 @HiltViewModel
-class ScheduleEditorViewModel @Inject constructor(private val active: ActiveFamily, private val families: FamilyRepository) : ViewModel() {
+class ScheduleEditorViewModel @Inject constructor(
+    private val active: ActiveFamily,
+    private val families: FamilyRepository,
+    private val savedState: SavedStateHandle,
+) : ViewModel() {
     private val _state = MutableStateFlow<ScheduleEditorState>(ScheduleEditorState.Loading)
     val state: StateFlow<ScheduleEditorState> = _state.asStateFlow()
 
@@ -53,10 +58,23 @@ class ScheduleEditorViewModel @Inject constructor(private val active: ActiveFami
         viewModelScope.launch {
             val ctx = active.context.filterNotNull().first()
             val child = ctx.child
-            _state.value = if (child == null || !ctx.canEditSchedule) {
-                ScheduleEditorState.NotAllowed
+            if (child == null || !ctx.canEditSchedule) {
+                _state.value = ScheduleEditorState.NotAllowed
+                return@launch
+            }
+            // Процес вбили посеред редагування — повертаємо незбережену чернетку саме цієї дитини.
+            val restored = DraftCodec.decode(savedState[DRAFT_KEY])?.takeIf { it.childId == child.userId }
+            _state.value = if (restored != null) {
+                ScheduleEditorState.Editing(child.name, restored.schedule, day = restored.day, dirty = true)
             } else {
                 ScheduleEditorState.Editing(child.name, ctx.schedule ?: Timetable.BLANK)
+            }
+            _state.collect { s ->
+                if (s is ScheduleEditorState.Editing && s.dirty) {
+                    savedState[DRAFT_KEY] = DraftCodec.encode(child.userId, s.day, s.draft)
+                } else {
+                    savedState.remove<String>(DRAFT_KEY)
+                }
             }
         }
     }
@@ -160,6 +178,7 @@ class ScheduleEditorViewModel @Inject constructor(private val active: ActiveFami
     }
 
     private companion object {
+        const val DRAFT_KEY = "schedule_draft"
         const val SATURDAY_DAYS = 6
         const val BREAK_MINUTES = 10L
         const val LESSON_MINUTES = 45L

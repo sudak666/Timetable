@@ -1,5 +1,6 @@
 package com.gifwarno.rozklad.feature.schedule
 
+import androidx.lifecycle.SavedStateHandle
 import com.gifwarno.rozklad.core.data.repository.ActiveFamily
 import com.gifwarno.rozklad.core.domain.Timetable
 import com.gifwarno.rozklad.core.testing.FakeFamilyRepository
@@ -11,6 +12,7 @@ import java.time.LocalTime
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -22,8 +24,10 @@ class ScheduleEditorViewModelTest {
 
     // lazy: створюємо після того, як MainDispatcherRule підмінив Dispatchers.Main
     private val vm by lazy {
-        ScheduleEditorViewModel(ActiveFamily(FakeSessionRepository.ready(), families, fakePreferences()), families)
+        ScheduleEditorViewModel(ActiveFamily(FakeSessionRepository.ready(), families, fakePreferences()), families, savedState)
     }
+
+    private val savedState = SavedStateHandle()
 
     private val editing get() = vm.state.value as ScheduleEditorState.Editing
 
@@ -45,6 +49,22 @@ class ScheduleEditorViewModelTest {
         val saved = families.savedSchedules.getValue(TestData.child.userId)
         assertEquals(listOf("Фізика", "Математика"), saved.week[0].map { it.subject })
         assertTrue(editing.saved)
+    }
+
+    @Test
+    fun `після вбивства процесу незбережена чернетка повертається, після збереження — зникає`() = runTest {
+        vm.addLesson("Хімія")
+        vm.addLesson("Біологія")
+
+        // Нова ViewModel з тим самим SavedStateHandle — так Android відновлює екран після смерті процесу.
+        val restored =
+            ScheduleEditorViewModel(ActiveFamily(FakeSessionRepository.ready(), families, fakePreferences()), families, savedState)
+        val e = restored.state.value as ScheduleEditorState.Editing
+        assertTrue(e.dirty)
+        assertEquals(listOf("Хімія", "Біологія"), e.lessons.map { it.subject })
+
+        restored.save()
+        assertNull(savedState.get<String>("schedule_draft"))
     }
 
     @Test

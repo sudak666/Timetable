@@ -134,6 +134,7 @@ private fun MainShell(
             deepLink == null -> null
             deepLink.startsWith("#hw") -> HomeworkKey
             deepLink.startsWith("#grades") -> GradesKey
+            deepLink.startsWith("#me") -> ProfileKey
             else -> null
         }
         if (target != null) {

@@ -87,7 +87,11 @@ internal fun QuizCard(onCorrect: () -> Unit, modifier: Modifier = Modifier) {
                         },
                         modifier = Modifier.weight(1f),
                         color = color,
-                        contentColor = if (color == c.soft) MaterialTheme.colorScheme.onSurface else Color.White,
+                        contentColor = when (color) {
+                            c.positive -> c.onPositive
+                            c.negative -> c.onNegative
+                            else -> MaterialTheme.colorScheme.onSurface
+                        },
                     )
                 }
             }

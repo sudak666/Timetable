@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import com.gifwarno.rozklad.core.common.ApplicationScope
 import com.gifwarno.rozklad.core.common.Dispatcher
 import com.gifwarno.rozklad.core.common.RozkladDispatchers
@@ -69,11 +70,17 @@ class PushManager @Inject constructor(
         if (!FirebaseSetup.init(context)) return
         createChannels()
         scope.launch {
+            var previousUser: String? = null
             combine(session.session, preferences.pushEnabled, preferences.alertsPushEnabled) { s, on, alerts ->
                 Triple((s as? SessionState.Ready)?.user?.id, on, alerts)
             }
                 .distinctUntilChanged()
-                .collect { (userId, on, alerts) -> sync(signedIn = userId != null, wanted = on && hasPermission(), alerts = alerts) }
+                .collect { (userId, on, alerts) ->
+                    // Вихід: пристрій треба відв'язати, навіть якщо локальні налаштування (токен) уже стерто.
+                    val signedOut = previousUser != null && userId == null
+                    previousUser = userId
+                    sync(signedIn = userId != null, wanted = on && hasPermission(), alerts = alerts, signedOut = signedOut)
+                }
         }
     }
 
@@ -107,23 +114,35 @@ class PushManager @Inject constructor(
     /** Чи реєстрували ми пристрій у цьому процесі — щоб знати, що треба відв'язати. */
     private var registered = false
 
-    private suspend fun sync(signedIn: Boolean, wanted: Boolean, alerts: Boolean) = withContext(io) {
+    /**
+     * Відв'язку не вдалося завершити (вийшли без мережі) — пам'ятаємо поза DataStore, бо його вихід очищає.
+     * Поки Firebase-ідентифікатор живий, сервер слав би на цей телефон сповіщення про оцінки попереднього акаунта.
+     */
+    private val pendingPrefs by lazy { context.getSharedPreferences(PENDING_PREFS, Context.MODE_PRIVATE) }
+
+    private fun setPendingUnregister(pending: Boolean) = pendingPrefs.edit { putBoolean(PENDING_KEY, pending) }
+
+    private suspend fun sync(signedIn: Boolean, wanted: Boolean, alerts: Boolean, signedOut: Boolean = false) = withContext(io) {
         try {
             when {
                 // Токен прийде в onRegistered(); якщо він уже є — Firebase поверне той самий.
                 signedIn && wanted -> {
                     FirebaseMessaging.getInstance().register().await()
                     registered = true
+                    setPendingUnregister(false)
                     // Перемкнули тривоги при вже зареєстрованому токені — повідомляємо сервер одразу.
                     preferences.pushToken.first()?.let { network.registerPushToken(it, alerts) }
                 }
 
-                registered || preferences.pushToken.first() != null -> {
+                signedOut || registered || preferences.pushToken.first() != null || pendingPrefs.getBoolean(PENDING_KEY, false) -> {
                     // Вимкнули або вийшли: прибираємо пристрій із сервера (якщо ще є сесія)
                     // і скасовуємо токен, щоб наступний користувач телефона отримав новий.
                     if (signedIn) preferences.pushToken.first()?.let { network.unregisterPushToken(it) }
                     preferences.setPushToken(null)
+                    // Спершу позначка, потім мережа: якщо unregister() впаде офлайн — повторимо на наступному старті.
+                    setPendingUnregister(true)
                     FirebaseMessaging.getInstance().unregister().await()
+                    setPendingUnregister(false)
                     registered = false
                 }
 
@@ -176,6 +195,8 @@ class PushManager @Inject constructor(
 
     private companion object {
         const val TAG = "RozkladPush"
+        const val PENDING_PREFS = "rozklad_push_pending"
+        const val PENDING_KEY = "unregister"
         const val OFFLINE_MESSAGE = "Не вдалося налаштувати сповіщення — перевір інтернет"
     }
 }
