@@ -205,14 +205,32 @@ private fun ColumnScope.Ready(state: WidgetState.Ready, alert: String?) {
     }
 }
 
+/** Розміри рядка уроку: чим вищий рядок, тим більші номерок і шрифт. */
+private enum class RowSize(val badge: Int, val corner: Int, val number: Int, val time: Int, val timeWidth: Int, val subject: Int) {
+    NORMAL(badge = 22, corner = 7, number = 12, time = 12, timeWidth = 46, subject = 13),
+    BIG(badge = 26, corner = 8, number = 14, time = 14, timeWidth = 54, subject = 15),
+    HUGE(badge = 30, corner = 9, number = 16, time = 16, timeWidth = 60, subject = 17),
+
+    /** Вузький віджет (без колонки часу): розмір фіксований, щоб назви предметів не обрізались. */
+    NARROW(badge = 26, corner = 8, number = 14, time = 14, timeWidth = 0, subject = 14),
+    ;
+
+    companion object {
+        fun of(height: Float, showTime: Boolean): RowSize = when {
+            !showTime -> NARROW
+            height >= ROW_HUGE -> HUGE
+            height >= ROW_BIG -> BIG
+            else -> NORMAL
+        }
+    }
+}
+
 /** [showTime] — колонка часу; у вузькому віджеті її немає, щоб назви предметів не обрізались. */
 @Composable
 private fun LessonRow(l: WidgetLesson, height: Float, showTime: Boolean) {
     val current = l.state == WidgetLessonState.CURRENT
     val past = l.state == WidgetLessonState.PAST
-    // Вузький віджет (без колонки часу): розмір фіксований, щоб назви предметів не обрізались.
-    val big = height >= ROW_BIG || !showTime
-    val huge = height >= ROW_HUGE && showTime
+    val s = RowSize.of(height, showTime)
     val row = GlanceModifier.fillMaxWidth().height(height.dp).padding(horizontal = 4.dp)
     Row(
         if (current) row.background(Highlight).cornerRadius(10.dp) else row,
@@ -220,28 +238,28 @@ private fun LessonRow(l: WidgetLesson, height: Float, showTime: Boolean) {
     ) {
         Box(
             GlanceModifier
-                .size(if (huge) 30.dp else if (big) 26.dp else 22.dp)
+                .size(s.badge.dp)
                 .background(if (past) Line else ColorProvider(Color(l.color)))
-                .cornerRadius(if (huge) 9.dp else if (big) 8.dp else 7.dp),
+                .cornerRadius(s.corner.dp),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 "${l.number}",
-                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = if (huge) 16.sp else if (big) 14.sp else 12.sp, color = if (past) Muted else White),
+                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = s.number.sp, color = if (past) Muted else White),
             )
         }
         if (showTime) {
             Text(
                 l.start,
-                style = TextStyle(fontSize = if (huge) 16.sp else if (big) 14.sp else 12.sp, color = Muted),
-                modifier = GlanceModifier.width(if (huge) 60.dp else if (big) 54.dp else 46.dp).padding(start = 8.dp),
+                style = TextStyle(fontSize = s.time.sp, color = Muted),
+                modifier = GlanceModifier.width(s.timeWidth.dp).padding(start = 8.dp),
             )
         }
         Text(
             "${l.emoji} ${l.subject}",
             modifier = if (showTime) GlanceModifier else GlanceModifier.padding(start = 8.dp),
             style = TextStyle(
-                fontSize = if (!showTime) 14.sp else if (huge) 17.sp else if (big) 15.sp else 13.sp,
+                fontSize = s.subject.sp,
                 fontWeight = if (current) FontWeight.Bold else FontWeight.Medium,
                 color = if (past) Muted else White,
             ),
