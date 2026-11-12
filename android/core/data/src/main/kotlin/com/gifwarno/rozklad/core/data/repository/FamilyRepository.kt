@@ -66,6 +66,12 @@ interface FamilyRepository {
     /** Свій аватар і/або колір (null — не змінювати). Сервер пускає лише свій рядок (або батьків). */
     suspend fun setMyLook(familyId: String, userId: String, avatar: String?, theme: String?)
 
+    /** Своє ім'я в сім'ї (обрізається до [NAME_MAX]). */
+    suspend fun setMyName(familyId: String, userId: String, name: String)
+
+    /** Назва сім'ї (лише батьки — так дозволяє RLS). */
+    suspend fun renameFamily(familyId: String, name: String)
+
     suspend fun parentInviteCode(familyId: String): Result<String?>
 
     /** Зберегти розклад дитини (офлайн-черга, повна заміна на сервері). */
@@ -85,3 +91,6 @@ interface FamilyRepository {
     /** Стан тривоги з push-повідомлення — без мережі. */
     suspend fun applyAlertPush(uid: Int, status: AlertStatus, since: Instant?)
 }
+
+/** Найдовше ім'я чи назва сім'ї — як у вебі (maxlength=40). */
+const val NAME_MAX = 40

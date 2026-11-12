@@ -113,10 +113,13 @@ internal class LocalWriter @Inject constructor(
 
             Tables.CHALLENGES to WriteKind.DELETE -> familyDao.deleteChallenge(w.rowId)
 
-            Tables.FAMILIES to WriteKind.UPDATE ->
+            Tables.FAMILIES to WriteKind.UPDATE -> {
                 w.body["rates"]?.let { familyDao.setSettingsJson(familyId, it.toString()) }
+                w.body["name"]?.jsonPrimitive?.content?.let { familyDao.setFamilyName(familyId, it) }
+            }
 
             Tables.MEMBERS to WriteKind.UPDATE -> {
+                w.body["name"]?.jsonPrimitive?.content?.let { familyDao.setMemberName(familyId, w.rowId, it) }
                 val goal = w.body["goal_title"]?.jsonPrimitive?.content
                 if (goal != null) {
                     familyDao.setMemberGoal(familyId, w.rowId, goal, w.body["goal_amount"]?.jsonPrimitive?.intOrNull ?: 0)

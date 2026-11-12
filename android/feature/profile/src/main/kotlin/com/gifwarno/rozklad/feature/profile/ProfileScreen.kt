@@ -19,12 +19,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -43,10 +45,12 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gifwarno.rozklad.core.data.repository.NAME_MAX
 import com.gifwarno.rozklad.core.datastore.ThemeMode
 import com.gifwarno.rozklad.core.designsystem.component.ButtonShape
 import com.gifwarno.rozklad.core.designsystem.component.GameButton
@@ -76,6 +80,7 @@ fun ProfileRoute(onPickAlertRegion: () -> Unit, modifier: Modifier = Modifier, v
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val alertError by viewModel.alertError.collectAsStateWithLifecycle()
     val deleteState by viewModel.deleteState.collectAsStateWithLifecycle()
+    val passwordState by viewModel.passwordState.collectAsStateWithLifecycle()
     val pushState by viewModel.pushState.collectAsStateWithLifecycle()
     // Android 13+: системний запит дозволу; вмикаємо лише якщо людина дозволила.
     // Що ввімкнути після дозволу: загальні сповіщення чи тривоги (тривоги вмикають і загальні).
@@ -122,6 +127,8 @@ fun ProfileRoute(onPickAlertRegion: () -> Unit, modifier: Modifier = Modifier, v
             onPushToggle = onPushToggle,
             alerts = alerts,
             onLook = viewModel::setLook,
+            onRename = viewModel::rename,
+            password = PasswordActions(passwordState, viewModel::changePassword, viewModel::resetPasswordState),
             onSaveRates = viewModel::saveRates,
             onGameStyle = viewModel::setGameStyle,
             modifier = modifier,
@@ -145,7 +152,11 @@ internal fun ProfileScreen(
     onLook: (avatar: String?, accent: String?) -> Unit = { _, _ -> },
     onSaveRates: (Map<Int, Int>, Streak) -> Unit = { _, _ -> },
     onGameStyle: (GameStyle) -> Unit = {},
+    onRename: (name: String, family: String?) -> Unit = { _, _ -> },
+    password: PasswordActions? = null,
 ) {
+    var passwordDialog by rememberSaveable { mutableStateOf(false) }
+    var renameDialog by rememberSaveable { mutableStateOf(false) }
     var ratesSheet by rememberSaveable { mutableStateOf(false) }
     var confirmSignOut by rememberSaveable { mutableStateOf(false) }
     var lookSheet by rememberSaveable { mutableStateOf(false) }
@@ -183,14 +194,35 @@ internal fun ProfileScreen(
                 }
             }
         }
-        GameButton(
-            "Аватар і колір",
-            onClick = { lookSheet = true },
-            modifier = Modifier.fillMaxWidth(),
-            color = c.card,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            leading = "🎨",
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            GameButton(
+                if (state.myName.isBlank()) "Вказати ім’я" else "Ім’я",
+                onClick = { renameDialog = true },
+                modifier = Modifier.weight(1f),
+                color = c.card,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                leading = "✏️",
+            )
+            GameButton(
+                "Аватар і колір",
+                onClick = { lookSheet = true },
+                modifier = Modifier.weight(1f),
+                color = c.card,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                leading = "🎨",
+            )
+        }
+        if (renameDialog) {
+            RenameDialog(
+                name = state.myName,
+                familyName = state.familyName.takeIf { state.isParent },
+                onDismiss = { renameDialog = false },
+                onSave = { n, f ->
+                    renameDialog = false
+                    onRename(n, f)
+                },
+            )
+        }
 
         if (state.isParent) {
             GameCard("🎟️ Запросити в сім’ю") {
@@ -289,6 +321,16 @@ internal fun ProfileScreen(
         }
 
         GameCard("⚙️ Акаунт") {
+            if (password != null) {
+                GameButton(
+                    "Змінити пароль",
+                    onClick = { passwordDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = c.soft,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    leading = "🔑",
+                )
+            }
             GameButton(
                 "Вийти",
                 onClick = { confirmSignOut = true },
@@ -303,6 +345,17 @@ internal fun ProfileScreen(
             ) { Text("Видалити акаунт") }
             PrivacyPolicyLink(Modifier.fillMaxWidth())
         }
+    }
+
+    if (passwordDialog && password != null) {
+        PasswordDialog(
+            state = password.state,
+            onSave = password.onSave,
+            onDismiss = {
+                passwordDialog = false
+                password.onClosed()
+            },
+        )
     }
 
     if (ratesSheet) {
@@ -402,3 +455,44 @@ private fun LookSheet(state: ProfileUiState.Ready, onDismiss: () -> Unit, onLook
         }
     }
 }
+
+/** Своє ім'я і (для батьків) назва сім'ї. Порожнє ім'я не зберігається. */
+@Composable
+internal fun RenameDialog(name: String, familyName: String?, onDismiss: () -> Unit, onSave: (String, String?) -> Unit) {
+    var n by rememberSaveable { mutableStateOf(name) }
+    var f by rememberSaveable { mutableStateOf(familyName.orEmpty()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (familyName != null) "✏️ Ім’я й сім’я" else "✏️ Ім’я") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = n,
+                    onValueChange = { n = it.take(NAME_MAX) },
+                    label = { Text("Як тебе звати") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                )
+                if (familyName != null) {
+                    OutlinedTextField(
+                        value = f,
+                        onValueChange = { f = it.take(NAME_MAX) },
+                        label = { Text("Назва сім’ї") },
+                        supportingText = { Text("Наприклад, «Сім’я Коваленків»") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(n, familyName?.let { f }) }, enabled = n.isNotBlank() && (familyName == null || f.isNotBlank())) {
+                Text("Зберегти")
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Скасувати") } },
+    )
+}
+
+/** Зміна пароля: стан і дії з ViewModel (null у прев'ю — кнопки немає). */
+internal class PasswordActions(val state: PasswordState, val onSave: (String) -> Unit, val onClosed: () -> Unit)

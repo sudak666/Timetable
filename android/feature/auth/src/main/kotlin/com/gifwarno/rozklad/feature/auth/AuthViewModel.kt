@@ -20,7 +20,9 @@ data class AuthUiState(
     val message: String? = null,
     val messageIsError: Boolean = false,
 ) {
-    val canSubmit: Boolean get() = !busy && EMAIL.matches(email.trim()) && password.length >= MIN_PASSWORD
+    val hasValidEmail: Boolean get() = EMAIL.matches(email.trim())
+
+    val canSubmit: Boolean get() = !busy && hasValidEmail && password.length >= MIN_PASSWORD
 
     companion object {
         const val MIN_PASSWORD = 6
@@ -57,6 +59,30 @@ class AuthViewModel @Inject constructor(private val session: SessionRepository) 
     fun onPassword(v: String) = _state.update { it.copy(password = v.take(MAX_PASSWORD), message = null) }
 
     fun toggleMode() = _state.update { it.copy(isSignUp = !it.isSignUp, message = null) }
+
+    /** «Забули пароль?»: лист на введену пошту. Посилання з листа веде на сайт, де задають новий пароль. */
+    fun forgotPassword() {
+        val s = _state.value
+        if (s.busy) return
+        if (!s.hasValidEmail) {
+            _state.update { it.copy(message = "Впиши пошту вище — надішлемо на неї посилання", messageIsError = true) }
+            return
+        }
+        _state.update { it.copy(busy = true, message = null) }
+        viewModelScope.launch {
+            session.resetPassword(s.email)
+                .onSuccess {
+                    _state.update {
+                        it.copy(
+                            busy = false,
+                            message = "Якщо акаунт ${s.email.trim()} існує, ми надіслали лист. Відкрий посилання — і задай новий пароль 📬",
+                            messageIsError = false,
+                        )
+                    }
+                }
+                .onFailure { e -> _state.update { it.copy(busy = false, message = e.message, messageIsError = true) } }
+        }
+    }
 
     fun submit() {
         val s = _state.value

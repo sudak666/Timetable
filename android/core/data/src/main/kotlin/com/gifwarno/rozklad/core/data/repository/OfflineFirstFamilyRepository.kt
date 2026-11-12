@@ -250,6 +250,18 @@ internal class OfflineFirstFamilyRepository @Inject constructor(
         submit(familyId, NetworkWrite(Tables.MEMBERS, WriteKind.UPDATE, userId, body))
     }
 
+    override suspend fun setMyName(familyId: String, userId: String, name: String) {
+        val clean = name.trim().take(NAME_MAX)
+        if (clean.isEmpty()) return
+        submit(familyId, NetworkWrite(Tables.MEMBERS, WriteKind.UPDATE, userId, buildJsonObject { put("name", clean) }))
+    }
+
+    override suspend fun renameFamily(familyId: String, name: String) {
+        val clean = name.trim().take(NAME_MAX)
+        if (clean.isEmpty()) return
+        submit(familyId, NetworkWrite(Tables.FAMILIES, WriteKind.UPDATE, familyId, buildJsonObject { put("name", clean) }))
+    }
+
     override suspend fun parentInviteCode(familyId: String): Result<String?> = withContext(io) {
         runCatching { network.parentCode(familyId) }
     }

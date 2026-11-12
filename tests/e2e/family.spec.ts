@@ -167,6 +167,83 @@ test('увійшов, але ще не в сім’ї: підказка веде
   await expect(page).toHaveURL(/#me$/);
 });
 
+test('профіль: батьки змінюють своє ім’я й назву сім’ї', async ({ page }) => {
+  await mockFamily(page, 'parent');
+  await page.goto('/#me');
+  const patch = (table: string) => page.waitForRequest((r) => r.method() === 'PATCH' && r.url().includes(table));
+  await page.getByRole('button', { name: /Ім’я/ }).click();
+  await page.getByRole('dialog').locator('input').fill('  Сергій Петрович  ');
+  let req = patch('school_members');
+  await page.getByRole('button', { name: 'Готово' }).click();
+  expect((await req).postDataJSON()).toEqual({ name: 'Сергій Петрович' });
+  expect((await req).url()).toContain('user_id=eq.p1');
+
+  await page.getByRole('button', { name: /Назва сім’ї/ }).click();
+  await page.getByRole('dialog').locator('input').fill('Сім’я Коваленків');
+  req = patch('school_families');
+  await page.getByRole('button', { name: 'Готово' }).click();
+  expect((await req).postDataJSON()).toEqual({ name: 'Сім’я Коваленків' });
+});
+
+test('профіль: дитина не бачить зміну назви сім’ї', async ({ page }) => {
+  await mockFamily(page, 'child');
+  await page.goto('/#me');
+  await expect(page.getByRole('button', { name: /Ім’я/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Назва сім’ї/ })).toHaveCount(0);
+});
+
+test('вступ у сім’ю без імені не пускає', async ({ page }) => {
+  await mockFamily(page, 'child', false, { family: false });
+  let rpc = 0;
+  await page.route('**/rest/v1/rpc/school_join_family', (r) => { rpc++; return r.fulfill({ status: 204, body: '' }); });
+  await page.goto('/#me');
+  await page.getByPlaceholder('Код запрошення').fill('ABC123');
+  await page.getByRole('button', { name: /Приєднатись/ }).click();
+  await expect(page.getByRole('status')).toContainText('Напиши своє ім’я');
+  await expect(page.getByPlaceholder("Твоє ім'я")).toBeFocused();
+  expect(rpc).toBe(0);
+});
+
+test('«Забули пароль?» надсилає лист на введену пошту', async ({ page }) => {
+  let body: unknown = null, url = '';
+  await page.route(`https://${REF}.supabase.co/auth/v1/recover**`, (r) => {
+    body = r.request().postDataJSON(); url = r.request().url();
+    return r.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+  });
+  await page.goto('/#me');
+  await page.locator('#gEmail').fill('kid@test.ua');
+  await page.getByRole('button', { name: 'Забули пароль?' }).click();
+  await expect(page.getByRole('dialog')).toContainText('kid@test.ua');
+  expect(body).toMatchObject({ email: 'kid@test.ua' });
+  expect(decodeURIComponent(url)).toContain('redirect_to=http://localhost');
+});
+
+test('«Змінити пароль» у профілі: двічі, перевірка збігу, збереження', async ({ page }) => {
+  await mockFamily(page, 'parent');
+  const puts: unknown[] = [];
+  await page.route(`https://${REF}.supabase.co/auth/v1/user`, (r) => {
+    if (r.request().method() === 'PUT') puts.push(r.request().postDataJSON());
+    return r.fallback();
+  });
+  await page.goto('/#me');
+  const change = page.getByRole('button', { name: /Змінити пароль/ });
+  const enter = async (v: string) => { await page.getByRole('dialog').locator('input[type=password]').fill(v); await page.getByRole('button', { name: 'Готово' }).click(); };
+  await change.click(); await enter('newpass1'); await enter('newpass2');
+  await expect(page.locator('.toast')).toContainText('не збігаються');
+  expect(puts).toHaveLength(0);
+  await change.click(); await enter('newpass1'); await enter('newpass1');
+  await expect.poll(() => puts.length).toBe(1);
+  expect(puts[0]).toMatchObject({ password: 'newpass1' });
+});
+
+test('посилання з листа відкриває «Задай новий пароль»', async ({ page }) => {
+  await mockFamily(page, 'parent');
+  await page.addInitScript(() => localStorage.clear());
+  await page.goto('/#access_token=x.eyJzdWIiOiJ4In0.x&expires_at=1790000000&expires_in=3600&refresh_token=r&token_type=bearer&type=recovery');
+  await expect(page.getByRole('dialog')).toContainText('Задай новий пароль');
+  await expect(page).not.toHaveURL(/access_token/);
+});
+
 test('редактор розкладу: заповнити, перевірка помилок, збереження на сервер', async ({ page }) => {
   await mockFamily(page, 'parent', false, { timetable: false });
   await page.goto('/');

@@ -47,6 +47,13 @@ class FakeSessionRepository(initial: SessionState) : SessionRepository {
 
     override suspend fun signUp(email: String, password: String) = Result.success(false)
 
+    val resetEmails = mutableListOf<String>()
+    val newPasswords = mutableListOf<String>()
+
+    override suspend fun resetPassword(email: String): Result<Unit> = Result.success(Unit).also { resetEmails += email }
+
+    override suspend fun changePassword(password: String): Result<Unit> = Result.success(Unit).also { newPasswords += password }
+
     override suspend fun createFamily(parentName: String) = Result.success(Unit)
 
     override suspend fun joinFamily(code: String, name: String) = Result.success(Unit)
@@ -180,6 +187,15 @@ class FakeFamilyRepository(initial: FamilyData?) : FamilyRepository {
 
     override suspend fun saveRates(familyId: String, rates: Map<Int, Int>, streak: com.gifwarno.rozklad.core.model.Streak) {
         savedRates = rates to streak
+    }
+
+    override suspend fun setMyName(familyId: String, userId: String, name: String) {
+        data.value =
+            data.value?.let { d -> d.copy(members = d.members.map { if (it.userId == userId) it.copy(name = name.trim()) else it }) }
+    }
+
+    override suspend fun renameFamily(familyId: String, name: String) {
+        data.value = data.value?.let { d -> d.copy(family = d.family.copy(name = name.trim())) }
     }
 
     val looks = mutableListOf<Triple<String, String?, String?>>()

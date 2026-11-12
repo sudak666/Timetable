@@ -84,6 +84,14 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
         return user != null && client.auth.currentSessionOrNull() == null
     }
 
+    override suspend fun resetPassword(email: String) {
+        client.auth.resetPasswordForEmail(email, redirectUrl = EMAIL_CONFIRM_REDIRECT)
+    }
+
+    override suspend fun changePassword(password: String) {
+        client.auth.updateUser { this.password = password }
+    }
+
     override suspend fun signOut() {
         client.auth.signOut()
     }

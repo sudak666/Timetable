@@ -12,6 +12,12 @@ interface SessionRepository {
     /** @return true — треба підтвердити пошту. */
     suspend fun signUp(email: String, password: String): Result<Boolean>
 
+    /** «Забули пароль?»: лист на пошту. Успіх не означає, що такий акаунт існує. */
+    suspend fun resetPassword(email: String): Result<Unit>
+
+    /** «Змінити пароль» у профілі. */
+    suspend fun changePassword(password: String): Result<Unit>
+
     suspend fun createFamily(parentName: String): Result<Unit>
 
     suspend fun joinFamily(code: String, name: String): Result<Unit>
