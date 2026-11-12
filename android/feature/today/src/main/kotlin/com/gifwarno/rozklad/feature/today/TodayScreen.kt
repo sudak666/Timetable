@@ -76,6 +76,7 @@ import com.gifwarno.rozklad.core.domain.SchoolCalendar
 import com.gifwarno.rozklad.core.domain.Timetable
 import com.gifwarno.rozklad.core.ui.ChildSelector
 import com.gifwarno.rozklad.core.ui.Format
+import com.gifwarno.rozklad.core.ui.InviteChildState
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -90,12 +91,7 @@ fun TodayRoute(
     when (val s = state) {
         TodayScreenState.Loading -> LoadingState(modifier)
 
-        TodayScreenState.NoChild -> EmptyState(
-            emoji = "👨‍👩‍👧",
-            title = "Додай дитину в сім’ю",
-            message = "Код для дитини — у «Профілі».",
-            modifier = modifier,
-        )
+        is TodayScreenState.NoChild -> InviteChildState("👨‍👩‍👧", s.isParent, s.inviteCode, modifier)
 
         is TodayScreenState.NoSchedule -> Column(modifier) {
             ChildSelector(s.children, s.childId, viewModel::selectChild, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))

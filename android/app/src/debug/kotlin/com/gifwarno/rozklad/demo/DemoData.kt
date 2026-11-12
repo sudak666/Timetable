@@ -26,14 +26,15 @@ import kotlin.random.Random
  * розкладу, кілька на підтвердження, челенджі, домашка, ціль. Усі дати — відносно [today].
  * Випадковість із фіксованим зерном — скриншоти щоразу однакові.
  */
-internal class DemoData(private val today: LocalDate, role: Role) {
+internal class DemoData(private val today: LocalDate, role: Role, noKids: Boolean = false, noFamily: Boolean = false) {
     private val parent = Member(PARENT_ID, Role.PARENT, "Оксана", "", 0, "🦉", "")
     private val schedule = Timetable.EXAMPLE
     private val cal = SchoolCalendar(schedule)
 
-    val session: SessionState = when (role) {
-        Role.PARENT -> SessionState.Ready(UserAccount(PARENT_ID, "mama@example.com", "Оксана"), FAMILY_ID, Role.PARENT)
-        Role.CHILD -> SessionState.Ready(UserAccount(CHILD_ID, "taras@example.com", "Тарас"), FAMILY_ID, Role.CHILD)
+    val session: SessionState = when {
+        noFamily -> SessionState.NoFamily(UserAccount(PARENT_ID, "mama@example.com", "Оксана"))
+        role == Role.PARENT -> SessionState.Ready(UserAccount(PARENT_ID, "mama@example.com", "Оксана"), FAMILY_ID, Role.PARENT)
+        else -> SessionState.Ready(UserAccount(CHILD_ID, "taras@example.com", "Тарас"), FAMILY_ID, Role.CHILD)
     }
 
     val family: FamilyData = run {
@@ -52,7 +53,7 @@ internal class DemoData(private val today: LocalDate, role: Role) {
         val child = Member(CHILD_ID, Role.CHILD, "Тарас", "Велосипед", goal, "🐯", "#6c5ce7")
         FamilyData(
             family = Family(FAMILY_ID, "Сім’я Тараса", "DEMO12"),
-            members = listOf(parent, child),
+            members = if (noKids) listOf(parent) else listOf(parent, child),
             grades = grades,
             ledger = ledger,
             challenges = listOf(

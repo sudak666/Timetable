@@ -21,6 +21,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -35,6 +36,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.gifwarno.rozklad.core.designsystem.component.ButtonShape
@@ -238,23 +241,26 @@ internal fun SubjectPickerDialog(onDismiss: () -> Unit, onPick: (String) -> Unit
         onDismissRequest = onDismiss,
         title = { Text("Предмет") },
         text = {
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = custom,
                     onValueChange = { custom = it.take(SchoolSchedule.MAX_SUBJECT) },
                     label = { Text("Свій предмет") },
                     singleLine = true,
+                    shape = ButtonShape,
                     trailingIcon = {
                         TextButton(onClick = { onPick(custom) }, enabled = custom.isNotBlank()) { Text("OK") }
                     },
                     modifier = Modifier.fillMaxWidth(),
                 )
-                LazyColumn(Modifier.height(SUBJECT_LIST_HEIGHT.dp)) {
+                // Без власного фону й прямих кутів: список — частина діалогу, рядки заокруглені.
+                LazyColumn(Modifier.height(SUBJECT_LIST_HEIGHT.dp).clip(ButtonShape)) {
                     items(Timetable.SUBJECTS, key = { it.name }) { s ->
                         ListItem(
                             leadingContent = { SubjectBadge(s.name) },
                             headlineContent = { Text(s.name) },
-                            modifier = Modifier.clickable { onPick(s.name) },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier.clip(ButtonShape).clickable { onPick(s.name) },
                         )
                     }
                 }

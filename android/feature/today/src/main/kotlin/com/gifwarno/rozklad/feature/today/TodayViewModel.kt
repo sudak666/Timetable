@@ -23,7 +23,7 @@ sealed interface TodayScreenState {
     data object Loading : TodayScreenState
 
     /** У сім'ї ще немає дитини. */
-    data object NoChild : TodayScreenState
+    data class NoChild(val isParent: Boolean, val inviteCode: String) : TodayScreenState
 
     /** Розклад вибраної дитини ще не заповнено. */
     data class NoSchedule(val childName: String, val canEdit: Boolean, val children: List<Member>, val childId: String) :
@@ -51,7 +51,7 @@ class TodayViewModel @Inject constructor(private val active: ActiveFamily, priva
 
     private fun build(ctx: FamilyContext?, now: LocalDateTime): TodayScreenState {
         ctx ?: return TodayScreenState.Loading
-        val child = ctx.child ?: return TodayScreenState.NoChild
+        val child = ctx.child ?: return TodayScreenState.NoChild(ctx.isParent, ctx.data.family.inviteCode)
         val schedule = ctx.schedule
         val alertSince = ctx.data.airAlert?.takeIf { it.isActive }?.since?.let { alertLocal(it, clock.zone) }
         val cal = schedule?.let(::SchoolCalendar)

@@ -1,5 +1,6 @@
 package com.gifwarno.rozklad.feature.auth
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -8,28 +9,36 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -95,18 +104,25 @@ internal fun AuthScreen(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("G", fontWeight = FontWeight.Black, color = Color(GOOGLE_BLUE), fontSize = 20.sp)
+                // Фірмова кольорова «G» — так вимагають правила бренду Google для кнопок входу.
+                Image(painterResource(R.drawable.ic_google_g), contentDescription = null, Modifier.size(20.dp))
                 Spacer(Modifier.width(12.dp))
                 Text("Увійти через Google", style = MaterialTheme.typography.labelLarge)
             }
         }
-        Text("або поштою", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            "або поштою",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(vertical = 6.dp),
+        )
         OutlinedTextField(
             value = state.email,
             onValueChange = onEmail,
             label = { Text("Пошта") },
             singleLine = true,
             shape = ButtonShape,
+            colors = fieldColors(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
             modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.EmailAddress },
         )
@@ -117,6 +133,7 @@ internal fun AuthScreen(
             supportingText = if (state.isSignUp) ({ Text("Щонайменше ${AuthUiState.MIN_PASSWORD} символів") }) else null,
             singleLine = true,
             shape = ButtonShape,
+            colors = fieldColors(),
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { onSubmit() }),
@@ -124,6 +141,14 @@ internal fun AuthScreen(
                 contentType = if (state.isSignUp) ContentType.NewPassword else ContentType.Password
             },
         )
+        // Одразу під паролем — там, де його шукають, коли пароль не підходить.
+        if (!state.isSignUp) {
+            TextButton(
+                onClick = onForgot,
+                enabled = !state.busy,
+                modifier = Modifier.align(Alignment.End).offset(y = (-8).dp),
+            ) { Text("Забули пароль?") }
+        }
         state.message?.let {
             Text(
                 it,
@@ -143,9 +168,6 @@ internal fun AuthScreen(
         )
         TextButton(onClick = onToggleMode) {
             Text(if (state.isSignUp) "Вже маю акаунт — увійти" else "Немає акаунта? Зареєструватися")
-        }
-        if (!state.isSignUp) {
-            TextButton(onClick = onForgot, enabled = !state.busy) { Text("Забули пароль?") }
         }
         PrivacyPolicyLink()
     }
@@ -190,38 +212,70 @@ internal fun JoinFamilyScreen(
             }
         },
     ) {
+        // Спершу роль, потім одна дія — замість двох головних кнопок одночасно.
+        var joining by rememberSaveable { mutableStateOf(true) }
         OutlinedTextField(
             value = state.name,
             onValueChange = onName,
             label = { Text("Як тебе звати") },
             singleLine = true,
             shape = ButtonShape,
+            colors = fieldColors(),
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
             modifier = Modifier.fillMaxWidth(),
         )
-        Text("🧒 Я дитина або другий з батьків", style = MaterialTheme.typography.titleMedium)
-        OutlinedTextField(
-            value = state.code,
-            onValueChange = onCode,
-            label = { Text("Код сім’ї") },
-            singleLine = true,
-            shape = ButtonShape,
-            textStyle = MaterialTheme.typography.titleLarge.copy(fontFamily = GameFont, letterSpacing = 3.sp),
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { onJoin() }),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        GameButton("Приєднатися", onJoin, Modifier.fillMaxWidth(), enabled = state.canJoin, leading = "🚀")
-        HorizontalDivider(Modifier.padding(vertical = 8.dp), color = RozkladTheme.colors.line)
-        Text("👑 Я з батьків і починаю", style = MaterialTheme.typography.titleMedium)
-        GameButton(
-            "Створити сім’ю",
-            onCreate,
-            Modifier.fillMaxWidth(),
-            color = RozkladTheme.colors.positive,
-            enabled = state.canCreate,
-            leading = "✨",
-        )
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            SegmentedButton(
+                selected = joining,
+                onClick = { joining = true },
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                colors = roleColors(),
+                icon = {},
+            ) { Text("🧒 Маю код") }
+            SegmentedButton(
+                selected = !joining,
+                onClick = { joining = false },
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                colors = roleColors(),
+                icon = {},
+            ) { Text("👑 Нова сім’я") }
+        }
+        if (joining) {
+            Text(
+                "Для дитини або другого з батьків: код дає той, хто створив сім’ю.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            OutlinedTextField(
+                value = state.code,
+                onValueChange = onCode,
+                label = { Text("Код сім’ї") },
+                singleLine = true,
+                shape = ButtonShape,
+                colors = fieldColors(),
+                textStyle = MaterialTheme.typography.titleLarge.copy(fontFamily = GameFont, letterSpacing = 3.sp),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { onJoin() }),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            GameButton("Приєднатися", onJoin, Modifier.fillMaxWidth(), enabled = state.canJoin, leading = "🚀")
+        } else {
+            Text(
+                "Ти з батьків і починаєш: створиш сім’ю й отримаєш код для дитини.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            GameButton(
+                "Створити сім’ю",
+                onCreate,
+                Modifier.fillMaxWidth(),
+                color = RozkladTheme.colors.positive,
+                enabled = state.canCreate,
+                leading = "✨",
+            )
+        }
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center) }
         TextButton(onClick = onSignOut) { Text("Вийти з акаунта") }
     }
@@ -257,11 +311,25 @@ private fun CenteredForm(header: @Composable () -> Unit, modifier: Modifier = Mo
     }
 }
 
+/** Вибрана роль — фірмовим фіолетовим, як активна вкладка внизу. */
+@Composable
+private fun roleColors() = SegmentedButtonDefaults.colors(
+    activeContainerColor = RozkladTheme.colors.accent,
+    activeContentColor = Color.White,
+    activeBorderColor = RozkladTheme.colors.accent,
+)
+
+/** Поля з виразнішою рамкою: тонка стандартна майже зливається з темною карткою. */
+@Composable
+private fun fieldColors() = OutlinedTextFieldDefaults.colors(
+    unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = FIELD_BORDER_ALPHA),
+)
+
 @Preview(showBackground = true, locale = "uk")
 @Composable
 private fun AuthPreview() {
     RozkladTheme { AuthScreen(AuthUiState(email = "mama@example.com"), {}, {}, {}, {}, {}) }
 }
 
-private const val GOOGLE_BLUE = 0xFF4285F4
+private const val FIELD_BORDER_ALPHA = 0.75f
 private const val GOOGLE_TEXT = 0xFF1F1F1F

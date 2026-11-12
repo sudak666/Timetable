@@ -74,6 +74,7 @@ import com.gifwarno.rozklad.core.model.LedgerKind
 import com.gifwarno.rozklad.core.ui.BadgesCard
 import com.gifwarno.rozklad.core.ui.ChildSelector
 import com.gifwarno.rozklad.core.ui.Format
+import com.gifwarno.rozklad.core.ui.InviteChildState
 import com.gifwarno.rozklad.core.ui.TrophyRoad
 import com.gifwarno.rozklad.core.ui.gradeColor
 import com.gifwarno.rozklad.core.ui.shareInvite
@@ -157,21 +158,8 @@ internal fun GradesScreen(
         when (state) {
             GradesUiState.Loading -> LoadingState(Modifier.padding(padding))
 
-            is GradesUiState.NoChild -> {
-                val context = LocalContext.current
-                EmptyState(
-                    emoji = "👋",
-                    title = if (state.isParent) "Запросіть дитину" else "Немає даних",
-                    message = if (state.isParent) {
-                        "Дитина встановлює застосунок або відкриває сайт, входить і вводить код ${state.inviteCode}."
-                    } else {
-                        null
-                    },
-                    actionLabel = if (state.isParent) "📨 Надіслати запрошення" else null,
-                    onAction = if (state.isParent) ({ shareInvite(context, state.inviteCode) }) else null,
-                    modifier = Modifier.padding(padding),
-                )
-            }
+            is GradesUiState.NoChild ->
+                InviteChildState("👋", state.isParent, state.inviteCode, Modifier.padding(padding))
 
             is GradesUiState.Ready -> ReadyContent(
                 state = state,
