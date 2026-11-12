@@ -45,6 +45,22 @@ class WidgetContentTest {
     }
 
     @Test
+    fun `широкий в один ряд — без обрізаного списку`() = runGlanceAppWidgetUnitTest(timeout = COLD_START) {
+        setAppWidgetSize(DpSize(373.dp, 124.dp))
+        provideComposable { WidgetContent(monday, null) }
+        onNode(hasText("до 10:10")).assertExists()
+        onNode(hasText("8:30")).assertDoesNotExist()
+    }
+
+    @Test
+    fun `вузький високий віджет теж показує список`() = runGlanceAppWidgetUnitTest(timeout = COLD_START) {
+        setAppWidgetSize(DpSize(170.dp, 380.dp))
+        provideComposable { WidgetContent(monday, null) }
+        onAllNodes(hasText("Математика")).assertCountEquals(2)
+        onNode(hasText("13:35")).assertDoesNotExist() // колонку часу прибрано, щоб назви не обрізались
+    }
+
+    @Test
     fun `не увійшов — підказка`() = runGlanceAppWidgetUnitTest(timeout = COLD_START) {
         provideComposable { WidgetContent(WidgetState.SignedOut, null) }
         onNode(hasText("Увійди")).assertExists()
