@@ -1,6 +1,6 @@
 # Дванадцятка — Android
 
-> Оцінки, кишенькові й розклад для всієї сім’ї. ID у Google Play: `com.gifwarno.dvanadtsiatka`
+> Оцінки, кишенькові й розклад для всієї сім’ї. ID у Google Play: `ua.dvanadtsiatka`
 > (після першої публікації не змінюється). Внутрішні пакети коду лишаються `com.gifwarno.rozklad.*` — користувачі їх не бачать.
 
 Нативний застосунок (Kotlin + Jetpack Compose) до того самого бекенду Supabase, що й веб-версія в корені репозиторію.
@@ -104,10 +104,10 @@ keyPassword=…
 
 ```bash
 # увімкнути (role=child або parent; time — котра зараз година в демо)
-adb shell "run-as com.gifwarno.dvanadtsiatka.debug sh -c 'printf \"role=child\ntime=10:40\n\" > files/demo'"
-adb shell am force-stop com.gifwarno.dvanadtsiatka.debug
+adb shell "run-as ua.dvanadtsiatka.debug sh -c 'printf \"role=child\ntime=10:40\n\" > files/demo'"
+adb shell am force-stop ua.dvanadtsiatka.debug
 # вимкнути
-adb shell run-as com.gifwarno.dvanadtsiatka.debug rm files/demo
+adb shell run-as ua.dvanadtsiatka.debug rm files/demo
 ```
 
 Поки демо-режим увімкнений, debug-застосунок не бачить справжнього акаунта. Тому вмикайте його на емуляторі,
@@ -124,13 +124,13 @@ adb shell run-as com.gifwarno.dvanadtsiatka.debug rm files/demo
 
 Як увімкнути (одноразово):
 1. [console.firebase.google.com](https://console.firebase.google.com) → новий проєкт (Google Analytics не потрібна).
-2. Додай два Android-застосунки: `com.gifwarno.dvanadtsiatka` і `com.gifwarno.dvanadtsiatka.debug`.
+2. Додай два Android-застосунки: `ua.dvanadtsiatka` і `ua.dvanadtsiatka.debug`.
 3. З `google-services.json` (файл у git не додавати) перенеси значення в `android/gradle.properties`:
    ```properties
    rozklad.firebase.projectId=…          # project_info.project_id
    rozklad.firebase.senderId=…           # project_info.project_number
    rozklad.firebase.apiKey=…             # client[].api_key[].current_key
-   rozklad.firebase.appId=…              # mobilesdk_app_id для com.gifwarno.dvanadtsiatka
+   rozklad.firebase.appId=…              # mobilesdk_app_id для ua.dvanadtsiatka
    rozklad.firebase.appIdDebug=…         # mobilesdk_app_id для …debug
    ```
    Ці значення публічні (вони є в будь-якому APK), секрету тут немає.
