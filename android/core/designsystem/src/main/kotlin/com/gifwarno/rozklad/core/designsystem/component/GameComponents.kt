@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -189,8 +190,9 @@ fun GameButton(
     GameSurface(
         modifier = modifier.semantics { if (!enabled) disabled() },
         shape = ButtonShape,
-        color = if (enabled) color else RozkladTheme.colors.soft,
-        contentColor = if (enabled) contentColor else RozkladTheme.colors.muted,
+        // Вимкнена кнопка — притлумлений власний колір, а не колір картки: її видно, але вона явно неактивна.
+        color = if (enabled) color else lerp(RozkladTheme.colors.soft, color, DISABLED_TINT),
+        contentColor = if (enabled) contentColor else contentColor.copy(alpha = DISABLED_TEXT),
         depth = if (enabled) 4.dp else 2.dp,
         onClick = if (enabled) onClick else null,
     ) {
@@ -427,6 +429,8 @@ private val CLOUDS = listOf(
     Triple(0.55f, 0.86f, 24f),
 )
 
+private const val DISABLED_TINT = 0.35f
+private const val DISABLED_TEXT = 0.7f
 private const val CLASSIC_ELEVATION = 3
 private val TIGHT_SIGNS = setOf("＋", "+", "−", "-")
 private const val CLASSIC_TEXT_SHADOW = 0.35f
