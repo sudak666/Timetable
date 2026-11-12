@@ -27,7 +27,7 @@ class WidgetStateTest {
     fun `на перерві — коли й що далі`() {
         val r = ready("09:20")
         assertEquals("Перерва", r.headline)
-        assertEquals("2 урок о 9:25 · Всесв. історія", r.detail)
+        assertEquals("2 урок о${Char(0xA0)}9:25 · Всесв. історія", r.detail)
         assertEquals(WidgetLessonState.PAST, r.lessons.first().state)
     }
 

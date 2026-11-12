@@ -2,6 +2,9 @@ package com.gifwarno.rozklad.feature.widget
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -26,8 +29,10 @@ import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.ColumnScope
 import androidx.glance.layout.Row
+import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
+import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
@@ -65,28 +70,32 @@ internal interface WidgetEntryPoint {
 
 /** Віджет «що зараз у школі»: маленький — лише поточне, більший — ще й уроки дня. */
 class RozkladWidget : GlanceAppWidget() {
-    override val sizeMode: SizeMode = SizeMode.Responsive(setOf(COMPACT, EXPANDED))
+    // Точний розмір: рядки уроків розтягуються під висоту віджета, а не лишають порожнечу.
+    override val sizeMode: SizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val deps = EntryPointAccessors.fromApplication(context.applicationContext, WidgetEntryPoint::class.java)
-        // Сесія піднімається з диска асинхронно: чекаємо, доки стане відомо, хто увійшов.
-        // Не увійшов — відповідаємо одразу, без очікування даних сім'ї.
-        val session = withTimeoutOrNull(SESSION_WAIT_MS) { deps.session().session.first { it != SessionState.Loading } }
-        val family = if (session is SessionState.Ready) {
-            withTimeoutOrNull(SESSION_WAIT_MS) { deps.activeFamily().context.filterNotNull().first() }
-        } else {
-            null
-        }
-        val now = LocalDateTime.now(deps.clock())
-        val state = resolveWidgetState(session, family) { f -> buildWidgetState(now, checkNotNull(f.child).name, f.schedule) }
         val clock = deps.clock()
-        val alert = widgetAlertLine(family?.data?.airAlert, clock.instant(), clock.zone)
-        // Не дочекались даних — пробуємо знову скоро, а не на наступному дзвінку чи опівночі.
-        val refreshAt = if (state == WidgetState.Loading) now.plusSeconds(RETRY_SECONDS) else nextRefreshAt(now, family?.schedule)
-        WidgetRefreshScheduler.scheduleAt(context, now, refreshAt)
+        val families = deps.activeFamily().context
+        // Коротко чекаємо дані до першого кадру — щоб не блимало «Завантажую».
+        // Не встигли — не страшно: стан нижче живий і оновиться, щойно дані прийдуть.
+        val initialFamily = withTimeoutOrNull(PREFETCH_MS) {
+            val s = deps.session().session.first { it != SessionState.Loading }
+            if (s is SessionState.Ready) families.filterNotNull().first() else null
+        }
 
         val open = context.packageManager.getLaunchIntentForPackage(context.packageName)?.let { actionStartActivity(it) }
         provideContent {
+            val session by deps.session().session.collectAsState()
+            val family by families.collectAsState(initial = initialFamily)
+            val now = LocalDateTime.now(clock)
+            val state = resolveWidgetState(session, family) { f -> buildWidgetState(now, checkNotNull(f.child).name, f.schedule) }
+            val alert = widgetAlertLine(family?.data?.airAlert, clock.instant(), clock.zone)
+            // Наступне оновлення — на дзвінку; без даних — повторна спроба скоро, а не опівночі.
+            LaunchedEffect(state) {
+                val at = if (state == WidgetState.Loading) now.plusSeconds(RETRY_SECONDS) else nextRefreshAt(now, family?.schedule)
+                WidgetRefreshScheduler.scheduleAt(context, now, at)
+            }
             GlanceTheme { WidgetContent(state, open, alert) }
         }
     }
@@ -101,9 +110,8 @@ class RozkladWidget : GlanceAppWidget() {
 
     private companion object {
         val PREVIEW_TIME: LocalDateTime = LocalDateTime.parse("2026-11-09T09:40")
-        val COMPACT = DpSize(110.dp, 48.dp)
-        val EXPANDED = DpSize(220.dp, 140.dp)
-        const val SESSION_WAIT_MS = 10_000L
+        val EXPANDED = DpSize(250.dp, 260.dp)
+        const val PREFETCH_MS = 3_000L
         const val RETRY_SECONDS = 30L
     }
 }
@@ -132,33 +140,57 @@ internal fun WidgetContent(state: WidgetState, open: Action?, alert: String? = n
 /**
  * Градієнтна шапка. [fill] — коли під нею нічого показувати (малий віджет, вхід, порожній розклад):
  * тоді вона займає весь віджет, щоб не лишалося порожньої темної області.
+ * Над списком — окрема плашка з відступом від країв картки (вкладені заокруглення 20 → 14).
  */
 @Composable
 private fun ColumnScope.Header(title: String, detail: String, alert: String?, fill: Boolean = true) {
-    val m = GlanceModifier
+    val size = LocalSize.current
+    val narrow = size.width < NARROW_WIDTH.dp
+    val plate = GlanceModifier
         .fillMaxWidth()
         .background(ImageProvider(R.drawable.widget_header))
-        .cornerRadius(20.dp)
+        .cornerRadius(if (fill) 20.dp else 14.dp)
         .padding(horizontal = 14.dp, vertical = 10.dp)
-    Column(
-        if (fill) m.defaultWeight() else m,
-        verticalAlignment = if (fill) Alignment.CenterVertically else Alignment.Top,
-    ) {
-        if (alert != null) {
-            Text(alert, style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 13.sp, color = AlertYellow), maxLines = 1)
+    val content: @Composable () -> Unit = {
+        Column(
+            if (fill) plate.fillMaxHeight() else plate,
+            verticalAlignment = if (fill) Alignment.CenterVertically else Alignment.Top,
+        ) {
+            if (alert != null) {
+                Text(alert, style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 13.sp, color = AlertYellow), maxLines = 1)
+            }
+            Text(
+                title,
+                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = if (narrow) 15.sp else 17.sp, color = White),
+                // Вузький, але високий віджет: довгий заголовок переноситься, а не обрізається «…».
+                maxLines = if (narrow && size.height >= TWO_LINE_TITLE_HEIGHT.dp) 2 else 1,
+            )
+            Text(
+                detail,
+                style = TextStyle(fontWeight = FontWeight.Medium, fontSize = if (narrow) 12.sp else 13.sp, color = WhiteSoft),
+                maxLines = 2,
+            )
         }
-        Text(title, style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 17.sp, color = White), maxLines = 1)
-        Text(detail, style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 13.sp, color = WhiteSoft), maxLines = 2)
+    }
+    if (fill) {
+        Box(GlanceModifier.fillMaxWidth().defaultWeight()) { content() }
+    } else {
+        Box(GlanceModifier.fillMaxWidth().padding(start = INSET.dp, top = INSET.dp, end = INSET.dp)) { content() }
     }
 }
 
 @Composable
 private fun ColumnScope.Ready(state: WidgetState.Ready, alert: String?) {
-    // Список уроків — лише якщо віджет достатньо високий.
-    val showList = LocalSize.current.height >= LIST_MIN_HEIGHT.dp && state.lessons.isNotEmpty()
+    val size = LocalSize.current
+    // Список уроків — лише якщо віджет достатньо високий і не надто вузький.
+    val showList = size.height >= LIST_MIN_HEIGHT.dp && size.width >= LIST_MIN_WIDTH.dp && state.lessons.isNotEmpty()
     Header("${state.emoji} ${state.headline}", state.detail, alert, fill = !showList)
     if (showList) {
-        Column(GlanceModifier.fillMaxWidth().defaultWeight().padding(start = 10.dp, end = 10.dp, top = 8.dp, bottom = 6.dp)) {
+        // Висота рядка — щоб уроки заповнили віджет (без порожнечі знизу), але в розумних межах.
+        val narrow = size.width < NARROW_WIDTH.dp
+        val headerHeight = HEADER_EST + (if (alert != null) ALERT_EST else 0f) + (if (narrow) NARROW_HEADER_EXTRA else 0f)
+        val rowHeight = ((size.height.value - headerHeight - DAY_TITLE_EST) / state.lessons.size).coerceIn(ROW_MIN, ROW_MAX)
+        Column(GlanceModifier.fillMaxWidth().defaultWeight().padding(start = 10.dp, end = 10.dp, top = 12.dp, bottom = 6.dp)) {
             Text(
                 state.dayTitle + if (state.childName.isNotBlank()) " · ${state.childName}" else "",
                 style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Muted),
@@ -167,39 +199,49 @@ private fun ColumnScope.Ready(state: WidgetState.Ready, alert: String?) {
             )
             // Glance Column вміщає не більше 10 дочірніх елементів — уроків може бути до 12, тож лише LazyColumn.
             LazyColumn(GlanceModifier.fillMaxWidth().defaultWeight()) {
-                items(state.lessons, itemId = { it.number.toLong() }) { l -> LessonRow(l) }
+                items(state.lessons, itemId = { it.number.toLong() }) { l -> LessonRow(l, rowHeight, showTime = !narrow) }
             }
         }
     }
 }
 
+/** [showTime] — колонка часу; у вузькому віджеті її немає, щоб назви предметів не обрізались. */
 @Composable
-private fun LessonRow(l: WidgetLesson) {
+private fun LessonRow(l: WidgetLesson, height: Float, showTime: Boolean) {
     val current = l.state == WidgetLessonState.CURRENT
     val past = l.state == WidgetLessonState.PAST
-    val row = GlanceModifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 3.dp)
+    // Вузький віджет (без колонки часу): розмір фіксований, щоб назви предметів не обрізались.
+    val big = height >= ROW_BIG || !showTime
+    val huge = height >= ROW_HUGE && showTime
+    val row = GlanceModifier.fillMaxWidth().height(height.dp).padding(horizontal = 4.dp)
     Row(
         if (current) row.background(Highlight).cornerRadius(10.dp) else row,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             GlanceModifier
-                .size(22.dp)
+                .size(if (huge) 30.dp else if (big) 26.dp else 22.dp)
                 .background(if (past) Line else ColorProvider(Color(l.color)))
-                .cornerRadius(7.dp),
+                .cornerRadius(if (huge) 9.dp else if (big) 8.dp else 7.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text("${l.number}", style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (past) Muted else White))
+            Text(
+                "${l.number}",
+                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = if (huge) 16.sp else if (big) 14.sp else 12.sp, color = if (past) Muted else White),
+            )
+        }
+        if (showTime) {
+            Text(
+                l.start,
+                style = TextStyle(fontSize = if (huge) 16.sp else if (big) 14.sp else 12.sp, color = Muted),
+                modifier = GlanceModifier.width(if (huge) 60.dp else if (big) 54.dp else 46.dp).padding(start = 8.dp),
+            )
         }
         Text(
-            l.start,
-            style = TextStyle(fontSize = 12.sp, color = Muted),
-            modifier = GlanceModifier.width(46.dp).padding(start = 8.dp),
-        )
-        Text(
             "${l.emoji} ${l.subject}",
+            modifier = if (showTime) GlanceModifier else GlanceModifier.padding(start = 8.dp),
             style = TextStyle(
-                fontSize = 13.sp,
+                fontSize = if (!showTime) 14.sp else if (huge) 17.sp else if (big) 15.sp else 13.sp,
                 fontWeight = if (current) FontWeight.Bold else FontWeight.Medium,
                 color = if (past) Muted else White,
             ),
@@ -217,4 +259,19 @@ private val White = ColorProvider(Color.White)
 private val WhiteSoft = ColorProvider(Color(0xE6FFFFFF))
 private val AlertYellow = ColorProvider(Color(0xFFFFE08A))
 
-private const val LIST_MIN_HEIGHT = 120
+// Шапка (~74) + «Завтра · …» (~40) + щонайменше два уроки; нижче — лише шапка на весь віджет.
+private const val LIST_MIN_HEIGHT = 170
+private const val LIST_MIN_WIDTH = 150
+private const val NARROW_WIDTH = 220
+private const val TWO_LINE_TITLE_HEIGHT = 90
+private const val INSET = 6
+
+// Оцінки висот (dp) для розрахунку рядка; з запасом, щоб останній урок не обрізався.
+private const val HEADER_EST = 74f
+private const val ALERT_EST = 18f
+private const val NARROW_HEADER_EXTRA = 36f // заголовок і деталь можуть зайняти по два рядки
+private const val DAY_TITLE_EST = 40f
+private const val ROW_MIN = 26f
+private const val ROW_MAX = 60f
+private const val ROW_BIG = 36f
+private const val ROW_HUGE = 50f

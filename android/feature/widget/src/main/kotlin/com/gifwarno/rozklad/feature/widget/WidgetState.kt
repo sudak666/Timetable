@@ -56,6 +56,9 @@ private val DAY = DateTimeFormatter.ofPattern("EEE, d MMM", Locale.forLanguageTa
 
 private fun hm(t: LocalTime) = HM.format(t)
 
+/** Нерозривний пробіл між «о» і часом: у вузькому віджеті «8:30» не переноситься окремо. */
+private val NBSP = Char(0xA0)
+
 /** Чиста функція: час + розклад → вміст віджета. */
 fun buildWidgetState(now: LocalDateTime, childName: String, schedule: SchoolSchedule?): WidgetState {
     if (schedule == null) return WidgetState.NoSchedule(childName)
@@ -88,12 +91,12 @@ fun buildWidgetState(now: LocalDateTime, childName: String, schedule: SchoolSche
 
         is SchoolStatus.OnBreak -> {
             val next = status.lessons[status.nextIndex].subject
-            Triple("☕", "Перерва", "${status.nextIndex + 1} урок о ${hm(status.next.start)} · $next")
+            Triple("☕", "Перерва", "${status.nextIndex + 1} урок о$NBSP${hm(status.next.start)} · $next")
         }
 
         is SchoolStatus.BeforeSchool -> {
             val first = status.lessons.first().subject
-            Triple(Timetable.subject(first).emoji, first, "перший урок о ${hm(status.first.start)}")
+            Triple(Timetable.subject(first).emoji, first, "перший урок о$NBSP${hm(status.first.start)}")
         }
 
         SchoolStatus.Done -> {
@@ -104,7 +107,7 @@ fun buildWidgetState(now: LocalDateTime, childName: String, schedule: SchoolSche
                 today.dayOfWeek.value > lessonDays(schedule) -> "Вихідні"
                 else -> "Уроки закінчились"
             }
-            Triple(if (holiday != null) "🏖️" else "🎉", headline, "далі: $first о ${hm(cal.bell(0).start)}")
+            Triple(if (holiday != null) "🏖️" else "🎉", headline, "далі: $first о$NBSP${hm(cal.bell(0).start)}")
         }
     }
 
