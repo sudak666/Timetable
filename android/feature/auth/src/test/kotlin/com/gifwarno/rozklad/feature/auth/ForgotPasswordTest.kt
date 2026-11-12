@@ -14,6 +14,7 @@ class ForgotPasswordTest {
     val main = MainDispatcherRule()
 
     private val session = FakeSessionRepository(SessionState.SignedOut)
+
     // Лише після MainDispatcherRule: інакше viewModelScope бере справжній Main і корутина не встигає завершитись.
     private val vm by lazy { AuthViewModel(session) }
 
