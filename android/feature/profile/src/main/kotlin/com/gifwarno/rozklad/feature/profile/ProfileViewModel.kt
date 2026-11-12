@@ -10,6 +10,7 @@ import com.gifwarno.rozklad.core.datastore.UserPreferencesDataSource
 import com.gifwarno.rozklad.core.designsystem.theme.GameStyle
 import com.gifwarno.rozklad.core.domain.Rewards
 import com.gifwarno.rozklad.core.domain.Trophies
+import com.gifwarno.rozklad.core.model.FamilyContext
 import com.gifwarno.rozklad.core.model.GradeStatus
 import com.gifwarno.rozklad.core.model.Member
 import com.gifwarno.rozklad.core.model.RewardSettings
@@ -57,8 +58,12 @@ sealed interface ProfileUiState {
         val gameStyle: GameStyle = GameStyle.ARENA,
         /** Ім'я в сім'ї як є (може бути порожнім — тоді в шапці пошта). */
         val myName: String = "",
+        /** Свій userId — себе прибрати з сім'ї не можна. */
+        val myId: String = "",
     ) : ProfileUiState
 }
+
+data class FamilyActionState(val busy: Boolean = false, val error: String? = null)
 
 /** [alerts] — push про тривоги на цей телефон (працює лише разом з [enabled]). */
 data class PushUiState(val enabled: Boolean, val error: String?, val alerts: Boolean = false)
@@ -170,6 +175,7 @@ class ProfileViewModel @Inject constructor(
             settings = ctx.data.settings,
             gameStyle = GameStyle.of(prefs.gameStyle),
             myName = ctx.me?.name.orEmpty(),
+            myId = ctx.user.id,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ProfileUiState.Loading)
 
@@ -177,6 +183,29 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             val ctx = active.context.filterNotNull().first()
             if (ctx.isParent) parentCode.value = families.parentInviteCode(ctx.familyId).getOrNull() ?: "—"
+        }
+    }
+
+    private val _familyAction = MutableStateFlow(FamilyActionState())
+
+    /** Зміна коду й видалення учасника — потрібна мережа, тож показуємо «зачекай» і помилку. */
+    val familyAction: StateFlow<FamilyActionState> = _familyAction.asStateFlow()
+
+    /** Новий код для дитини: старий (можливо, злитий) перестає працювати, учасники лишаються. */
+    fun rotateInviteCode() = familyAction { ctx -> families.rotateInviteCode(ctx.familyId) }
+
+    /** Прибрати учасника (напр., чужого, що увійшов за злитим кодом). Себе — не можна. */
+    fun removeMember(userId: String) = familyAction { ctx ->
+        if (userId == ctx.user.id) Result.success(Unit) else families.removeMember(ctx.familyId, userId)
+    }
+
+    private fun familyAction(action: suspend (FamilyContext) -> Result<Unit>) {
+        if (_familyAction.value.busy) return
+        _familyAction.value = FamilyActionState(busy = true)
+        viewModelScope.launch {
+            val ctx = active.context.filterNotNull().first()
+            val error = if (ctx.isParent) action(ctx).exceptionOrNull()?.let { it.message ?: "Не вдалося — перевір інтернет" } else null
+            _familyAction.value = FamilyActionState(error = error)
         }
     }
 

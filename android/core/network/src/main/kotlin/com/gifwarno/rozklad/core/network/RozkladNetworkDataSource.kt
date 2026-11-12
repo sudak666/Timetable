@@ -54,10 +54,17 @@ interface RozkladNetworkDataSource {
 
     suspend fun createFamily(familyName: String, parentName: String)
 
+    /** Невірний код → виняток «Невірний код»; забагато спроб → виняток із текстом сервера. */
     suspend fun joinFamily(code: String, name: String)
 
     /** Код для запрошення другого батька (видно лише батькам). */
     suspend fun parentCode(familyId: String): String?
+
+    /** Новий код для дитини (лише батьки); старий перестає працювати. @return новий код. */
+    suspend fun rotateInviteCode(familyId: String): String
+
+    /** Прибрати учасника з сім'ї (лише батьки, не себе — так дозволяє RLS). */
+    suspend fun removeMember(familyId: String, userId: String)
 
     suspend fun snapshot(familyId: String): NetworkSnapshot
 

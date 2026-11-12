@@ -46,3 +46,11 @@ function stripFamily<T extends { family_id: string }>(r: T): Omit<T, 'family_id'
 export const isOp = (x: unknown): x is Op =>
   !!x && typeof x === 'object' && 't' in x && 'kind' in x &&
   ((x as Op).t === 'school_grades' || (x as Op).t === 'school_homework');
+
+/**
+ * Чи лишити зміну в черзі після помилки сервера (як writeFailureOf в Android).
+ * 401 — протермінований токен, 408/425/429 — таймаут і ліміти, 5xx — збій сервера: повторимо пізніше.
+ * Решта 4xx — свідома відмова (права, обмеження): повтор не допоможе.
+ */
+export const isRetryableStatus = (status: number): boolean =>
+  status === 0 || status === 401 || status === 408 || status === 425 || status === 429 || status >= 500;

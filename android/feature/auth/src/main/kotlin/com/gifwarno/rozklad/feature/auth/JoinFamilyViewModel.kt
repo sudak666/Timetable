@@ -1,5 +1,6 @@
 package com.gifwarno.rozklad.feature.auth
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gifwarno.rozklad.core.data.repository.SessionRepository
@@ -21,13 +22,23 @@ data class JoinUiState(val name: String = "", val code: String = "", val busy: B
 }
 
 @HiltViewModel
-class JoinFamilyViewModel @Inject constructor(private val session: SessionRepository) : ViewModel() {
-    private val _state = MutableStateFlow(JoinUiState())
+class JoinFamilyViewModel @Inject constructor(private val session: SessionRepository, private val savedState: SavedStateHandle) :
+    ViewModel() {
+    // Ім'я й код переживають смерть процесу: дитина йде в месенджер скопіювати код — і повертається.
+    private val _state = MutableStateFlow(JoinUiState(name = savedState[KEY_NAME] ?: "", code = savedState[KEY_CODE] ?: ""))
     val state: StateFlow<JoinUiState> = _state.asStateFlow()
 
-    fun onName(v: String) = _state.update { it.copy(name = v.take(MAX_NAME), error = null) }
+    fun onName(v: String) {
+        val name = v.take(MAX_NAME)
+        savedState[KEY_NAME] = name
+        _state.update { it.copy(name = name, error = null) }
+    }
 
-    fun onCode(v: String) = _state.update { it.copy(code = v.filter(Char::isLetterOrDigit).uppercase().take(MAX_CODE), error = null) }
+    fun onCode(v: String) {
+        val code = v.filter(Char::isLetterOrDigit).uppercase().take(MAX_CODE)
+        savedState[KEY_CODE] = code
+        _state.update { it.copy(code = code, error = null) }
+    }
 
     fun create() = run { session.createFamily(_state.value.name) }
 
@@ -49,5 +60,7 @@ class JoinFamilyViewModel @Inject constructor(private val session: SessionReposi
     private companion object {
         const val MAX_NAME = 40
         const val MAX_CODE = 12
+        const val KEY_NAME = "join_name"
+        const val KEY_CODE = "join_code"
     }
 }

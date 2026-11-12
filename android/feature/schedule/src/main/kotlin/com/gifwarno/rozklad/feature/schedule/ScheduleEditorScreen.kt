@@ -95,7 +95,13 @@ private fun ScheduleEditorScreen(
 
     Column(modifier.fillMaxSize()) {
         GameTopBar(title = "Розклад · ${state.childName}", onBack = tryClose) {
-            GameButton("Зберегти", onClick = actions.save, enabled = state.dirty, color = RozkladTheme.colors.positive)
+            GameButton(
+                "Зберегти",
+                onClick = actions.save,
+                enabled = state.dirty,
+                color = RozkladTheme.colors.positive,
+                contentColor = RozkladTheme.colors.onPositive,
+            )
         }
         GameSegmented(
             options = listOf(0 to "📚 Уроки", 1 to "🔔 Дзвінки", 2 to "🏖️ Канікули"),

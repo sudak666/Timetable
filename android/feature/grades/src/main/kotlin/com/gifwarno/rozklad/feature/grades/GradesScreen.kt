@@ -294,7 +294,7 @@ private fun ReadyContent(
                         onApproveAll,
                         Modifier.fillMaxWidth(),
                         color = RozkladTheme.colors.positive,
-                        contentColor = Color.White,
+                        contentColor = RozkladTheme.colors.onPositive,
                         leading = "✓",
                     )
                 }
@@ -466,7 +466,7 @@ internal fun GradeRow(item: GradeItem, actions: RowActions) {
             GameSurface(
                 shape = ButtonShape,
                 color = c.positive,
-                contentColor = Color.White,
+                contentColor = c.onPositive,
                 depth = 3.dp,
                 onClick = { actions.onApprove(g) },
                 onClickLabel = "Підтвердити",

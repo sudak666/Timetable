@@ -11,7 +11,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -43,8 +43,9 @@ internal fun passwordProblem(p1: String, p2: String): String? = when {
 /** Новий пароль двічі. Старий не питаємо: акаунт уже відкритий на цьому пристрої (як у вебі). */
 @Composable
 internal fun PasswordDialog(state: PasswordState, onSave: (String) -> Unit, onDismiss: () -> Unit) {
-    var p1 by rememberSaveable { mutableStateOf("") }
-    var p2 by rememberSaveable { mutableStateOf("") }
+    // Не rememberSaveable: збережений стан система пише на диск, а паролю там не місце.
+    var p1 by remember { mutableStateOf("") }
+    var p2 by remember { mutableStateOf("") }
     val problem = passwordProblem(p1, p2)
     val saving = state == PasswordState.Saving
     AlertDialog(

@@ -1,5 +1,6 @@
 package com.gifwarno.rozklad.feature.today
 
+import android.provider.Settings
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -44,6 +45,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.liveRegion
@@ -360,6 +362,15 @@ private fun subjectEmoji(subject: String) = Timetable.subject(subject).emoji
 /** Емодзі, що повільно «плаває» (анімується лише шар — без перекомпозиції). */
 @Composable
 private fun FloatingEmoji(emoji: String, modifier: Modifier = Modifier) {
+    // Вимкнені системні анімації (доступність, вестибулярні розлади) — емодзі стоїть на місці, як і салют.
+    val context = LocalContext.current
+    val animationsOn = remember {
+        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
+    }
+    if (!animationsOn) {
+        Text(emoji, fontSize = 46.sp, modifier = modifier.clearAndSetSemantics { })
+        return
+    }
     val t = rememberInfiniteTransition(label = "float")
     val phase = t.animateFloat(
         initialValue = 0f,

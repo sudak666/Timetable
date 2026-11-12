@@ -107,7 +107,11 @@ private val DarkColors = darkColorScheme(
 @Immutable
 data class RozkladColors(
     val positive: Color,
+    /** Текст на заливці [positive]: у темній темі заливка світла, тож текст темний (≥ 4,5:1, WCAG). */
+    val onPositive: Color,
     val negative: Color,
+    /** Текст на заливці [negative] — так само, як [onPositive]. */
+    val onNegative: Color,
     val gradeExcellent: Color,
     val gradeGood: Color,
     val gradeFair: Color,
@@ -134,7 +138,9 @@ data class RozkladColors(
 
 private val LightExtra = RozkladColors(
     positive = Color(0xFF00705A),
+    onPositive = Color.White,
     negative = Color(0xFFC0392B),
+    onNegative = Color.White,
     gradeExcellent = Color(0xFF00866B),
     gradeGood = Color(0xFF0869B5),
     gradeFair = Color(0xFFB35900),
@@ -157,7 +163,9 @@ private val LightExtra = RozkladColors(
 
 private val DarkExtra = RozkladColors(
     positive = Color(0xFF4FD1A5),
+    onPositive = Color(0xFF00382C),
     negative = Color(0xFFFF8A80),
+    onNegative = Color(0xFF3B1F1A),
     gradeExcellent = Color(0xFF00866B),
     gradeGood = Color(0xFF0869B5),
     gradeFair = Color(0xFFB35900),

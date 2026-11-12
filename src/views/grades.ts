@@ -154,8 +154,10 @@ function joinView(): TemplateResult {
     const code = (document.getElementById('jCode') as HTMLInputElement).value.trim();
     if (!named()) return;
     if (!code) return set({ authMsg: { text: 'Введи код' } });
-    const { error } = await sb.rpc('school_join_family', { p_code: code, p_name: name() });
+    // Невірний код сервер повертає як null (не помилкою) — так він рахує невдалі спроби; забагато спроб — помилка з текстом.
+    const { data, error } = await sb.rpc('school_join_family', { p_code: code, p_name: name() });
     if (error) return set({ authMsg: { text: /Невірний/.test(error.message) ? 'Невірний код' : error.message } });
+    if (!data) return set({ authMsg: { text: 'Невірний код' } });
     await enter();
   };
   return html`<p class="lead">Ти ще не в сім'ї. Батьки створюють сім'ю, дитина приєднується за кодом.</p>

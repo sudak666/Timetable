@@ -74,6 +74,12 @@ interface FamilyRepository {
 
     suspend fun parentInviteCode(familyId: String): Result<String?>
 
+    /** Новий код для дитини (лише батьки, потрібна мережа); старий перестає працювати. */
+    suspend fun rotateInviteCode(familyId: String): Result<Unit>
+
+    /** Прибрати учасника з сім'ї (лише батьки, потрібна мережа). */
+    suspend fun removeMember(familyId: String, userId: String): Result<Unit>
+
     /** Зберегти розклад дитини (офлайн-черга, повна заміна на сервері). */
     suspend fun saveSchedule(familyId: String, childId: String, schedule: SchoolSchedule)
 

@@ -2,7 +2,7 @@ import { AuthClient } from '@supabase/auth-js';
 import { PostgrestClient } from '@supabase/postgrest-js';
 import type { RealtimeChannel, RealtimeClient } from '@supabase/realtime-js';
 import type { TimetableRow } from './data/schedule';
-import { enqueue, isOp, overlay, type Op } from './features/outbox';
+import { enqueue, isOp, isRetryableStatus, overlay, type Op } from './features/outbox';
 import { parseSettings, type Challenge, type Grade, type Homework, type Ledger, type Member, type Role } from './features/rewards';
 import { set, state, store } from './state';
 import { applyAccent } from './ui/theme';
@@ -72,16 +72,33 @@ export function errText(e: unknown): string {
 let channel: RealtimeChannel | null = null;
 let reloadTimer: ReturnType<typeof setTimeout> | undefined;
 
+/** Сторінка PostgREST: сервер усе одно віддає не більше ~1000 рядків за запит. */
+const PAGE = 1000;
+
+/** Усі рядки запиту сторінками по [PAGE] (порядок має бути однозначним — з id наприкінці). */
+async function fetchAll<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<{ data: T[] | null; error: { message: string } | null }> {
+  const out: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await page(from, from + PAGE - 1);
+    if (error) return { data: null, error };
+    out.push(...(data ?? []));
+    if (!data || data.length < PAGE) return { data: out, error: null };
+  }
+}
+
 export async function loadFamily(): Promise<void> {
   const fid = state.family?.id;
   if (!fid) return;
   const [f, m, g, l, c, h, t] = await Promise.all([
     sb.from('school_families').select('id,name,invite_code,rates').eq('id', fid).single(),
     sb.from('school_members').select('user_id,role,name,goal_title,goal_amount,avatar,theme').eq('family_id', fid),
-    sb.from('school_grades').select('id,child_id,subject,grade,date,status,amount,created_at').eq('family_id', fid).order('date', { ascending: false }).limit(2000),
-    sb.from('school_ledger').select('id,child_id,kind,amount,note,date,created_at').eq('family_id', fid).order('date', { ascending: false }).limit(2000),
-    sb.from('school_challenges').select('id,child_id,title,subject,min_grade,need,reward,start_date,end_date').eq('family_id', fid).limit(200),
-    sb.from('school_homework').select('id,child_id,subject,due,text,done').eq('family_id', fid).order('due').limit(1000),
+    // Оцінки й журнал — усі, без обрізання: з них рахується баланс «до виплати».
+    fetchAll((a, b) => sb.from('school_grades').select('id,child_id,subject,grade,date,status,amount,created_at').eq('family_id', fid).order('date', { ascending: false }).order('id').range(a, b)),
+    fetchAll((a, b) => sb.from('school_ledger').select('id,child_id,kind,amount,note,date,created_at').eq('family_id', fid).order('date', { ascending: false }).order('id').range(a, b)),
+    fetchAll((a, b) => sb.from('school_challenges').select('id,child_id,title,subject,min_grade,need,reward,start_date,end_date').eq('family_id', fid).order('id').range(a, b)),
+    fetchAll((a, b) => sb.from('school_homework').select('id,child_id,subject,due,text,done').eq('family_id', fid).order('due').order('id').range(a, b)),
     sb.from('school_timetables').select('child_id,bells,week,holidays').eq('family_id', fid),
   ]);
   const firstErr = [f, m, g, l, c, h].find((r) => r.error)?.error;
@@ -170,10 +187,11 @@ export function flush(): Promise<void> {
     let q = readQueue(), changed = false;
     while (q.length && navigator.onLine) {
       const op = q[0]!;
-      const { error } = op.kind === 'insert'
+      const { error, status } = op.kind === 'insert'
         ? await sb.from(op.t).upsert({ ...op.row }, { onConflict: 'id', ignoreDuplicates: true })
         : await sb.from(op.t).update(op.patch).eq('id', op.id);
-      if (error && isNetErr(error)) break;
+      // Збій сервера чи протермінований токен — не привід втратити зміну: лишаємо в черзі.
+      if (error && (isNetErr(error) || isRetryableStatus(status))) break;
       if (error) toast('Зміну не збережено: ' + errText(error), 'err');
       q = q.slice(1);
       writeQueue(q);
@@ -197,7 +215,7 @@ export async function enter(): Promise<void> {
   if (!user) return set({ view: 'auth', me: null, family: null, role: null });
   const meta = user.user_metadata as { full_name?: string } | undefined;
   set({ me: { id: user.id, email: user.email ?? '', fullName: meta?.full_name ?? '' } });
-  const { data: mem, error } = await sb.from('school_members').select('family_id,role').eq('user_id', user.id).limit(1);
+  const { data: mem, error } = await sb.from('school_members').select('family_id,role').eq('user_id', user.id).order('family_id').limit(1);
   if (error) throw error;
   const row = mem?.[0];
   if (!row) return set({ view: 'join' });

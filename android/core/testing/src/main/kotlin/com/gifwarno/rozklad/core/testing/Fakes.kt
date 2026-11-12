@@ -213,6 +213,19 @@ class FakeFamilyRepository(initial: FamilyData?) : FamilyRepository {
 
     override suspend fun parentInviteCode(familyId: String) = Result.success<String?>("PARENT1")
 
+    /** Відповідь на зміну коду / видалення учасника; за замовчуванням — успіх. */
+    var familyActionResult: Result<Unit> = Result.success(Unit)
+    val removedMembers = mutableListOf<String>()
+
+    override suspend fun rotateInviteCode(familyId: String): Result<Unit> = familyActionResult.onSuccess {
+        data.update { d -> d?.copy(family = d.family.copy(inviteCode = "NEWCODE8")) }
+    }
+
+    override suspend fun removeMember(familyId: String, userId: String): Result<Unit> = familyActionResult.onSuccess {
+        removedMembers += userId
+        data.update { d -> d?.copy(members = d.members.filterNot { it.userId == userId }) }
+    }
+
     val savedSchedules = mutableMapOf<String, SchoolSchedule>()
 
     override suspend fun saveSchedule(familyId: String, childId: String, schedule: SchoolSchedule) {
