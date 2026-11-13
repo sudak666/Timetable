@@ -52,18 +52,24 @@ fun alertBannerText(alert: AirAlert?, now: Instant, zone: ZoneId): AlertBannerTe
     }
 }
 
-/** Плашка тривоги над вкладками. Тривога — кольором помилки, «частково» — спокійніше. */
+/**
+ * Плашка тривоги над вкладками — «плаваюча» картка з тими самими відступами й кутами, що й решта карток.
+ * Тривога — кольором помилки, «частково» — спокійніше.
+ */
 @Composable
 fun AlertBanner(text: AlertBannerText?, modifier: Modifier = Modifier) {
     text ?: return
     Surface(
-        modifier.fillMaxWidth(),
+        modifier.fillMaxWidth().padding(start = 16.dp, top = 8.dp, end = 16.dp),
+        shape = MaterialTheme.shapes.medium,
         color = if (text.active) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.tertiaryContainer,
         contentColor = if (text.active) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onTertiaryContainer,
     ) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).semantics { liveRegion = LiveRegionMode.Polite }) {
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp).semantics { liveRegion = LiveRegionMode.Polite }) {
             Text(text.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-            if (text.detail.isNotEmpty()) Text(text.detail, style = MaterialTheme.typography.bodySmall)
+            if (text.detail.isNotEmpty()) {
+                Text(text.detail, Modifier.padding(top = 2.dp), style = MaterialTheme.typography.bodyMedium)
+            }
         }
     }
 }

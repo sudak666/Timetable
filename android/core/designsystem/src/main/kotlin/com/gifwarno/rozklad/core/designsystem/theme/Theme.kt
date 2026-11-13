@@ -86,8 +86,9 @@ private val DarkColors = darkColorScheme(
     tertiaryContainer = Color(0xFF643F00),
     onTertiaryContainer = Color(0xFFFFE3B8),
     error = Color(0xFFFF8A80),
-    errorContainer = Color(0xFF3B1F1A),
-    onErrorContainer = Color(0xFFFFB4A2),
+    // Чистий темно-червоний (без коричневого відтінку) і світліший текст: контраст ≈ 10:1.
+    errorContainer = Color(0xFF6E1318),
+    onErrorContainer = Color(0xFFFFDAD6),
     background = Web.BgDark,
     onBackground = Web.TextDark,
     surface = Web.CardDark,
