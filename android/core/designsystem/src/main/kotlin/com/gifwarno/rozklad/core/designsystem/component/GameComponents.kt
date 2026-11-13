@@ -284,13 +284,8 @@ fun GameProgressBar(
                         val path = Path().apply { addRoundRect(RoundRect(Rect(Offset.Zero, filled), r)) }
                         clipPath(path) {
                             drawRect(fill, size = filled)
-                            // Відблиск зверху й тінь знизу — «скляна» смужка.
-                            drawRect(Color.White.copy(alpha = 0.35f), size = Size(filled.width, filled.height * 0.35f))
-                            drawRect(
-                                Color.Black.copy(alpha = 0.15f),
-                                topLeft = Offset(0f, filled.height * 0.75f),
-                                size = Size(filled.width, filled.height * 0.25f),
-                            )
+                            // Об'єм — плавним переходом: світліше зверху, темніше знизу (різкі смуги читались як лінії).
+                            drawRect(barShading(filled.height), size = filled)
                             // «Блоки» — смужка з окремих «кубиків».
                             if (blocks) {
                                 val step = BLOCK_STEP.dp.toPx()
@@ -311,6 +306,24 @@ fun GameProgressBar(
     )
 }
 
+/** Відблиск і тінь смужки прогресу одним градієнтом — без видимих меж. */
+private fun barShading(height: Float) = Brush.verticalGradient(
+    0f to Color.White.copy(alpha = 0.30f),
+    0.45f to Color.Transparent,
+    0.6f to Color.Transparent,
+    1f to Color.Black.copy(alpha = 0.15f),
+    startY = 0f,
+    endY = height,
+)
+
+/** Легке затемнення до низу квадратика — «об'ємна» плитка без смуги-лінії. */
+private fun tileShading(height: Float) = Brush.verticalGradient(
+    0.5f to Color.Transparent,
+    1f to Color.Black.copy(alpha = 0.18f),
+    startY = 0f,
+    endY = height,
+)
+
 /** Квадратик з номером уроку кольору предмета (як .n у вебі). */
 @Composable
 fun NumberTile(number: Int, color: Color, modifier: Modifier = Modifier, size: Dp = 30.dp) {
@@ -319,13 +332,7 @@ fun NumberTile(number: Int, color: Color, modifier: Modifier = Modifier, size: D
             .size(size)
             .clip(RoundedCornerShape(9.dp))
             .background(color)
-            .drawBehind {
-                drawRoundRect(
-                    Color.Black.copy(alpha = 0.2f),
-                    topLeft = Offset(0f, this.size.height - 3.dp.toPx()),
-                    size = Size(this.size.width, 3.dp.toPx()),
-                )
-            },
+            .drawBehind { drawRect(tileShading(this.size.height)) },
         contentAlignment = Alignment.Center,
     ) {
         Text("$number", color = Color.White, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Black)
