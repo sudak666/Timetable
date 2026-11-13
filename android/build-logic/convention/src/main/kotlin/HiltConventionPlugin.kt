@@ -1,5 +1,6 @@
 import com.gifwarno.rozklad.lib
 import com.gifwarno.rozklad.libs
+import com.gifwarno.rozklad.serializeKsp
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -15,6 +16,7 @@ class HiltConventionPlugin : Plugin<Project> {
                 "ksp"(libs.lib("hilt-compiler"))
             }
             failOnEmptyKspOutput()
+            serializeKsp()
         }
     }
 }
