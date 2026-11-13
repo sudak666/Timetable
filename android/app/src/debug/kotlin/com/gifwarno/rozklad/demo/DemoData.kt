@@ -17,6 +17,8 @@ import com.gifwarno.rozklad.core.model.Member
 import com.gifwarno.rozklad.core.model.Role
 import com.gifwarno.rozklad.core.model.SessionState
 import com.gifwarno.rozklad.core.model.UserAccount
+import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import kotlin.random.Random
@@ -26,7 +28,14 @@ import kotlin.random.Random
  * розкладу, кілька на підтвердження, челенджі, домашка, ціль. Усі дати — відносно [today].
  * Випадковість із фіксованим зерном — скриншоти щоразу однакові.
  */
-internal class DemoData(private val today: LocalDate, role: Role, noKids: Boolean = false, noFamily: Boolean = false) {
+internal class DemoData(
+    private val today: LocalDate,
+    role: Role,
+    noKids: Boolean = false,
+    noFamily: Boolean = false,
+    alert: AlertStatus = AlertStatus.NONE,
+    now: Instant = Instant.EPOCH,
+) {
     private val parent = Member(PARENT_ID, Role.PARENT, "Оксана", "", 0, "🦉", "")
     private val schedule = Timetable.EXAMPLE
     private val cal = SchoolCalendar(schedule)
@@ -63,7 +72,11 @@ internal class DemoData(private val today: LocalDate, role: Role, noKids: Boolea
             homework = homework(),
             settings = Rewards.DEFAULT_SETTINGS,
             timetables = mapOf(CHILD_ID to schedule),
-            airAlert = AirAlert(ALERT_UID, "м. Київ", AlertStatus.NONE, null, null),
+            airAlert = if (alert == AlertStatus.NONE) {
+                AirAlert(ALERT_UID, "м. Київ", AlertStatus.NONE, null, null)
+            } else {
+                AirAlert(ALERT_UID, "м. Київ", alert, now.minus(ALERT_AGO), now)
+            },
         )
     }
 
@@ -140,6 +153,9 @@ internal class DemoData(private val today: LocalDate, role: Role, noKids: Boolea
         const val CHILD_ID = "demo-child"
         const val LOOKBACK_DAYS = 21
         const val ALERT_UID = 31
+
+        /** Демо-тривога «триває» вже стільки. */
+        val ALERT_AGO: Duration = Duration.ofMinutes(25)
         const val SEED = 12
         const val HISTORY_DAYS = 42L
     }

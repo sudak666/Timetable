@@ -5,6 +5,7 @@ import com.gifwarno.rozklad.core.common.ClockOverride
 import com.gifwarno.rozklad.core.data.di.RepositoryOverride
 import com.gifwarno.rozklad.core.data.repository.FamilyRepository
 import com.gifwarno.rozklad.core.data.repository.SessionRepository
+import com.gifwarno.rozklad.core.model.AlertStatus
 import com.gifwarno.rozklad.core.model.Role
 import dagger.Module
 import dagger.Provides
@@ -30,10 +31,17 @@ import javax.inject.Singleton
  * time=10:40      # який зараз час у демо (далі годинник іде)
  * kids=0          # сім'я без дитини (порожні стани з запрошенням)
  * family=none     # увійшли, але сім'ї ще немає (екран «Майже готово!»)
+ * alert=1         # плашка повітряної тривоги (2 — «у частині області»)
  * ```
  * Вимкнути — видалити файл і перезапустити застосунок.
  */
-class DemoMode(val role: Role, start: LocalTime, noKids: Boolean = false, noFamily: Boolean = false) {
+class DemoMode(
+    val role: Role,
+    start: LocalTime,
+    noKids: Boolean = false,
+    noFamily: Boolean = false,
+    alert: AlertStatus = AlertStatus.NONE,
+) {
     private val zone: ZoneId = ZoneId.systemDefault()
 
     /** Найближчий навчальний день (сьогодні або останній будній) — щоб у вихідні теж був «шкільний» день. */
@@ -46,7 +54,7 @@ class DemoMode(val role: Role, start: LocalTime, noKids: Boolean = false, noFami
         Clock.offset(real, Duration.between(real.instant(), today.atTime(start).atZone(zone).toInstant()))
     }
 
-    private val data = DemoData(today, role, noKids, noFamily)
+    private val data = DemoData(today, role, noKids, noFamily, alert, clock.instant())
     val session: SessionRepository = DemoSessionRepository(data.session)
     val family: FamilyRepository = DemoFamilyRepository(data.family, clock)
 
@@ -59,7 +67,12 @@ class DemoMode(val role: Role, start: LocalTime, noKids: Boolean = false, noFami
             }.toMap()
             val role = if (kv["role"] == "parent") Role.PARENT else Role.CHILD
             val time = kv["time"]?.let { runCatching { LocalTime.parse(it.padStart(5, '0')) }.getOrNull() } ?: LocalTime.of(10, 40)
-            return DemoMode(role, time, noKids = kv["kids"] == "0", noFamily = kv["family"] == "none")
+            val alert = when (kv["alert"]) {
+                "1" -> AlertStatus.ACTIVE
+                "2" -> AlertStatus.PARTIAL
+                else -> AlertStatus.NONE
+            }
+            return DemoMode(role, time, noKids = kv["kids"] == "0", noFamily = kv["family"] == "none", alert = alert)
         }
     }
 }
