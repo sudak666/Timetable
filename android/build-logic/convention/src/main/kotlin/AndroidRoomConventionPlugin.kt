@@ -1,6 +1,7 @@
 import androidx.room.gradle.RoomExtension
 import com.gifwarno.rozklad.lib
 import com.gifwarno.rozklad.libs
+import com.gifwarno.rozklad.serializeKsp
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.configure
@@ -12,6 +13,7 @@ class AndroidRoomConventionPlugin : Plugin<Project> {
         with(target) {
             pluginManager.apply("androidx.room")
             pluginManager.apply("com.google.devtools.ksp")
+            serializeKsp()
             extensions.configure<RoomExtension> {
                 schemaDirectory("$projectDir/schemas")
             }
