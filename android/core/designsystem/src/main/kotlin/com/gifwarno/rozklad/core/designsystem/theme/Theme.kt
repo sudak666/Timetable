@@ -208,7 +208,7 @@ fun RozkladTheme(
     /** Обраний людиною колір (відкривається з рівнями); null — фірмовий фіолетовий. */
     accent: Color? = null,
     /** Ігровий стиль: форма, шрифти, небо. */
-    style: GameStyle = GameStyle.ARENA,
+    style: GameStyle = GameStyle.CLASSIC,
     content: @Composable () -> Unit,
 ) {
     val colors: ColorScheme = when {

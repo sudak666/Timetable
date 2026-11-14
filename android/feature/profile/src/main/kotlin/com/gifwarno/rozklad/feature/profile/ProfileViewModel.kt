@@ -55,7 +55,7 @@ sealed interface ProfileUiState {
         val accent: String = "",
         /** Курс оцінок і правила серії сім'ї. */
         val settings: RewardSettings = Rewards.DEFAULT_SETTINGS,
-        val gameStyle: GameStyle = GameStyle.ARENA,
+        val gameStyle: GameStyle = GameStyle.CLASSIC,
         /** Ім'я в сім'ї як є (може бути порожнім — тоді в шапці пошта). */
         val myName: String = "",
         /** Свій userId — себе прибрати з сім'ї не можна. */

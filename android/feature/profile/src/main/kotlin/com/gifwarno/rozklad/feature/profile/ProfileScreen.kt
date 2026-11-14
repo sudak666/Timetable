@@ -61,6 +61,7 @@ import com.gifwarno.rozklad.core.designsystem.component.GameButton
 import com.gifwarno.rozklad.core.designsystem.component.GameSegmented
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.component.LoadingState
+import com.gifwarno.rozklad.core.designsystem.component.LocalChromePadding
 import com.gifwarno.rozklad.core.designsystem.component.Pill
 import com.gifwarno.rozklad.core.designsystem.component.StrokeText
 import com.gifwarno.rozklad.core.designsystem.component.outlineWidth
@@ -176,7 +177,7 @@ internal fun ProfileScreen(
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
     val c = RozkladTheme.colors
     Column(
-        modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(LocalChromePadding.current).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         GameSurface(

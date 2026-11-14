@@ -48,6 +48,7 @@ import com.gifwarno.rozklad.core.designsystem.component.GameButton
 import com.gifwarno.rozklad.core.designsystem.component.GameFab
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.component.LoadingState
+import com.gifwarno.rozklad.core.designsystem.component.LocalChromePadding
 import com.gifwarno.rozklad.core.designsystem.component.Pill
 import com.gifwarno.rozklad.core.designsystem.component.RoundCheck
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
@@ -86,7 +87,10 @@ internal fun HomeworkScreen(
     Scaffold(
         modifier = modifier,
         containerColor = Color.Transparent,
-        contentWindowInsets = WindowInsets(0),
+        // Плаваючі панелі оболонки: FAB і снекбар піднімаються над нижнім баром.
+        contentWindowInsets = LocalChromePadding.current.let {
+            WindowInsets(top = it.calculateTopPadding(), bottom = it.calculateBottomPadding())
+        },
         floatingActionButton = {
             if (state is HomeworkUiState.Ready) GameFab("Завдання", onClick = { showAdd = true })
         },
@@ -97,8 +101,14 @@ internal fun HomeworkScreen(
             is HomeworkUiState.NoChild -> InviteChildState("📒", state.isParent, state.inviteCode, Modifier.padding(padding))
 
             is HomeworkUiState.Ready -> LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 96.dp),
+                // Відступ — усередині списку, щоб картки пропливали під панелями, а не обрізалися.
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = padding.calculateTopPadding() + 12.dp,
+                    bottom = padding.calculateBottomPadding() + 96.dp,
+                ),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item(key = "kids") { ChildSelector(state.children, state.childId, onSelectChild) }

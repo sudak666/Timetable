@@ -58,6 +58,7 @@ import com.gifwarno.rozklad.core.designsystem.component.GameProgressBar
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.component.GradeTile
 import com.gifwarno.rozklad.core.designsystem.component.LoadingState
+import com.gifwarno.rozklad.core.designsystem.component.LocalChromePadding
 import com.gifwarno.rozklad.core.designsystem.component.Pill
 import com.gifwarno.rozklad.core.designsystem.component.StatTile
 import com.gifwarno.rozklad.core.designsystem.component.StrokeText
@@ -149,7 +150,10 @@ internal fun GradesScreen(
     Scaffold(
         modifier = modifier,
         containerColor = Color.Transparent,
-        contentWindowInsets = WindowInsets(0),
+        // Плаваючі панелі оболонки: FAB і снекбар піднімаються над нижнім баром.
+        contentWindowInsets = LocalChromePadding.current.let {
+            WindowInsets(top = it.calculateTopPadding(), bottom = it.calculateBottomPadding())
+        },
         snackbarHost = { SnackbarHost(snackbar) },
         floatingActionButton = {
             if (state is GradesUiState.Ready) GameFab("Оцінка", onClick = { showAdd = true })
@@ -260,8 +264,14 @@ private fun ReadyContent(
 ) {
     val actions = RowActions(onApprove, onUnapprove, onDelete)
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(padding),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 96.dp),
+        // Відступ — усередині списку, щоб картки пропливали під панелями, а не обрізалися.
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            top = padding.calculateTopPadding() + 12.dp,
+            bottom = padding.calculateBottomPadding() + 96.dp,
+        ),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item(key = "kids") { ChildSelector(state.children, state.child.userId, onSelectChild) }
