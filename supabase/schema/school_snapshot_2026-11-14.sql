@@ -1,4 +1,5 @@
--- ЗНІМОК СХЕМИ «Дванадцятки» (таблиці school_*) з продакшн-бази — 14.11.2026.
+-- ЗНІМОК СХЕМИ «Дванадцятки» (таблиці school_*) з продакшн-бази — 14.11.2026,
+-- доповнений міграцією 20261115_school_audit_fixes.sql (застосовано 15.11.2026).
 --
 -- Навіщо: частина схеми (school_rewards_init, school_rewards_codes, school_hide_parent_code,
 -- school_features_v2, school_push_triggers, school_avatar_whitelist, school_grades_allow_pass,
@@ -9,7 +10,7 @@
 -- (school_secrets.v) сюди не потрапили.
 --
 -- НЕ ЗАПУСКАТИ на живій базі — там усе це вже є. Для нової чи локальної бази: цей файл замість
--- усіх міграцій до 20261114 включно; довідник місць тривог — supabase/scripts/alert_locations.py;
+-- усіх міграцій до 20261115 включно; довідник місць тривог — supabase/scripts/alert_locations.py;
 -- cron і секрети — див. кінець файлу. Після кожної зміни схеми в продакшні цей файл оновлювати.
 --
 -- Потрібні розширення: pgcrypto (extensions.gen_random_bytes), pg_net (net.http_post), pg_cron.
@@ -174,7 +175,8 @@ create table public.school_homework (
   due date not null,
   text text not null,
   done boolean not null default false,
-  created_at timestamp with time zone not null default now()
+  created_at timestamp with time zone not null default now(),
+  created_by uuid default auth.uid()
 );
 
 create table public.school_timetables (
@@ -267,6 +269,7 @@ alter table public.school_homework add constraint school_homework_subject_check 
 alter table public.school_homework add constraint school_homework_text_check CHECK (((length(text) >= 1) AND (length(text) <= 500)));
 alter table public.school_homework add constraint school_homework_child_id_fkey FOREIGN KEY (child_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 alter table public.school_homework add constraint school_homework_family_id_fkey FOREIGN KEY (family_id) REFERENCES public.school_families(id) ON DELETE CASCADE;
+alter table public.school_homework add constraint school_homework_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL;
 
 alter table public.school_timetables add constraint school_timetables_pkey PRIMARY KEY (child_id);
 alter table public.school_timetables add constraint school_timetables_activities_valid CHECK (public.school_activities_valid(activities));
@@ -298,6 +301,7 @@ CREATE INDEX school_fcm_tokens_alerts_idx ON public.school_fcm_tokens USING btre
 CREATE INDEX school_grades_child_id_idx ON public.school_grades USING btree (child_id);
 CREATE INDEX school_grades_family_id_child_id_idx ON public.school_grades USING btree (family_id, child_id);
 CREATE INDEX school_homework_child_id_idx ON public.school_homework USING btree (child_id);
+CREATE INDEX school_homework_created_by_idx ON public.school_homework USING btree (created_by);
 CREATE INDEX school_homework_family_id_child_id_due_idx ON public.school_homework USING btree (family_id, child_id, due);
 CREATE INDEX school_join_attempts_user_at_idx ON public.school_join_attempts USING btree (user_id, at);
 CREATE INDEX school_ledger_child_id_idx ON public.school_ledger USING btree (child_id);
@@ -484,6 +488,7 @@ begin
     body := jsonb_build_object('table', 'alerts', 'type', 'CRON'));
 end $function$;
 
+-- Нагадування про домашку: cron о 15 і 16 UTC, спрацьовує лише о 18-й за Києвом (і взимку, і влітку).
 CREATE OR REPLACE FUNCTION public.school_hw_remind()
  RETURNS void
  LANGUAGE plpgsql
@@ -491,11 +496,28 @@ CREATE OR REPLACE FUNCTION public.school_hw_remind()
  SET search_path TO ''
 AS $function$
 begin
+  if extract(hour from (now() at time zone 'Europe/Kyiv')) <> 18 then
+    return;
+  end if;
   perform net.http_post(
     url := 'https://vkwkyhjjjmcpmiakxohw.supabase.co/functions/v1/school-push',
     headers := jsonb_build_object('Content-Type', 'application/json', 'x-hook-secret', (select v from public.school_secrets where k = 'hook_secret')),
     body := jsonb_build_object('table', 'hw_remind', 'type', 'CRON'));
 end $function$;
+
+-- Приватний Realtime-канал сім'ї «fam-<uuid>»: лише учасники.
+CREATE OR REPLACE FUNCTION public.school_realtime_member(topic text)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  select case
+    when topic ~ '^fam-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      then public.school_role(substring(topic from 5)::uuid) is not null
+    else false
+  end
+$function$;
 
 -- ───────────────────────────── тригери ─────────────────────────────
 
@@ -525,6 +547,8 @@ revoke all on function public.school_role(uuid) from public, anon;
 grant execute on function public.school_role(uuid) to authenticated;
 revoke all on function public.school_rotate_invite_code(uuid) from public, anon;
 grant execute on function public.school_rotate_invite_code(uuid) to authenticated;
+revoke all on function public.school_realtime_member(text) from public, anon;
+grant execute on function public.school_realtime_member(text) to authenticated;
 
 -- ───────────────────────────── права по стовпцях ─────────────────────────────
 -- Табличні права anon/authenticated — стандартні Supabase (ALL); нижче — звуження, від яких залежить безпека.
@@ -568,7 +592,9 @@ create policy alert_state_sel on public.school_alert_state as permissive for sel
 create policy ch_del on public.school_challenges as permissive for delete to authenticated
   using ((public.school_role(family_id) = 'parent'::text));
 create policy ch_ins on public.school_challenges as permissive for insert to authenticated
-  with check ((public.school_role(family_id) = 'parent'::text));
+  with check (public.school_role(family_id) = 'parent'
+    and exists (select 1 from public.school_members m
+                where m.family_id = school_challenges.family_id and m.user_id = school_challenges.child_id and m.role = 'child'));
 create policy ch_sel on public.school_challenges as permissive for select to authenticated
   using ((public.school_role(family_id) IS NOT NULL));
 create policy fam_sel on public.school_families as permissive for select to authenticated
@@ -592,7 +618,8 @@ create policy gr_upd on public.school_grades as permissive for update to authent
   using ((public.school_role(family_id) = 'parent'::text))
   with check ((public.school_role(family_id) = 'parent'::text));
 create policy hw_del on public.school_homework as permissive for delete to authenticated
-  using (((public.school_role(family_id) = 'parent'::text) OR (child_id = ( SELECT auth.uid() AS uid))));
+  using (public.school_role(family_id) = 'parent'
+    or (child_id = (select auth.uid()) and (created_by is null or created_by = (select auth.uid()))));
 create policy hw_ins on public.school_homework as permissive for insert to authenticated
   with check (((EXISTS ( SELECT 1
    FROM public.school_members m
@@ -605,7 +632,9 @@ create policy hw_upd on public.school_homework as permissive for update to authe
 create policy lg_del on public.school_ledger as permissive for delete to authenticated
   using ((public.school_role(family_id) = 'parent'::text));
 create policy lg_ins on public.school_ledger as permissive for insert to authenticated
-  with check ((public.school_role(family_id) = 'parent'::text));
+  with check (public.school_role(family_id) = 'parent'
+    and exists (select 1 from public.school_members m
+                where m.family_id = school_ledger.family_id and m.user_id = school_ledger.child_id and m.role = 'child'));
 create policy lg_sel on public.school_ledger as permissive for select to authenticated
   using ((public.school_role(family_id) IS NOT NULL));
 create policy mem_del on public.school_members as permissive for delete to authenticated
@@ -636,9 +665,15 @@ create policy tt_upd on public.school_timetables as permissive for update to pub
   using (((public.school_role(family_id) = 'parent'::text) OR (child_id = ( SELECT auth.uid() AS uid))))
   with check (((public.school_role(family_id) = 'parent'::text) OR (child_id = ( SELECT auth.uid() AS uid))));
 
+-- Realtime: політики на realtime.messages лише для тем «fam-<uuid>».
+create policy school_family_read on realtime.messages as permissive for select to authenticated
+  using (public.school_realtime_member(realtime.topic()));
+create policy school_family_presence on realtime.messages as permissive for insert to authenticated
+  with check (realtime.messages.extension = 'presence' and public.school_realtime_member(realtime.topic()));
+
 -- ───────────────────────────── cron і секрети (не SQL-схема — для довідки) ─────────────────────────────
 -- select cron.schedule('school-alerts', '* * * * *', 'select public.school_alerts_tick()');
--- select cron.schedule('school-hw-remind', '0 16 * * 0-4', 'select public.school_hw_remind()');
+-- select cron.schedule('school-hw-remind', '0 15,16 * * 0-4', 'select public.school_hw_remind()');
 -- school_secrets: hook_secret, vapid_public, vapid_private (значення — лише в продакшн-базі).
 -- Edge-функція school-push: supabase/functions/school-push (verify_jwt = false, перевіряє x-hook-secret);
 -- секрети функції: FCM_SERVICE_ACCOUNT, ALERTS_IN_UA_TOKEN.
