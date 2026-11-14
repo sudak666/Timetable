@@ -62,7 +62,7 @@ export function profileBar(): TemplateResult | typeof nothing {
   const pend = state.grades.filter((g) => g.status === 'pending' && (par || g.child_id === state.me!.id)).length;
   const go = (tab: 'grades' | 'hw') => { location.hash = tab; };
   return html`<section class="prof" aria-label="Профіль">
-    <button type="button" class="pa" aria-haspopup="dialog" aria-label="Аватар, колір і стиль" @click=${avatarPop}>${emo(m?.avatar || (par ? '👨‍👩‍👦' : '🧒'))}</button>
+    <button type="button" class="pa" aria-haspopup="dialog" @click=${avatarPop}>${emo(m?.avatar || (par ? '👨‍👩‍👦' : '🧒'))}<span class="sr-only">Аватар, колір і стиль</span></button>
     <div class="pn"><b>${m?.name || state.me.email}</b>
       <small>${par && state.kid ? html`${emo('👀')} ${kidMember()?.name || 'Дитина'} · ` : nothing}Рівень ${d.lv} · ${d.xp} XP</small>
       <div class="pl" role="progressbar" aria-label="Прогрес рівня" aria-valuemin="0" aria-valuemax=${XP_PER_LEVEL} aria-valuenow=${d.xp % XP_PER_LEVEL}><i style=${styleMap({ width: (d.xp % XP_PER_LEVEL) * (100 / XP_PER_LEVEL) + '%' })}></i></div></div>
@@ -265,11 +265,11 @@ function cards(d: D): TemplateResult {
 function gradeInput(): TemplateResult {
   const f = state.form;
   return html`<div class="form">
-      <button type="button" class="pick" aria-haspopup="listbox" aria-label="Предмет" @click=${(e: Event) => pickSubject(e, f.subject, (s) => set((st) => { st.form.subject = s; }))}>${subjLabel(f.subject)}</button>
-      <button type="button" class="pick" aria-haspopup="dialog" aria-label="Дата оцінки" @click=${(e: Event) => pickDate(e, f.date, (v) => set((st) => { st.form.date = v; }), [['Вчора', iso(addDays(new Date(), -1))], ['Сьогодні', iso(new Date())]])}>${dateLabel(f.date)}</button>
+      <button type="button" class="pick" aria-haspopup="listbox" @click=${(e: Event) => pickSubject(e, f.subject, (s) => set((st) => { st.form.subject = s; }))}><span class="sr-only">Предмет: </span>${subjLabel(f.subject)}</button>
+      <button type="button" class="pick" aria-haspopup="dialog" @click=${(e: Event) => pickDate(e, f.date, (v) => set((st) => { st.form.date = v; }), [['Вчора', iso(addDays(new Date(), -1))], ['Сьогодні', iso(new Date())]])}><span class="sr-only">Дата оцінки: </span>${dateLabel(f.date)}</button>
     </div>
     <div class="gbtn" role="group" aria-label="Поставити оцінку" style=${styleMap({ opacity: state.kid ? '1' : '.4' })}>${[...Array.from({ length: 12 }, (_, i) => 12 - i), PASS].map((g) =>
-      html`<button type="button" ?disabled=${!state.kid} style=${styleMap({ background: gradeColor(g) })} aria-label=${g === PASS ? `Зараховано, ${uah(rateOf(g, state.rates))}` : `Оцінка ${g}, ${uah(rateOf(g, state.rates))}`} @click=${(e: MouseEvent) => addGrade(g, e)}>${gradeLabel(g)}</button>`)}</div>`;
+      html`<button type="button" ?disabled=${!state.kid} style=${styleMap({ background: gradeColor(g) })} aria-label=${g === PASS ? `${gradeLabel(g)} — зараховано, ${uah(rateOf(g, state.rates))}` : `Оцінка ${g}, ${uah(rateOf(g, state.rates))}`} @click=${(e: MouseEvent) => addGrade(g, e)}>${gradeLabel(g)}</button>`)}</div>`;
 }
 
 function homework(d: D): TemplateResult {
@@ -292,8 +292,8 @@ function homework(d: D): TemplateResult {
   };
   return html`<h3 class="h4 gap">${emo('📝')} Домашні завдання</h3>
     <form class="form" @submit=${add}>
-      <button type="button" class="pick" aria-haspopup="listbox" aria-label="Предмет домашки" @click=${(e: Event) => pickSubject(e, f.hwSubject, setSubj)}>${subjLabel(f.hwSubject)}</button>
-      <button type="button" class="pick" aria-haspopup="dialog" aria-label="На коли" @click=${(e: Event) => pickDate(e, f.hwDate, (v) => set((st) => { st.form.hwDate = v; }), [['Сьогодні', iso(new Date())], ['Завтра', iso(addDays(new Date(), 1))]])}>${dateLabel(f.hwDate)}</button>
+      <button type="button" class="pick" aria-haspopup="listbox" @click=${(e: Event) => pickSubject(e, f.hwSubject, setSubj)}><span class="sr-only">Предмет домашки: </span>${subjLabel(f.hwSubject)}</button>
+      <button type="button" class="pick" aria-haspopup="dialog" @click=${(e: Event) => pickDate(e, f.hwDate, (v) => set((st) => { st.form.hwDate = v; }), [['Сьогодні', iso(new Date())], ['Завтра', iso(addDays(new Date(), 1))]])}><span class="sr-only">На коли: </span>${dateLabel(f.hwDate)}</button>
       <label class="sr-only" for="hText">Що задали</label><input id="hText" class="grow" placeholder="Що задали?" maxlength="500" required>
       <button>Додати</button>
     </form>
@@ -368,7 +368,7 @@ function parentTools(d: D, part: 'money' | 'settings'): TemplateResult | typeof 
     <h3 class="h4 gap">${emo('🏅')} Новий челендж</h3>
     <form class="form" @submit=${chal}>
       <label class="sr-only" for="cTitle">Назва</label><input id="cTitle" class="grow" placeholder="Напр.: 3 десятки з математики" maxlength="120" required>
-      <button type="button" class="pick" aria-haspopup="listbox" aria-label="Предмет челенджу" @click=${(e: Event) => pickSubject(e, f.chSubject, (s) => set((st) => { st.form.chSubject = s; }), true)}>${subjLabel(f.chSubject, true)}</button>
+      <button type="button" class="pick" aria-haspopup="listbox" @click=${(e: Event) => pickSubject(e, f.chSubject, (s) => set((st) => { st.form.chSubject = s; }), true)}><span class="sr-only">Предмет челенджу: </span>${subjLabel(f.chSubject, true)}</button>
       <label>оцінка ≥ <input type="number" id="cMin" value="10" min="1" max="12" class="w64"></label>
       <label>разів <input type="number" id="cNeed" value="3" min="1" max="50" class="w64"></label>
       <label>днів <input type="number" id="cDays" value="7" min="1" max="90" class="w64"></label>
@@ -470,7 +470,7 @@ export function tabProfile(): TemplateResult {
   if (g) return g;
   const d = derive(), m = me(), par = state.role === 'parent';
   return html`<section class="side card me-card" aria-label="Профіль">
-      <div class="me-head"><button type="button" class="pa big" aria-haspopup="dialog" aria-label="Змінити аватар, колір і стиль" @click=${avatarPop}>${emo(m?.avatar || (par ? '👨‍👩‍👦' : '🧒'))}</button>
+      <div class="me-head"><button type="button" class="pa big" aria-haspopup="dialog" @click=${avatarPop}>${emo(m?.avatar || (par ? '👨‍👩‍👦' : '🧒'))}<span class="sr-only">Змінити аватар, колір і стиль</span></button>
         <div><h2 class="me-name">${m?.name || state.me!.email}</h2><p class="msg">${par ? 'Батьки' : 'Учень'} · ${state.family?.name}</p>
         <div class="me-acts"><button type="button" class="pick" @click=${avatarPop}>${emo('🎨 Аватар, колір і стиль')}</button>
           <button type="button" @click=${renameMe}>${emo(m?.name ? '✏️ Ім’я' : '✏️ Вказати ім’я')}</button>

@@ -43,13 +43,18 @@
             </intent-filter>
         </service>
 
-        <!-- Нагадування про позашкільні заняття: власний будильник + відновлення після перезавантаження/оновлення. -->
+        <!--
+          Нагадування про позашкільні заняття: власний будильник + відновлення після перезавантаження/оновлення,
+          а також після ручної зміни часу чи часового поясу (будильник ставиться на абсолютний момент).
+        -->
         <receiver
             android:name=".ClubReminderReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
             </intent-filter>
         </receiver>
     </application>
