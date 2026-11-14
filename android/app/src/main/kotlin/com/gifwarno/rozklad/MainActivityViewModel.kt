@@ -36,7 +36,7 @@ class MainActivityViewModel @Inject constructor(
 
     val gameStyle: StateFlow<GameStyle> = preferences.preferences
         .map { GameStyle.of(it.gameStyle) }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, GameStyle.ARENA)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, GameStyle.CLASSIC)
 
     val themeMode: StateFlow<ThemeMode> = preferences.preferences
         .map { it.themeMode }

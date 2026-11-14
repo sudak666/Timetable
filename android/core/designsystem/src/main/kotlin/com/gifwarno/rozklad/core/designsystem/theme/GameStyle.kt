@@ -13,11 +13,11 @@ enum class GameStyle(val label: String) {
     ;
 
     companion object {
-        /** Збережене ім'я → стиль; невідоме чи порожнє — «Арена» (стиль Android за замовчуванням). */
-        fun of(name: String?): GameStyle = entries.firstOrNull { it.name == name } ?: ARENA
+        /** Збережене ім'я → стиль; невідоме чи порожнє — «Звичайний» (стиль за замовчуванням). */
+        fun of(name: String?): GameStyle = entries.firstOrNull { it.name == name } ?: CLASSIC
     }
 }
 
 // Свідомий виняток: токени теми — класичний випадок для CompositionLocal (як MaterialTheme.colorScheme).
 @Suppress("ComposeCompositionLocalUsage")
-val LocalGameStyle = staticCompositionLocalOf { GameStyle.ARENA }
+val LocalGameStyle = staticCompositionLocalOf { GameStyle.CLASSIC }
