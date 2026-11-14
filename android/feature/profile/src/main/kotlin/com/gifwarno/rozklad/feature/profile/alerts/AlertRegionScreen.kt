@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -122,7 +123,7 @@ private fun OblastList(items: List<AlertLocation>, onOpen: (AlertLocation) -> Un
                 },
                 trailingContent = { Text("›", style = MaterialTheme.typography.titleLarge, color = RozkladTheme.colors.muted) },
                 colors = rowColors,
-                modifier = Modifier.clickable { onOpen(loc) },
+                modifier = Modifier.clickable(onClickLabel = "Відкрити райони й громади", role = Role.Button) { onOpen(loc) },
             )
         }
     }
@@ -172,13 +173,17 @@ private fun OblastContents(step: RegionStep.InOblast, query: String, actions: Re
                     headlineContent = { Text(item.location.name, fontWeight = FontWeight.ExtraBold) },
                     supportingContent = { Text("Увесь район") },
                     colors = rowColors,
-                    modifier = Modifier.clickable { actions.choose(item.location.uid) },
+                    modifier = Modifier.clickable(onClickLabel = "Обрати це місце", role = Role.Button) {
+                        actions.choose(item.location.uid)
+                    },
                 )
 
                 is RegionItem.Hromada -> ListItem(
                     headlineContent = { Text(shortName(item.location.name)) },
                     colors = rowColors,
-                    modifier = Modifier.padding(start = 16.dp).clickable { actions.choose(item.location.uid) },
+                    modifier = Modifier.padding(start = 16.dp).clickable(onClickLabel = "Обрати це місце", role = Role.Button) {
+                        actions.choose(item.location.uid)
+                    },
                 )
             }
         }

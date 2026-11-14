@@ -284,7 +284,7 @@ internal fun ProfileScreen(
             }
         }
 
-        GameCard("👨‍👩‍👧 Сім’я") {
+        GameCard("🏡 Сім’я") {
             state.members.forEach { m ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(44.dp).clip(CircleShape).background(c.soft), contentAlignment = Alignment.Center) {

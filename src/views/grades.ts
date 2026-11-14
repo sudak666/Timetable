@@ -128,7 +128,7 @@ function authView(): TemplateResult {
     <form class="form" id="gMail" @submit=${login}>
       <label class="sr-only" for="gEmail">Пошта</label><input type="email" id="gEmail" placeholder="пошта" required autocomplete="email">
       <label class="sr-only" for="gPass">Пароль</label><input type="password" id="gPass" placeholder="пароль (від 6 символів)" minlength="6" required autocomplete="current-password">
-      <button>Увійти</button><button type="button" @click=${signup}>Зареєструватись</button>
+      <button>Увійти</button><button type="button" @click=${signup}>Зареєструватися</button>
     </form>
     <p class="legal"><button type="button" class="linkish" @click=${() => void import('./password').then((m) => m.forgotPassword(email()))}>Забули пароль?</button></p>
     ${msg ? html`<p class=${classMap({ msg: true, pos: !!msg.ok, neg: !msg.ok })} role="status">${emo(msg.text)}</p>` : nothing}
@@ -163,7 +163,7 @@ function joinView(): TemplateResult {
   return html`<p class="lead">Ти ще не в сім'ї. Батьки створюють сім'ю, дитина приєднується за кодом.</p>
     <div class="form"><label class="sr-only" for="jName">Ім'я</label><input id="jName" placeholder="Твоє ім'я" maxlength="40" required autocomplete="given-name" .value=${state.me?.fullName ?? ''}></div>
     <div class="form"><button type="button" @click=${create}>${emo('👨‍👩‍👦 Я батько/мати — створити сім’ю')}</button></div>
-    <div class="form"><label class="sr-only" for="jCode">Код запрошення</label><input id="jCode" placeholder="Код запрошення" maxlength="10" autocapitalize="characters"><button type="button" @click=${join}>${emo('🔑 Приєднатись')}</button></div>
+    <div class="form"><label class="sr-only" for="jCode">Код запрошення</label><input id="jCode" placeholder="Код запрошення" maxlength="10" autocapitalize="characters"><button type="button" @click=${join}>${emo('🔑 Приєднатися')}</button></div>
     ${state.authMsg ? html`<p class="msg neg" role="status">${state.authMsg.text}</p>` : nothing}`;
 }
 
@@ -410,7 +410,7 @@ function inviteCard(): TemplateResult {
   const code = state.family?.invite_code ?? '';
   const text = `Приєднуйся до нашого розкладу: ${location.origin + location.pathname} — увійди й введи код ${code}`;
   const share = async () => {
-    if (navigator.share) { try { await navigator.share({ title: 'Розклад уроків', text }); return; } catch { return; } }
+    if (navigator.share) { try { await navigator.share({ title: 'Дванадцятка', text }); return; } catch { return; } }
     await navigator.clipboard?.writeText(text);
     toast('Запрошення скопійовано — надішли його дитині');
   };

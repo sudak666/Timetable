@@ -95,7 +95,7 @@ fun TodayRoute(
     when (val s = state) {
         TodayScreenState.Loading -> LoadingState(modifier.padding(LocalChromePadding.current))
 
-        is TodayScreenState.NoChild -> InviteChildState("👨‍👩‍👧", s.isParent, s.inviteCode, modifier.padding(LocalChromePadding.current))
+        is TodayScreenState.NoChild -> InviteChildState("🏡", s.isParent, s.inviteCode, modifier.padding(LocalChromePadding.current))
 
         is TodayScreenState.NoSchedule -> Column(modifier.padding(LocalChromePadding.current)) {
             ChildSelector(s.children, s.childId, viewModel::selectChild, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))

@@ -103,7 +103,7 @@ internal fun BellsTab(draft: SchoolSchedule, actions: EditorActions) {
                     leading = "＋",
                 )
                 GameButton(
-                    "Останній",
+                    "Останній дзвінок",
                     actions.removeLastBell,
                     Modifier.weight(1f),
                     color = c.card,

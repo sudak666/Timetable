@@ -207,7 +207,7 @@ internal fun JoinFamilyScreen(
         modifier = modifier,
         header = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("👨‍👩‍👧", fontSize = 64.sp)
+                Text("🏡", fontSize = 64.sp)
                 StrokeText("Майже готово!", GameTitleStyle.copy(fontSize = 28.sp, lineHeight = 34.sp), strokeWidth = 5.dp)
             }
         },
@@ -250,7 +250,7 @@ internal fun JoinFamilyScreen(
             OutlinedTextField(
                 value = state.code,
                 onValueChange = onCode,
-                label = { Text("Код сім’ї") },
+                label = { Text("Код запрошення") },
                 singleLine = true,
                 shape = ButtonShape,
                 colors = fieldColors(),

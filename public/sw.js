@@ -27,8 +27,8 @@ self.addEventListener('fetch', (e) => {
 });
 self.addEventListener('push', (e) => {
   let d = {};
-  try { d = e.data.json(); } catch { d = { title: 'Розклад', body: e.data ? e.data.text() : '' }; }
-  e.waitUntil(self.registration.showNotification(d.title || 'Розклад', { body: d.body || '', tag: d.tag, data: { url: typeof d.url === 'string' && d.url.startsWith('#') ? d.url : '#grades' }, icon: 'assets/icon-192.png', badge: 'assets/icon-192.png' }));
+  try { d = e.data.json(); } catch { d = { title: 'Дванадцятка', body: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'Дванадцятка', { body: d.body || '', tag: d.tag, data: { url: typeof d.url === 'string' && d.url.startsWith('#') ? d.url : '#grades' }, icon: 'assets/icon-192.png', badge: 'assets/icon-192.png' }));
 });
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
