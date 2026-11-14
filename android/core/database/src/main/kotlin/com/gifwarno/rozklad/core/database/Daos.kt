@@ -34,6 +34,9 @@ interface FamilyDao {
     @Upsert
     suspend fun upsertTimetables(rows: List<TimetableEntity>)
 
+    @Query("SELECT * FROM timetables WHERE childId = :childId")
+    suspend fun timetable(childId: String): TimetableEntity?
+
     @Query("DELETE FROM timetables WHERE familyId = :familyId")
     suspend fun clearTimetables(familyId: String)
 
@@ -167,4 +170,15 @@ interface OutboxDao {
 
     @Query("UPDATE outbox SET attempts = attempts + 1 WHERE seq = :seq")
     suspend fun markAttempt(seq: Long)
+
+    /** Новіша зміна цілого рядка (розклад) робить попередні ще не надіслані зайвими. */
+    @Query("DELETE FROM outbox WHERE tableName = :table AND rowId = :rowId AND kind = :kind")
+    suspend fun dropPending(table: String, rowId: String, kind: String)
+
+    @Query("UPDATE outbox SET payload = :payload WHERE seq = :seq")
+    suspend fun setPayload(seq: Long, payload: String)
+
+    /** Нова версія розкладу після успішного збереження — щоб наступне збереження не вважало її чужою. */
+    @Query("UPDATE timetables SET updatedAt = :version WHERE childId = :childId")
+    suspend fun setTimetableVersion(childId: String, version: String)
 }

@@ -28,8 +28,9 @@ const kidName = (id: string) => state.members.find((m) => m.user_id === id)?.nam
 
 export function openEditor(): void {
   if (!canEditSchedule()) return;
-  const base = fromRow(state.timetables.find((t) => t.child_id === state.kid));
-  set({ editor: { kid: state.kid!, base, draft: base, tab: 'lessons', day: 0, saving: false }, day: null });
+  const row = state.timetables.find((t) => t.child_id === state.kid);
+  const base = fromRow(row);
+  set({ editor: { kid: state.kid!, base, baseAt: row ? (row.updated_at ?? null) : null, draft: base, tab: 'lessons', day: 0, saving: false }, day: null });
   scrollTo({ top: 0 });
 }
 
@@ -51,15 +52,40 @@ async function save(): Promise<void> {
   if (!ed || !fid || ed.saving || validate(ed.draft).length) return;
   if (!navigator.onLine) return void toast('Немає інтернету — розклад збережеться, коли зʼявиться звʼязок. Поки що не закривай сторінку.', 'err');
   set((s) => { if (s.editor) s.editor = { ...s.editor, saving: true }; });
-  // updated_at ставить тригер на сервері.
-  const { error } = await sb.from('school_timetables').upsert(toRow(ed.draft, ed.kid, fid), { onConflict: 'child_id' });
-  if (error) {
-    set((s) => { if (s.editor) s.editor = { ...s.editor, saving: false }; });
-    return void toast('Розклад не збережено: ' + errText(error), 'err');
+  const done = (): void => set((s) => { if (s.editor) s.editor = { ...s.editor, saving: false }; });
+  const result = await writeTimetable(toRow(ed.draft, ed.kid, fid), ed.baseAt);
+  if (result === 'conflict') {
+    done();
+    // Хтось зберіг розклад, поки його тут редагували (інший пристрій, Android-черга після офлайну).
+    if (!(await confirm('Розклад уже змінили на іншому пристрої. Записати твою версію замість тієї?', 'Записати мою'))) {
+      await loadFamily().catch(() => undefined);
+      return void toast('Не збережено. Закрий редактор і відкрий знову, щоб побачити свіжу версію.', 'err');
+    }
+    set((s) => { if (s.editor) s.editor = { ...s.editor, saving: true }; });
+    const { error } = await sb.from('school_timetables').upsert(toRow(ed.draft, ed.kid, fid), { onConflict: 'child_id' });
+    if (error) { done(); return void toast('Розклад не збережено: ' + errText(error), 'err'); }
+  } else if (result) {
+    done();
+    return void toast('Розклад не збережено: ' + result, 'err');
   }
   await loadFamily().catch(() => undefined);
   set({ editor: null });
   toast('Розклад збережено ✓', 'ok');
+}
+
+/**
+ * Збереження з перевіркою версії: оновлюємо лише той рядок, з якого почали (updated_at ставить тригер),
+ * а якщо розкладу не було — лише вставляємо. null — збережено, 'conflict' — рядок уже інший, інакше — текст помилки.
+ */
+async function writeTimetable(row: ReturnType<typeof toRow>, baseAt: string | null): Promise<null | 'conflict' | string> {
+  if (baseAt) {
+    const { data, error } = await sb.from('school_timetables').update(row).eq('child_id', row.child_id).eq('updated_at', baseAt).select('child_id');
+    if (error) return errText(error);
+    return data?.length ? null : 'conflict';
+  }
+  const { error } = await sb.from('school_timetables').insert(row);
+  if (error) return error.code === '23505' ? 'conflict' : errText(error);
+  return null;
 }
 
 /* ---------------- уроки ---------------- */
