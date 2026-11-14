@@ -5,7 +5,8 @@ export interface Member { user_id: string; role: Role; name: string; goal_title:
 export interface Grade { id: string; child_id: string; subject: string; grade: number; date: string; status: 'pending' | 'approved'; amount: number | null; created_at: string }
 export interface Ledger { id: string; child_id: string; kind: 'bonus' | 'payout'; amount: number; note: string; date: string; created_at: string }
 export interface Challenge { id: string; child_id: string; title: string; subject: string | null; min_grade: number; need: number; reward: number; start_date: string; end_date: string }
-export interface Homework { id: string; child_id: string; subject: string; due: string; text: string; done: boolean }
+/** created_by ставить сервер; null/немає — старі записи (вважаються дитячими). */
+export interface Homework { id: string; child_id: string; subject: string; due: string; text: string; done: boolean; created_by?: string | null }
 export interface Streak { len: number; min: number; bonus: number }
 export type Rates = Record<number, number>;
 

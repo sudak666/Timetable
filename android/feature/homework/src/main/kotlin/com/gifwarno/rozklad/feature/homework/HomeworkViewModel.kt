@@ -35,6 +35,8 @@ sealed interface HomeworkUiState {
         val today: LocalDate,
         /** Предмети з розкладу дитини: спершу сьогоднішні, далі решта тижня. */
         val scheduleSubjects: List<String> = emptyList(),
+        /** Що можна видалити: батькам — усе; дитині — лише задане собою (так само перевіряє сервер). */
+        val deletable: Set<String> = emptySet(),
     ) : HomeworkUiState
 }
 
@@ -78,6 +80,7 @@ class HomeworkViewModel @Inject constructor(
             done = done.sortedByDescending { it.due }.take(DONE_LIMIT),
             today = today,
             scheduleSubjects = ctx.schedule?.let { scheduleSubjects(it.week, today) }.orEmpty(),
+            deletable = mine.filter { canDelete(it, ctx.isParent, ctx.user.id) }.map { it.id }.toSet(),
         )
     }
 
@@ -110,3 +113,6 @@ class HomeworkViewModel @Inject constructor(
         const val DONE_LIMIT = 30
     }
 }
+
+/** Батьки видаляють будь-яку домашку; дитина — лише свою (createdBy null — старі записи, теж свої). Як hw_del у базі. */
+internal fun canDelete(hw: Homework, isParent: Boolean, me: String): Boolean = isParent || hw.createdBy == null || hw.createdBy == me

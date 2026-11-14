@@ -74,6 +74,8 @@ data class NetworkHomework(
     val due: String,
     val text: String,
     val done: Boolean,
+    /** Хто задав; ставить сервер (default auth.uid()), клієнт не надсилає. */
+    @SerialName("created_by") val createdBy: String? = null,
 )
 
 /** Усі дані сім'ї одним знімком. */

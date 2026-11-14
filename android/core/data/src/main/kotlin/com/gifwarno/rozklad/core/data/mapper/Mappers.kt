@@ -112,7 +112,7 @@ internal fun NetworkMember.asEntity(familyId: String) = MemberEntity(
 internal fun NetworkGrade.asEntity(familyId: String) =
     GradeEntity(id, familyId, childId, subject, grade, date, status, amount, parseInstant(createdAt).toEpochMilli())
 
-internal fun NetworkHomework.asEntity(familyId: String) = HomeworkEntity(id, familyId, childId, subject, due, text, done)
+internal fun NetworkHomework.asEntity(familyId: String) = HomeworkEntity(id, familyId, childId, subject, due, text, done, createdBy)
 
 internal fun NetworkLedger.asEntity(familyId: String) =
     LedgerEntity(id, familyId, childId, kind, amount, note.orEmpty(), date, parseInstant(createdAt).toEpochMilli())
@@ -143,7 +143,7 @@ internal fun GradeEntity.asModel() = Grade(
     createdAt = Instant.ofEpochMilli(createdAt),
 )
 
-internal fun HomeworkEntity.asModel() = Homework(id, childId, subject, LocalDate.parse(due), text, done)
+internal fun HomeworkEntity.asModel() = Homework(id, childId, subject, LocalDate.parse(due), text, done, createdBy)
 
 internal fun LedgerEntity.asModel() = LedgerEntry(
     id = id,

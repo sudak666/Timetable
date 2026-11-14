@@ -346,3 +346,18 @@ test('редактор розкладу: чужа зміна під час ре�
   expect(writes[1]?.method).toBe('POST');
   await expect(page.getByRole('heading', { name: /Розклад · Стас/ })).toHaveCount(0);
 });
+
+test('домашку від батьків дитина не видаляє — кнопки «✕» немає', async ({ page }) => {
+  await mockFamily(page, 'child');
+  await page.route(`https://${REF}.supabase.co/rest/v1/school_homework**`, (r) => r.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify([
+      { id: 'h1', child_id: 'k1', subject: 'Інформатика', due: today, text: 'Від тата', done: false, created_by: 'p1' },
+      { id: 'h2', child_id: 'k1', subject: 'Математика', due: today, text: 'Своя', done: false, created_by: 'k1' },
+    ]),
+  }));
+  await page.goto('/#hw');
+  await expect(page.locator('#hwl li')).toHaveCount(2);
+  await expect(page.locator('#hwl li', { hasText: 'Від тата' }).getByRole('button', { name: 'Видалити завдання' })).toHaveCount(0);
+  await expect(page.locator('#hwl li', { hasText: 'Своя' }).getByRole('button', { name: 'Видалити завдання' })).toHaveCount(1);
+});

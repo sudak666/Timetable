@@ -164,7 +164,7 @@ internal class DemoData(
             .filter { d -> cal.holidayOf(d) == null && cal.lessonsOn(d).orEmpty().any { it.subject == subject } }
             .firstOrNull() ?: today.minusDays(1)
         return listOf(
-            Homework("h1", CHILD_ID, "Математика", next("Математика"), "№ 245, 247 (с. 62)", false),
+            Homework("h1", CHILD_ID, "Математика", next("Математика"), "№ 245, 247 (с. 62)", false, createdBy = PARENT_ID),
             Homework("h2", CHILD_ID, "Англ. мова", next("Англ. мова"), "Вивчити слова Unit 4, впр. 3 письмово", false),
             Homework("h3", CHILD_ID, "Укр. мова", next("Укр. мова"), "Вправа 118, правило на с. 54", false),
             Homework("h4", CHILD_ID, "Довкілля", prev("Довкілля"), "Спостереження за погодою: заповнити таблицю", false),

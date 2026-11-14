@@ -115,9 +115,9 @@ internal fun HomeworkScreen(
                 if (state.overdue.isEmpty() && state.upcoming.isEmpty()) {
                     item(key = "empty") { AllDone() }
                 }
-                section("🔥 Прострочено", state.overdue, overdue = true, onToggle, onDelete)
-                section("📌 Треба зробити", state.upcoming, overdue = false, onToggle, onDelete)
-                section("✅ Зроблено", state.done, overdue = false, onToggle, onDelete)
+                section("🔥 Прострочено", state.overdue, overdue = true, onToggle, onDelete, state.deletable)
+                section("📌 Треба зробити", state.upcoming, overdue = false, onToggle, onDelete, state.deletable)
+                section("✅ Зроблено", state.done, overdue = false, onToggle, onDelete, state.deletable)
             }
         }
     }
@@ -155,6 +155,7 @@ private fun LazyListScope.section(
     overdue: Boolean,
     onToggle: (Homework) -> Unit,
     onDelete: (Homework) -> Unit,
+    deletable: Set<String>,
 ) {
     if (items.isEmpty()) return
     item(key = "t-$title") { ArenaTitle("$title · ${items.size}") }
@@ -163,7 +164,7 @@ private fun LazyListScope.section(
             Column(Modifier.fillMaxWidth().padding(4.dp)) {
                 items.forEachIndexed { i, hw ->
                     if (i > 0) HorizontalDivider(Modifier.padding(horizontal = 12.dp), color = RozkladTheme.colors.line)
-                    HomeworkRow(hw, overdue, onToggle, onDelete)
+                    HomeworkRow(hw, overdue, onToggle, onDelete.takeIf { hw.id in deletable })
                 }
             }
         }
@@ -171,7 +172,7 @@ private fun LazyListScope.section(
 }
 
 @Composable
-private fun HomeworkRow(hw: Homework, overdue: Boolean, onToggle: (Homework) -> Unit, onDelete: (Homework) -> Unit) {
+private fun HomeworkRow(hw: Homework, overdue: Boolean, onToggle: (Homework) -> Unit, onDelete: ((Homework) -> Unit)?) {
     val c = RozkladTheme.colors
     val info = Timetable.subject(hw.subject)
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -195,7 +196,10 @@ private fun HomeworkRow(hw: Homework, overdue: Boolean, onToggle: (Homework) -> 
                 )
             }
         }
-        IconButton(onClick = { onDelete(hw) }) { Icon(Icons.Outlined.Delete, contentDescription = "Видалити", tint = c.muted) }
+        // Домашку від батьків дитина не видаляє — кнопки немає (сервер теж не дозволить).
+        if (onDelete != null) {
+            IconButton(onClick = { onDelete(hw) }) { Icon(Icons.Outlined.Delete, contentDescription = "Видалити", tint = c.muted) }
+        }
     }
 }
 
