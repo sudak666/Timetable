@@ -3,6 +3,7 @@ package com.gifwarno.rozklad
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.gifwarno.rozklad.core.push.ClubReminders
 import com.gifwarno.rozklad.core.push.FirebaseSetup
 import com.gifwarno.rozklad.core.push.PushManager
 import com.gifwarno.rozklad.feature.widget.WidgetUpdater
@@ -19,12 +20,15 @@ class RozkladApplication :
 
     @Inject lateinit var pushManager: PushManager
 
+    @Inject lateinit var clubReminders: ClubReminders
+
     override fun onCreate() {
         super.onCreate()
         // Першим — щоб звіти про збої охоплювали й решту старту.
         FirebaseSetup.init(this)
         widgetUpdater.start()
         pushManager.start()
+        clubReminders.start()
     }
 
     override val workManagerConfiguration: Configuration

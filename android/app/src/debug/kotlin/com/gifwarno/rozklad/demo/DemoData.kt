@@ -6,6 +6,7 @@ import com.gifwarno.rozklad.core.domain.Timetable
 import com.gifwarno.rozklad.core.model.AirAlert
 import com.gifwarno.rozklad.core.model.AlertStatus
 import com.gifwarno.rozklad.core.model.Challenge
+import com.gifwarno.rozklad.core.model.Club
 import com.gifwarno.rozklad.core.model.Family
 import com.gifwarno.rozklad.core.model.FamilyData
 import com.gifwarno.rozklad.core.model.Grade
@@ -17,9 +18,11 @@ import com.gifwarno.rozklad.core.model.Member
 import com.gifwarno.rozklad.core.model.Role
 import com.gifwarno.rozklad.core.model.SessionState
 import com.gifwarno.rozklad.core.model.UserAccount
+import java.time.DayOfWeek
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneOffset
 import kotlin.random.Random
 
@@ -37,7 +40,30 @@ internal class DemoData(
     now: Instant = Instant.EPOCH,
 ) {
     private val parent = Member(PARENT_ID, Role.PARENT, "Оксана", "", 0, "🦉", "")
-    private val schedule = Timetable.EXAMPLE
+
+    /** Приклад розкладу + позашкільні заняття (футбол і програмування) — щоб було видно «Після школи». */
+    private val schedule = Timetable.EXAMPLE.copy(
+        clubs = listOf(
+            Club(
+                "Футбол",
+                "⚽",
+                setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),
+                LocalTime.of(16, 0),
+                LocalTime.of(17, 30),
+                place = "Стадіон біля школи",
+                bring = "форма, бутси, вода",
+            ),
+            Club(
+                "Програмування",
+                "💻",
+                setOf(DayOfWeek.TUESDAY, DayOfWeek.THURSDAY),
+                LocalTime.of(18, 0),
+                LocalTime.of(19, 30),
+                place = "Онлайн",
+                bring = "ноутбук, зарядка",
+            ),
+        ),
+    )
     private val cal = SchoolCalendar(schedule)
 
     val session: SessionState = when {

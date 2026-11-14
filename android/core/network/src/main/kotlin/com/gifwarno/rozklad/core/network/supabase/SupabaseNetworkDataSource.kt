@@ -241,7 +241,7 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
             }
         }
         val timetables = async {
-            client.from("school_timetables").select(Columns.list("child_id", "bells", "week", "holidays", "updated_at")) {
+            client.from("school_timetables").select(Columns.list("child_id", "bells", "week", "holidays", "activities", "updated_at")) {
                 filter { eq("family_id", familyId) }
             }.decodeList<NetworkTimetable>()
         }

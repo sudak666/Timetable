@@ -116,7 +116,14 @@ fun RoundCheck(checked: Boolean, onToggle: () -> Unit, label: String, modifier: 
 
 /** Перемикач з кількох варіантів — «пігулки», обрана залита акцентом. */
 @Composable
-fun <T> GameSegmented(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit, modifier: Modifier = Modifier) {
+fun <T> GameSegmented(
+    options: List<Pair<T, String>>,
+    selected: T,
+    onSelect: (T) -> Unit,
+    modifier: Modifier = Modifier,
+    /** 2 — для вузьких кнопок з емодзі над підписом (емодзі, перенос рядка, слово). */
+    maxLines: Int = 1,
+) {
     val c = RozkladTheme.colors
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         options.forEach { (value, label) ->
@@ -134,7 +141,7 @@ fun <T> GameSegmented(options: List<Pair<T, String>>, selected: T, onSelect: (T)
                     Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 4.dp),
                     style = MaterialTheme.typography.labelLarge,
                     textAlign = TextAlign.Center,
-                    maxLines = 1,
+                    maxLines = maxLines,
                 )
             }
         }

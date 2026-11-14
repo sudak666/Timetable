@@ -53,6 +53,35 @@ class MappersTest {
     }
 
     @Test
+    fun `заняття — модель, мережа, БД і назад без втрат, порожні поля йдуть як null`() {
+        val club = com.gifwarno.rozklad.core.model.Club(
+            "Футбол",
+            "⚽",
+            setOf(java.time.DayOfWeek.THURSDAY, java.time.DayOfWeek.TUESDAY),
+            java.time.LocalTime.of(16, 0),
+            java.time.LocalTime.of(17, 30),
+            bring = "форма",
+        )
+        val original = com.gifwarno.rozklad.core.domain.Timetable.EXAMPLE.copy(clubs = listOf(club))
+        val net = original.asNetwork("k1")
+        assertEquals(listOf(2, 4), net.activities.single().days)
+        assertEquals("16:00", net.activities.single().start)
+        assertEquals(null, net.activities.single().place)
+        assertEquals(original, net.asEntity("f1", json).asModel(json))
+    }
+
+    @Test
+    fun `зіпсовані заняття не ховають уроки`() {
+        val e = com.gifwarno.rozklad.core.domain.Timetable.EXAMPLE.asNetwork("k1").asEntity("f1", json)
+        val broken = e.copy(activitiesJson = """[{"t":"X","e":"⚽","d":[1],"a":"25:00","b":"1:00"}, 5]""")
+        val m = broken.asModel(json)
+        assertEquals(com.gifwarno.rozklad.core.domain.Timetable.EXAMPLE.week, m?.week)
+        assertEquals(emptyList<Any>(), m?.clubs)
+        // Рядок зі старої БД (до занять) — без колонки, за замовчуванням "[]".
+        assertEquals(emptyList<Any>(), e.copy(activitiesJson = "[]").asModel(json)?.clubs)
+    }
+
+    @Test
     fun `пошкоджений розклад у БД — null, а не падіння`() {
         val broken = com.gifwarno.rozklad.core.database.TimetableEntity("k1", "f1", "[[\"25:99\"]]", "[]", "[]")
         assertEquals(null, broken.asModel(json))

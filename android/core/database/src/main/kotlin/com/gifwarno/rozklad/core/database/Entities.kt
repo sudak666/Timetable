@@ -1,5 +1,6 @@
 package com.gifwarno.rozklad.core.database
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -88,6 +89,8 @@ data class TimetableEntity(
     val bellsJson: String,
     val weekJson: String,
     val holidaysJson: String,
+    /** Позашкільні заняття (колонка activities), JSON у форматі сервера. */
+    @ColumnInfo(defaultValue = "[]") val activitiesJson: String = "[]",
 )
 
 /**

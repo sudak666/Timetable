@@ -9,10 +9,11 @@ import { live } from 'lit-html/directives/live.js';
 import { errText, loadFamily, sb } from '../api';
 import { DAY_NAMES, subjEmoji } from '../data/schedule';
 import {
-  MAX_HOLIDAYS, MAX_LESSONS, MAX_SUBJECT, TYPICAL_BELLS, addBell, addHoliday, addLesson, fromRow, inputTime,
-  lessonsLostByLastBell, moveLesson, normTime, removeHoliday, removeLastBell, removeLesson, sameDraft, setBell, setDays, setHoliday,
-  setLesson, toRow, validate, type Draft,
+  CLUB, CLUB_KINDS, MAX_HOLIDAYS, MAX_LESSONS, MAX_SUBJECT, TYPICAL_BELLS, addBell, addClub, addHoliday, addLesson, fromRow, inputTime,
+  lessonsLostByLastBell, moveLesson, normTime, removeClub, removeHoliday, removeLastBell, removeLesson, sameDraft, setBell, setClub, setDays,
+  setHoliday, setLesson, toRow, toggleClubDay, validate, type Draft,
 } from '../features/timetable';
+import { DAY_SHORT } from '../lib/clubs';
 import { emo } from '../lib/emoji';
 import { addDays, iso } from '../lib/time';
 import { set, state, type EditorTab } from '../state';
@@ -184,12 +185,39 @@ function holidaysTab(d: Draft): TemplateResult {
     </div>`;
 }
 
+/* ---------------- позашкільні заняття ---------------- */
+
+const val = (e: Event) => (e.target as HTMLInputElement).value;
+
+function clubsTab(d: Draft): TemplateResult {
+  const full = d.clubs.length >= CLUB.max;
+  return html`
+    <p class="muted">Тренування, гуртки, курси — у свої дні й свій час, не за дзвінками. Показуються на «Сьогодні» в картці «Після школи», і на канікулах теж. «Що взяти» потрапить у рюкзак.</p>
+    ${d.clubs.length ? html`<ol class="ed-list">${d.clubs.map((c, i) => html`<li>
+        <input type="text" class="cl-e" aria-label=${`Заняття ${i + 1}: емодзі`} maxlength=${CLUB.emoji} .value=${live(c.e)} @input=${(e: Event) => update((x) => setClub(x, i, { e: val(e) }))}>
+        <input type="text" class="cl-t" aria-label=${`Заняття ${i + 1}: назва`} placeholder="Назва" maxlength=${CLUB.title} .value=${live(c.t)} @input=${(e: Event) => update((x) => setClub(x, i, { t: val(e) }))}>
+        <button type="button" class="ic danger" aria-label=${`Прибрати заняття ${c.t || i + 1}`} @click=${() => update((x) => removeClub(x, i))}>✕</button>
+        <span class="days cl-w" role="group" aria-label=${`Заняття ${i + 1}: дні`}>${DAY_SHORT.map((n, k) => html`
+          <button type="button" class=${classMap({ on: c.d.includes(k + 1) })} aria-pressed=${c.d.includes(k + 1)} @click=${() => update((x) => toggleClubDay(x, i, k + 1))}>${n}</button>`)}</span>
+        <input type="time" aria-label=${`Заняття ${i + 1}: початок`} .value=${live(inputTime(c.a))} @change=${(e: Event) => update((x) => setClub(x, i, { a: normTime(val(e)) ?? '' }))}>
+        <span aria-hidden="true">–</span>
+        <input type="time" aria-label=${`Заняття ${i + 1}: кінець`} .value=${live(inputTime(c.b))} @change=${(e: Event) => update((x) => setClub(x, i, { b: normTime(val(e)) ?? '' }))}>
+        <input type="text" class="cl-w" aria-label=${`Заняття ${i + 1}: де`} placeholder="Де (необов’язково)" maxlength=${CLUB.place} .value=${live(c.p)} @input=${(e: Event) => update((x) => setClub(x, i, { p: val(e) }))}>
+        <input type="text" class="cl-w" aria-label=${`Заняття ${i + 1}: що взяти`} placeholder="Що взяти: форма, вода, ноутбук" maxlength=${CLUB.bring} .value=${live(c.n)} @input=${(e: Event) => update((x) => setClub(x, i, { n: val(e) }))}>
+      </li>`)}</ol>`
+      : html`<p class="muted">Занять ще немає — обери нижче.</p>`}
+    <div class="ed-row" role="group" aria-label="Додати заняття">${CLUB_KINDS.map(([e, t]) => html`
+      <button type="button" ?disabled=${full} @click=${() => update((x) => addClub(x, e, t))}>${emo(e)} ${t}</button>`)}
+      <button type="button" ?disabled=${full} @click=${() => update((x) => addClub(x))}>+ Своє</button>
+    </div>`;
+}
+
 /* ---------------- екран ---------------- */
 
 export function scheduleEditor(): TemplateResult {
   const ed = state.editor!;
   const errors = validate(ed.draft);
-  const tabs: [EditorTab, string][] = [['lessons', 'Уроки'], ['bells', 'Дзвінки'], ['holidays', 'Канікули']];
+  const tabs: [EditorTab, string][] = [['lessons', 'Уроки'], ['bells', 'Дзвінки'], ['holidays', 'Канікули'], ['clubs', 'Заняття']];
   return html`<section class="side editor" aria-labelledby="ed-h" aria-busy=${ed.saving}>
     <div class="ed-head">
       <h2 id="ed-h">${emo('🗓️')} Розклад · ${kidName(ed.kid)}</h2>
@@ -202,7 +230,8 @@ export function scheduleEditor(): TemplateResult {
     <nav class="tabs" role="tablist" aria-label="Розділ розкладу">${tabs.map(([t, l]) => html`
       <button type="button" role="tab" aria-selected=${ed.tab === t} class=${classMap({ on: ed.tab === t })} @click=${() => go({ tab: t })}>${l}</button>`)}</nav>
     ${errors.length ? html`<ul class="ed-err" role="alert">${errors.map((e) => html`<li>${e}</li>`)}</ul>` : nothing}
-    ${ed.tab === 'lessons' ? lessonsTab(ed.draft, Math.min(ed.day, ed.draft.week.length - 1)) : ed.tab === 'bells' ? bellsTab(ed.draft) : holidaysTab(ed.draft)}
+    ${ed.tab === 'lessons' ? lessonsTab(ed.draft, Math.min(ed.day, ed.draft.week.length - 1))
+      : ed.tab === 'bells' ? bellsTab(ed.draft) : ed.tab === 'clubs' ? clubsTab(ed.draft) : holidaysTab(ed.draft)}
   </section>`;
 }
 

@@ -16,6 +16,11 @@ const TIMETABLE = {
     ['Всесв. історія', 'Англ. мова', 'Література', 'Фіз-ра', 'Довкілля', 'Математика'],
   ].map((d) => d.map((x) => ({ s: x }))),
   holidays: [],
+  // 2026-09-22 — вівторок: футбол сьогодні, програмування в середу.
+  activities: [
+    { t: 'Футбол', e: '⚽', d: [2, 4], a: '16:00', b: '17:30', p: 'Стадіон', n: 'форма, бутси' },
+    { t: 'Програмування', e: '💻', d: [3], a: '18:00', b: '19:00', p: null, n: null },
+  ],
 };
 
 async function mockFamily(page: Page, role: 'parent' | 'child', noKids = false, { timetable = true, family = true } = {}) {
@@ -58,6 +63,10 @@ for (const role of ['child', 'parent'] as const) {
     await page.goto('/');
     await expect(page.locator('.prof')).toBeVisible();
     await expect(page.locator('.day.today')).toContainText('ДЗ');
+    // Позашкільні заняття: картка «Після школи» і речі в рюкзаку.
+    await expect(page.locator('.after')).toContainText('Футбол');
+    await expect(page.locator('.after')).toContainText('16:00 – 17:30');
+    await expect(page.locator('.club-bag')).toContainText('форма, бутси');
     await expect(page.locator('.bnav .nb')).toHaveCount(2);
     await page.goto('/#grades');
     await expect(page.locator('.sum')).toContainText('+200 ₴');
@@ -262,6 +271,15 @@ test('редактор розкладу: заповнити, перевірка 
   await page.locator('.ed-list .opt input').nth(1).check();
   await page.getByRole('button', { name: 'Перемістити 2 урок вище' }).click();
 
+  // Заняття: шаблон, день, час і що взяти; без дня — помилка.
+  await page.getByRole('tab', { name: 'Заняття' }).click();
+  await page.getByRole('button', { name: /Шахи/ }).click();
+  await expect(page.locator('.ed-err')).toContainText('Шахи: обери хоча б один день');
+  await page.getByRole('group', { name: 'Заняття 1: дні' }).getByRole('button', { name: 'Ср' }).click();
+  await page.getByLabel('Заняття 1: початок').fill('15:00');
+  await page.getByLabel('Заняття 1: кінець').fill('16:00');
+  await page.getByLabel('Заняття 1: що взяти').fill('блокнот');
+
   // Дзвінки: помилка блокує збереження, виправлення — знімає.
   await page.getByRole('tab', { name: 'Дзвінки' }).click();
   await page.getByLabel('1 урок: початок').fill('08:00');
@@ -285,6 +303,7 @@ test('редактор розкладу: заповнити, перевірка 
     family_id: 'f1',
     week: [[{ s: 'Математика', o: true }, { s: 'Робототехніка' }], [], [], [], []],
     holidays: [],
+    activities: [{ t: 'Шахи', e: '♟️', d: [3], a: '15:00', b: '16:00', p: null, n: 'блокнот' }],
   });
   expect(body.bells[0]).toEqual(['8:00', '8:45']);
   expect(body.bells).toHaveLength(7);

@@ -13,7 +13,12 @@ export interface TimetableRow {
   bells: [string, string][];
   week: { s: string; o?: boolean }[][];
   holidays: [string, string][];
+  /** Позашкільні заняття (див. supabase/migrations/20261114_school_activities.sql). Старі знімки — без поля. */
+  activities?: ActivityRow[];
 }
+
+/** Заняття: t — назва, e — емодзі, d — дні 1..7 (1 = понеділок), a/b — «H:MM», p — місце, n — що взяти. */
+export interface ActivityRow { t: string; e: string; d: number[]; a: string; b: string; p?: string | null; n?: string | null }
 
 export const DAY_NAMES = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П’ятниця', 'Субота', 'Неділя'] as const;
 
@@ -52,6 +57,8 @@ export let BELLS: readonly string[] = DEFAULT_BELLS;
 export let RANGES: readonly (readonly [number, number])[] = rangesOf(DEFAULT_BELLS);
 export let WEEK: readonly Day[] = DEFAULT_WEEK;
 export let HOLIDAYS: readonly (readonly [string, string])[] = DEFAULT_HOLIDAYS;
+/** Заняття вибраної дитини (у прикладі без входу — немає). */
+export let ACTIVITIES: readonly ActivityRow[] = [];
 
 export const bellStart = (i: number): string => BELLS[i]?.split('-')[0] ?? '';
 export const bellEnd = (i: number): string => BELLS[i]?.split('-')[1] ?? '';
@@ -65,6 +72,7 @@ export const EMPTY_TIMETABLE: TimetableRow = {
   bells: DEFAULT_BELLS.map((b) => b.split('-') as [string, string]),
   week: [[], [], [], [], []],
   holidays: [],
+  activities: [],
 };
 
 let applied: TimetableRow | null = null;
@@ -74,12 +82,13 @@ export function applyTimetable(row: TimetableRow | null): boolean {
   if (row === applied) return false;
   applied = row;
   if (!row) {
-    BELLS = DEFAULT_BELLS; WEEK = DEFAULT_WEEK; HOLIDAYS = DEFAULT_HOLIDAYS;
+    BELLS = DEFAULT_BELLS; WEEK = DEFAULT_WEEK; HOLIDAYS = DEFAULT_HOLIDAYS; ACTIVITIES = [];
   } else {
     BELLS = row.bells.map(([a, b]) => `${a}-${b}`);
     // Уроків не більше, ніж дзвінків (сервер це перевіряє, але захищаємось від старих даних).
     WEEK = row.week.map((d, i) => ({ name: DAY_NAMES[i] ?? `День ${i + 1}`, lessons: d.slice(0, BELLS.length).map((l) => (l.o ? { subject: l.s, optional: true } : { subject: l.s })) }));
     HOLIDAYS = row.holidays;
+    ACTIVITIES = Array.isArray(row.activities) ? row.activities : [];
   }
   RANGES = rangesOf(BELLS);
   return true;

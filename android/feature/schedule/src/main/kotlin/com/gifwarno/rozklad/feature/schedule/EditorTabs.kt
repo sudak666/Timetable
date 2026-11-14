@@ -135,7 +135,7 @@ internal fun BellsTab(draft: SchoolSchedule, actions: EditorActions) {
 
 /** Час дзвінка — натискна «плитка». */
 @Composable
-private fun TimeChip(text: String, onClick: () -> Unit) {
+internal fun TimeChip(text: String, onClick: () -> Unit) {
     GameSurface(shape = ButtonShape, color = RozkladTheme.colors.soft, depth = 3.dp, onClick = onClick) {
         Text(
             text,
@@ -147,7 +147,7 @@ private fun TimeChip(text: String, onClick: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TimeDialog(title: String, initial: LocalTime, onDismiss: () -> Unit, onConfirm: (LocalTime) -> Unit) {
+internal fun TimeDialog(title: String, initial: LocalTime, onDismiss: () -> Unit, onConfirm: (LocalTime) -> Unit) {
     val state = rememberTimePickerState(initialHour = initial.hour, initialMinute = initial.minute, is24Hour = true)
     AlertDialog(
         onDismissRequest = onDismiss,

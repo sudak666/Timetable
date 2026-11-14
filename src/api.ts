@@ -99,7 +99,7 @@ export async function loadFamily(): Promise<void> {
     fetchAll((a, b) => sb.from('school_ledger').select('id,child_id,kind,amount,note,date,created_at').eq('family_id', fid).order('date', { ascending: false }).order('id').range(a, b)),
     fetchAll((a, b) => sb.from('school_challenges').select('id,child_id,title,subject,min_grade,need,reward,start_date,end_date').eq('family_id', fid).order('id').range(a, b)),
     fetchAll((a, b) => sb.from('school_homework').select('id,child_id,subject,due,text,done').eq('family_id', fid).order('due').order('id').range(a, b)),
-    sb.from('school_timetables').select('child_id,bells,week,holidays').eq('family_id', fid),
+    sb.from('school_timetables').select('child_id,bells,week,holidays,activities').eq('family_id', fid),
   ]);
   const firstErr = [f, m, g, l, c, h].find((r) => r.error)?.error;
   if (firstErr) throw firstErr;

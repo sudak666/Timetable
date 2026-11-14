@@ -15,6 +15,7 @@ import com.gifwarno.rozklad.core.model.AlertLocationKind
 import com.gifwarno.rozklad.core.model.AlertStatus
 import com.gifwarno.rozklad.core.model.Bell
 import com.gifwarno.rozklad.core.model.Challenge
+import com.gifwarno.rozklad.core.model.Club
 import com.gifwarno.rozklad.core.model.Family
 import com.gifwarno.rozklad.core.model.Grade
 import com.gifwarno.rozklad.core.model.GradeStatus
@@ -27,6 +28,7 @@ import com.gifwarno.rozklad.core.model.Member
 import com.gifwarno.rozklad.core.model.RewardSettings
 import com.gifwarno.rozklad.core.model.Role
 import com.gifwarno.rozklad.core.model.SchoolSchedule
+import com.gifwarno.rozklad.core.network.model.NetworkActivity
 import com.gifwarno.rozklad.core.network.model.NetworkAlert
 import com.gifwarno.rozklad.core.network.model.NetworkAlertLocation
 import com.gifwarno.rozklad.core.network.model.NetworkChallenge
@@ -37,6 +39,7 @@ import com.gifwarno.rozklad.core.network.model.NetworkLedger
 import com.gifwarno.rozklad.core.network.model.NetworkLesson
 import com.gifwarno.rozklad.core.network.model.NetworkMember
 import com.gifwarno.rozklad.core.network.model.NetworkTimetable
+import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -160,6 +163,7 @@ internal fun ChallengeEntity.asModel() =
 private val HHMM = DateTimeFormatter.ofPattern("H:mm")
 private val PAIRS = ListSerializer(ListSerializer(String.serializer()))
 private val WEEK = ListSerializer(ListSerializer(NetworkLesson.serializer()))
+private val CLUBS = ListSerializer(NetworkActivity.serializer())
 
 internal fun NetworkTimetable.asEntity(familyId: String, json: Json) = TimetableEntity(
     childId = childId,
@@ -167,6 +171,7 @@ internal fun NetworkTimetable.asEntity(familyId: String, json: Json) = Timetable
     bellsJson = json.encodeToString(PAIRS, bells),
     weekJson = json.encodeToString(WEEK, week),
     holidaysJson = json.encodeToString(PAIRS, holidays),
+    activitiesJson = json.encodeToString(CLUBS, activities),
 )
 
 /** Пошкоджені дані не валять застосунок — такий розклад просто вважається незаповненим. */
@@ -175,8 +180,34 @@ internal fun TimetableEntity.asModel(json: Json): SchoolSchedule? = runCatching 
         bells = json.decodeFromString(PAIRS, bellsJson).map { (a, b) -> Bell(LocalTime.parse(a, HHMM), LocalTime.parse(b, HHMM)) },
         week = json.decodeFromString(WEEK, weekJson).map { day -> day.map { Lesson(it.subject, it.optional) } },
         holidays = json.decodeFromString(PAIRS, holidaysJson).map { (a, b) -> Holiday(LocalDate.parse(a), LocalDate.parse(b)) },
+        // Пошкоджене заняття не ховає весь розклад — пропускаємо лише його.
+        clubs = runCatching { json.decodeFromString(CLUBS, activitiesJson) }.getOrDefault(emptyList()).mapNotNull { it.asModel() },
     )
 }.getOrNull()
+
+internal fun NetworkActivity.asModel(): Club? = runCatching {
+    Club(
+        title = title,
+        emoji = emoji,
+        days = days.filter { it in 1..DAYS_IN_WEEK }.map(DayOfWeek::of).toSet(),
+        start = LocalTime.parse(start, HHMM),
+        end = LocalTime.parse(end, HHMM),
+        place = place.orEmpty(),
+        bring = bring.orEmpty(),
+    )
+}.getOrNull()
+
+internal fun Club.asNetwork() = NetworkActivity(
+    title = title.trim(),
+    emoji = emoji.trim(),
+    days = days.map { it.value }.sorted(),
+    start = HHMM.format(start),
+    end = HHMM.format(end),
+    place = place.trim().ifEmpty { null },
+    bring = bring.trim().ifEmpty { null },
+)
+
+private const val DAYS_IN_WEEK = 7
 
 /** Модель → тіло запиту до school_timetables (updated_at ставить сервер). */
 internal fun SchoolSchedule.asNetwork(childId: String) = NetworkTimetable(
@@ -184,4 +215,5 @@ internal fun SchoolSchedule.asNetwork(childId: String) = NetworkTimetable(
     bells = bells.map { listOf(HHMM.format(it.start), HHMM.format(it.end)) },
     week = week.map { day -> day.map { NetworkLesson(it.subject.trim(), it.optional) } },
     holidays = holidays.map { listOf(it.start.toString(), it.end.toString()) },
+    activities = clubs.map { it.asNetwork() },
 )

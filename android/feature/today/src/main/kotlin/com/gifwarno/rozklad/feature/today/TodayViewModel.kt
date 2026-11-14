@@ -97,7 +97,7 @@ class TodayViewModel @Inject constructor(private val active: ActiveFamily, priva
         if (d is Daily.Done) return d.state
         d as Daily.Parts
         val day = d.day
-        val today = day?.let { buildTodayState(now, it.cal, d.alertSince) }
+        val today = day?.let { buildTodayState(now, it.cal, d.alertSince, it.schedule.clubs) }
         return if (day == null || today == null) {
             TodayScreenState.NoSchedule(d.child.name, d.ctx.canEditSchedule, d.ctx.data.children, d.child.userId)
         } else {

@@ -1,7 +1,8 @@
 import { html, nothing, type TemplateResult } from 'lit-html';
 import { classMap } from 'lit-html/directives/class-map.js';
 import { styleMap } from 'lit-html/directives/style-map.js';
-import { BELLS, RANGES, SUBJECTS, WEEK, bellEnd, bellStart, isSubject } from '../data/schedule';
+import { ACTIVITIES, BELLS, RANGES, SUBJECTS, WEEK, bellEnd, bellStart, isSubject } from '../data/schedule';
+import { afterSchool, clubBag, dueReminder } from '../lib/clubs';
 import { emo, emojiSrc } from '../lib/emoji';
 import { addDays, clockOf, fmtDate, fmtDay, hms, holidayOf, iso, leftText, lessonsOn, mondayOf, nextSchoolDate, statusAt } from '../lib/time';
 import { set, state, store } from '../state';
@@ -49,6 +50,7 @@ export function sidePanel(): TemplateResult {
   const target = s.kind === 'done' || !lessons ? clockOf(nextSchoolDate(c.date)).weekday : c.weekday;
   const day = WEEK[target] ?? { name: '', lessons: [] };
   const bag = [...new Set(day.lessons.map((l) => l.subject))];
+  const clubs = clubBag(ACTIVITIES, state.now, s.kind === 'done' || !lessons, target);
   let prog: TemplateResult;
   if (lessons) {
     const a = RANGES[0]![0], b = RANGES[lessons.length - 1]![1], p = Math.min(1, Math.max(0, (c.min - a) / (b - a)));
@@ -57,8 +59,23 @@ export function sidePanel(): TemplateResult {
   return html`<aside class="side">
     <h2 class="h4">${target === c.weekday ? 'Рюкзак на сьогодні' : 'Рюкзак на ' + day.name.toLowerCase()}</h2>
     <ul class="chips">${bag.map((x) => html`<li class="chip" style=${styleMap({ background: subjColor(x) })}>${x}</li>`)}</ul>
+    ${clubs.length ? html`<ul class="club-bag">${clubs.map(({ c, day }) => html`<li>${emo(c.e)} <b>${c.t}${day ? ` (${day})` : ''}</b>: ${c.n}</li>`)}</ul>` : nothing}
     <div class="dayprog">${prog}</div>
   </aside>`;
+}
+
+/** «Після школи»: тренування й гуртки на сьогодні (а ввечері — на завтра). Без занять картки немає. */
+export function afterSchoolCard(): TemplateResult | typeof nothing {
+  const a = afterSchool(ACTIVITIES, state.now);
+  if (!a) return nothing;
+  return html`<section class="side after" aria-labelledby="as-h">
+    <h2 class="h4" id="as-h">${emo('⚽')} ${a.today ? 'Після школи' : 'Завтра після школи'}</h2>
+    <ol class="lessons">${a.rows.map(({ c, st }) => html`<li class=${classMap({ l: true, [st]: !!st })} aria-current=${st === 'cur' ? 'time' : nothing}>
+      <span class="n club-e" aria-hidden="true">${emo(c.e)}</span>
+      <span class="t">${c.a} – ${c.b}</span>
+      <span class="s">${c.t}${c.p ? html` <small class="muted">· ${emo('📍')} ${c.p}</small>` : nothing}</span>
+    </li>`)}</ol>
+  </section>`;
 }
 
 function weekendText(): TemplateResult {
@@ -144,11 +161,18 @@ export async function toggleLessonAlerts(): Promise<void> {
   set({ lessonAlerts: v });
 }
 
-let lastAlert = '';
+let lastAlert = '', lastClub = '';
+/** Про заняття нагадуємо раніше, ніж про урок: треба ще дійти чи доїхати. */
+const CLUB_LEAD = 15;
 /** Локальне нагадування за 2 хв до уроку (поки сторінка відкрита). */
 export function lessonAlertTick(): void {
   if (!state.lessonAlerts) return;
   const c = clockOf(state.now), s = statusAt(c);
+  const club = dueReminder(ACTIVITIES, state.now, CLUB_LEAD);
+  if (club && lastClub !== c.weekday + club.t + club.a) {
+    lastClub = c.weekday + club.t + club.a;
+    try { new Notification(`${club.e} ${club.t} о ${club.a}`, { body: [club.p && '📍 ' + club.p, club.n && '🎒 ' + club.n].filter(Boolean).join(' · ') || 'Скоро заняття', icon: 'assets/icon-192.png' }); } catch { /* ignore */ }
+  }
   if ((s.kind === 'break' || s.kind === 'before') && s.start - c.min <= 2 && s.start - c.min > 0) {
     const key = c.weekday + '-' + s.idx;
     if (key === lastAlert) return;
