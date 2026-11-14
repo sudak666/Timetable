@@ -57,6 +57,23 @@ class DatabaseTest {
     }
 
     @Test
+    fun `міграція 5 → 6 зберігає домашку й додає порожнього автора`() {
+        helper.createDatabase(5).use {
+            it.execSQL(
+                "INSERT INTO homework (id, familyId, childId, subject, due, text, done) " +
+                    "VALUES ('h1', 'f1', 'k1', 'Математика', '2026-11-16', '№ 5', 0)",
+            )
+        }
+        helper.runMigrationsAndValidate(6).use { migrated ->
+            migrated.prepare("SELECT text, createdBy FROM homework WHERE id = 'h1'").use { s ->
+                assertEquals(true, s.step())
+                assertEquals("№ 5", s.getText(0))
+                assertEquals(true, s.isNull(1))
+            }
+        }
+    }
+
+    @Test
     fun `нова версія розкладу витісняє попередню з черги, інші зміни лишаються`() = runTest {
         val outbox = db.outboxDao()
         outbox.enqueue(op("school_timetables", "UPSERT", "k1", """{"v":1}"""))
