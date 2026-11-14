@@ -6,6 +6,9 @@ plugins {
 
 android {
     namespace = "com.gifwarno.rozklad.core.database"
+    // Схеми Room — ресурси unit-тестів міграцій (MigrationTestHelper під Robolectric).
+    sourceSets.getByName("test").assets.directories.add("$projectDir/schemas")
+    testOptions.unitTests.isIncludeAndroidResources = true
 }
 
 dependencies {
