@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,6 +51,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -198,8 +200,11 @@ internal fun TodayScreen(
     }
 }
 
-/** Вигляд головної картки: градієнт і великий емодзі. */
-private data class NowLook(val colors: List<Color>, val emoji: String)
+/**
+ * Вигляд головної картки «Зараз»: градієнт і великий емодзі. [content] — колір тексту в «Звичайному» стилі, підібраний до градієнта
+ * (контраст ≥ 4,5:1 по всій картці; аудит 14.11.2026, В1). В «Арені» й «Блоках» текст білий з обведенням.
+ */
+private data class NowLook(val colors: List<Color>, val emoji: String, val content: Color = Color.White)
 
 /** Хто грає: аватар, рівень, досвід і гаманець. Натискання відкриває «Оцінки». */
 @Composable
@@ -291,7 +296,7 @@ private fun QuestRow(q: Quest) {
             }
         }
         if (q.done) {
-            Pill("✓ готово", color = c.positive, contentColor = Color.White)
+            Pill("✓ готово", color = c.positive, contentColor = c.onPositive)
         } else {
             Text("${q.progress}/${q.target}", style = MaterialTheme.typography.labelLarge, color = c.muted)
         }
@@ -302,10 +307,10 @@ private fun QuestRow(q: Quest) {
 private fun NowCardView(card: NowCard, onDoneTap: (() -> Unit)? = null) {
     val c = RozkladTheme.colors
     val look = when (card) {
-        is NowCard.Lesson -> NowLook(listOf(Color(0xFFFFC93C), Color(0xFFFF8A1F), Color(0xFFFF4F5E)), subjectEmoji(card.subject))
-        is NowCard.Break -> NowLook(listOf(Color(0xFF00C49A), Color(0xFF00705A)), "☕")
-        is NowCard.Before -> NowLook(listOf(c.accent, Color(0xFFA29BFE)), "⏰")
-        is NowCard.Done -> NowLook(listOf(Color(0xFF4834D4), c.accentEnd), if (card.holidayUntil != null) "🏖️" else "🎉")
+        is NowCard.Lesson -> NowLook(listOf(Color(0xFFFFC93C), Color(0xFFFF8A1F), Color(0xFFFF4F5E)), subjectEmoji(card.subject), c.ink)
+        is NowCard.Break -> NowLook(listOf(Color(0xFF00866B), Color(0xFF00604D)), "☕")
+        is NowCard.Before -> NowLook(listOf(c.accent, Color(0xFF4834D4)), "⏰")
+        is NowCard.Done -> NowLook(listOf(Color(0xFF4834D4), Color(0xFFC2185B)), if (card.holidayUntil != null) "🏖️" else "🎉")
     }
     // «Блоки»: трава зверху, земля знизу — як у вебі.
     val blocks = LocalGameStyle.current == GameStyle.BLOCKS
@@ -321,7 +326,7 @@ private fun NowCardView(card: NowCard, onDoneTap: (() -> Unit)? = null) {
     }
     GameSurface(
         brush = brush,
-        contentColor = Color.White,
+        contentColor = if (LocalGameStyle.current == GameStyle.CLASSIC) look.content else Color.White,
         depth = 6.dp,
         onClick = onDoneTap,
         onClickLabel = if (onDoneTap != null) "Ще салют" else null,
@@ -399,27 +404,37 @@ private fun FloatingEmoji(emoji: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun Caption(text: String) = Text(
+private fun Caption(text: String) = NowText(
     text.uppercase(),
-    style = MaterialTheme.typography.labelLarge,
-    letterSpacing = 1.sp,
-    modifier = Modifier.padding(end = 64.dp),
+    MaterialTheme.typography.labelLarge.copy(letterSpacing = 1.sp),
+    Modifier.padding(end = 64.dp),
 )
 
 @Composable
-private fun Headline(text: String) = StrokeText(text, GameTitleStyle, Modifier.padding(end = 56.dp), strokeWidth = 5.dp, maxLines = 2)
+private fun Headline(text: String) =
+    StrokeText(text, GameTitleStyle, Modifier.padding(end = 56.dp), color = LocalContentColor.current, strokeWidth = 5.dp, maxLines = 2)
 
 @Composable
-private fun Timer(seconds: Long) = StrokeText(Format.timer(seconds), TimerTextStyle, strokeWidth = 6.dp)
+private fun Timer(seconds: Long) = StrokeText(Format.timer(seconds), TimerTextStyle, color = LocalContentColor.current, strokeWidth = 6.dp)
 
 @Composable
-private fun Subline(text: String) = Text(text, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.ExtraBold)
+private fun Subline(text: String) = NowText(text, MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.ExtraBold))
+
+/** Дрібний текст картки «Зараз»: у «Звичайному» — колір картки, в «Арені» й «Блоках» — білий з тонким обведенням. */
+@Composable
+private fun NowText(text: String, style: TextStyle, modifier: Modifier = Modifier) {
+    if (LocalGameStyle.current == GameStyle.CLASSIC) {
+        Text(text, modifier, style = style)
+    } else {
+        StrokeText(text, style, modifier, strokeWidth = 3.dp)
+    }
+}
 
 @Composable
 private fun NowProgress(value: Float) = GameProgressBar(
     progress = value,
     modifier = Modifier.padding(top = 12.dp),
-    fill = SolidColor(Color.White),
+    fill = SolidColor(LocalContentColor.current),
     track = Color.Black.copy(alpha = 0.2f),
 )
 

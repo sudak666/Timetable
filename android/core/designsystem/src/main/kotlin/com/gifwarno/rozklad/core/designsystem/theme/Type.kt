@@ -22,25 +22,23 @@ val Nunito = FontFamily(
 /** Шрифт стилю «Арена» (як у вебі). */
 internal val RussoOne = FontFamily(Font(R.font.russo_one, FontWeight.Normal))
 
-/** Піксельний шрифт стилю «Блоки» (як у вебі); відсутні символи Android бере з системного шрифту. */
-internal val PixelFont = FontFamily(Font(R.font.pixelify_500, FontWeight.Medium), Font(R.font.pixelify_700, FontWeight.Bold))
-
-/** «Ігровий» шрифт великих цифр і заголовків — залежить від обраного стилю. */
+/**
+ * «Ігровий» шрифт великих цифр і заголовків — залежить від обраного стилю.
+ * «Блоки» — Nunito з обведенням: піксельний Pixelify Sans плутав «д»/«а», «С»/«О» і «5»/«S» (аудит 14.11.2026, В2).
+ */
 val GameFont: FontFamily
     @Composable @ReadOnlyComposable
     get() = when (LocalGameStyle.current) {
         GameStyle.ARENA -> RussoOne
-        GameStyle.BLOCKS -> PixelFont
-        GameStyle.CLASSIC -> Nunito
+        GameStyle.BLOCKS, GameStyle.CLASSIC -> Nunito
     }
 
-/** Товщина «ігрового» шрифту: у Nunito й піксельного — жирна, у Russo One — єдина. */
+/** Товщина «ігрового» шрифту: у Nunito — найжирніша, у Russo One — єдина. */
 private val gameWeight: FontWeight
     @Composable @ReadOnlyComposable
     get() = when (LocalGameStyle.current) {
         GameStyle.ARENA -> FontWeight.Normal
-        GameStyle.BLOCKS -> FontWeight.Bold
-        GameStyle.CLASSIC -> FontWeight.Black
+        GameStyle.BLOCKS, GameStyle.CLASSIC -> FontWeight.Black
     }
 
 private val base = Typography()

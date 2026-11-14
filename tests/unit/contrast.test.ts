@@ -20,3 +20,8 @@ it('приглушений текст на картках ≥ 4.5:1 (світл�
   expect(contrast('#5f6384', '#f0f1fa')).toBeGreaterThanOrEqual(4.5);
   expect(contrast('#a3a6cc', '#1a1b36')).toBeGreaterThanOrEqual(4.5);
 });
+
+it('картка «Зараз»: білий текст на градієнті акцент → акцент 70% + ink 30% (styles.css .now) ≥ 4.5:1', () => {
+  const mix = (a: string, b: string, k: number) => '#' + [1, 3, 5].map((i) => Math.round(parseInt(a.slice(i, i + 2), 16) * k + parseInt(b.slice(i, i + 2), 16) * (1 - k)).toString(16).padStart(2, '0')).join('');
+  for (const [c] of THEMES) expect(contrast(mix(c, '#1b1c33', 0.7), '#ffffff')).toBeGreaterThanOrEqual(4.5);
+});

@@ -57,6 +57,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gifwarno.rozklad.core.data.repository.NAME_MAX
 import com.gifwarno.rozklad.core.datastore.ThemeMode
 import com.gifwarno.rozklad.core.designsystem.component.ButtonShape
+import com.gifwarno.rozklad.core.designsystem.component.FitText
 import com.gifwarno.rozklad.core.designsystem.component.GameButton
 import com.gifwarno.rozklad.core.designsystem.component.GameSegmented
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
@@ -501,7 +502,7 @@ private fun CodeRow(label: String, code: String) {
     ) {
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.labelMedium, color = RozkladTheme.colors.muted)
-            Text(code, style = MaterialTheme.typography.titleLarge, fontFamily = GameFont, letterSpacing = 3.sp)
+            FitText(code, style = MaterialTheme.typography.titleLarge.copy(fontFamily = GameFont, letterSpacing = 3.sp))
         }
         GameButton("Копіювати", onClick = { clipboard.setText(AnnotatedString(code)) })
     }

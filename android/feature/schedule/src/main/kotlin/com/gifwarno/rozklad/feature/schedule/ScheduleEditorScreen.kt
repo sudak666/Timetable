@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -45,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gifwarno.rozklad.core.designsystem.component.EmptyState
+import com.gifwarno.rozklad.core.designsystem.component.FitText
 import com.gifwarno.rozklad.core.designsystem.component.GameButton
 import com.gifwarno.rozklad.core.designsystem.component.GameSegmented
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
@@ -281,7 +283,7 @@ private fun LessonEditRow(
         Row(verticalAlignment = Alignment.CenterVertically) {
             NumberTile(index + 1, Color(info.color))
             Column(Modifier.weight(1f).padding(start = 10.dp)) {
-                Text("${info.emoji} $subject", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.ExtraBold)
+                FitText("${info.emoji} $subject", style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.ExtraBold))
                 val meta = listOfNotNull(time, if (optional) "факультатив" else null).joinToString(" · ")
                 if (meta.isNotEmpty()) Text(meta, style = MaterialTheme.typography.bodySmall, color = c.muted, maxLines = 1)
             }
@@ -295,7 +297,8 @@ private fun LessonEditRow(
                 Icon(Icons.Outlined.Delete, contentDescription = "Видалити урок", tint = c.muted)
             }
         }
-        Row(Modifier.padding(start = 34.dp), verticalAlignment = Alignment.CenterVertically) {
+        // FlowRow: за великого шрифту «Факультатив» переходить у новий рядок, а не обрізається до «Фа».
+        FlowRow(Modifier.padding(start = 34.dp), itemVerticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onPick) { Text("Змінити предмет") }
             TextButton(onClick = { actions.toggleOptional(index) }) {
                 Icon(

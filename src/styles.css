@@ -26,9 +26,9 @@ button[aria-busy=true]{cursor:progress;opacity:.7}
 button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .top{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:20px}
 @media(max-width:720px){.top{grid-template-columns:1fr}}
-.now{background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 55%,#fff));color:#fff;border-radius:20px;padding:20px;box-shadow:0 10px 30px var(--glow)}
+.now{background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 70%,#1b1c33));color:#fff;border-radius:20px;padding:20px;box-shadow:0 10px 30px var(--glow)}
 .now.brk{background:linear-gradient(135deg,#00705a,#00a383)}
-.now small{opacity:.9;text-transform:uppercase;letter-spacing:.08em;font-size:12px}
+.now small{text-transform:uppercase;letter-spacing:.08em;font-size:12px}
 .now h2{font-size:clamp(22px,5vw,30px);margin:4px 0}
 .big{font-size:clamp(34px,8vw,48px);font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1;margin:6px 0}
 .bar{height:8px;background:rgba(255,255,255,.3);border-radius:8px;overflow:hidden;margin-top:12px}
@@ -263,7 +263,7 @@ details[open] summary::before{transform:rotate(45deg)}
 [data-style=blocks] body{background:linear-gradient(180deg,#8fd3ff 0,#cdeeff 380px,var(--bg) 700px)}
 [data-style=blocks]:is([data-theme=dark]) body{background:linear-gradient(180deg,#1b2a4a 0,#0f1024 600px)}
 @media (prefers-color-scheme:dark){[data-style=blocks]:not([data-theme=light]) body{background:linear-gradient(180deg,#1b2a4a 0,#0f1024 600px)}}
-[data-style=blocks] h1,[data-style=blocks] .now h2,[data-style=blocks] .big,[data-style=blocks] .sum b,[data-style=blocks] .prof .pn b,[data-style=blocks] .day h3,[data-style=blocks] .h4,[data-style=blocks] .lvl,[data-style=blocks] .big2,[data-style=blocks] .gbtn button,[data-style=blocks] .st,[data-style=blocks] .n{font-family:"Pixelify Sans","Nunito Variable",sans-serif;letter-spacing:.02em}
+[data-style=blocks] h1,[data-style=blocks] .now h2,[data-style=blocks] .big,[data-style=blocks] .sum b,[data-style=blocks] .prof .pn b,[data-style=blocks] .day h3,[data-style=blocks] .h4,[data-style=blocks] .lvl,[data-style=blocks] .big2,[data-style=blocks] .gbtn button,[data-style=blocks] .st,[data-style=blocks] .n{font-family:"Nunito Variable",sans-serif;font-weight:900;letter-spacing:.02em}
 [data-style=blocks] h1{background:none;-webkit-text-fill-color:#fff;color:#fff;text-shadow:3px 3px 0 #3b2a1a;animation:none}
 [data-style=blocks] .now{background:linear-gradient(180deg,#6abe30 0,#5aa526 18px,#8b5a2b 18px,#7a4e25 100%);border-radius:14px;box-shadow:inset 0 -6px 0 rgba(0,0,0,.2),0 8px 0 #4a3018}
 [data-style=blocks] .now h2,[data-style=blocks] .now .big{text-shadow:3px 3px 0 rgba(0,0,0,.35)}
