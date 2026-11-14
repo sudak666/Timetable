@@ -53,6 +53,7 @@ data class HomeworkEntity(
     val due: String,
     val text: String,
     val done: Boolean,
+    val createdBy: String? = null,
 )
 
 @Entity(tableName = "ledger", indices = [Index("familyId", "childId")])

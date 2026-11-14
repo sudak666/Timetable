@@ -166,7 +166,9 @@ internal class OfflineFirstFamilyRepository @Inject constructor(
 
     override suspend fun addHomework(familyId: String, childId: String, subject: String, due: LocalDate, text: String) {
         val dto = NetworkHomework(UUID.randomUUID().toString(), childId, subject, due.toString(), text.trim(), done = false)
-        val body = withFamily(json.encodeToJsonElement(NetworkHomework.serializer(), dto).jsonObject, familyId)
+        // created_by ставить сервер (default auth.uid()); явний null його б перезаписав.
+        val fields = json.encodeToJsonElement(NetworkHomework.serializer(), dto).jsonObject.filterKeys { it != "created_by" }
+        val body = withFamily(JsonObject(fields), familyId)
         submit(familyId, NetworkWrite(Tables.HOMEWORK, WriteKind.INSERT, dto.id, body))
     }
 

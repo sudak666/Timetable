@@ -234,7 +234,7 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
         }
         val homework = async {
             allPages { from, to ->
-                client.from("school_homework").select(Columns.list("id", "child_id", "subject", "due", "text", "done")) {
+                client.from("school_homework").select(Columns.list("id", "child_id", "subject", "due", "text", "done", "created_by")) {
                     filter { eq("family_id", familyId) }
                     order("due", Order.ASCENDING)
                     order("id", Order.ASCENDING)

@@ -7,7 +7,7 @@ import { DELETE_CONFIRM_WORD, deletionWarnings, isDeleteConfirmed } from '../fea
 import { subjEmoji } from '../data/schedule';
 import {
   AVATARS, THEMES, XP_PER_LEVEL, autoRewards, bestTenRun, byTime, challengeHits, currentRun, PASS, gradeColor, gradeLabel, gradeValue, isScored, rateOf, levelOf, totals, xpOf,
-  type Grade,
+  type Grade, type Homework,
 } from '../features/rewards';
 import { emo } from '../lib/emoji';
 import { addDays, fmtDay, iso, mondayOf, nextLessonDate } from '../lib/time';
@@ -300,7 +300,7 @@ function homework(d: D): TemplateResult {
     <ul id="hwl" class="hwl">${todo.length || done.length ? [...todo, ...done].map((x) => html`<li class=${classMap({ hw: true, dn: x.done, late: !x.done && x.due < d.today })}>
         <button type="button" role="checkbox" aria-checked=${x.done} aria-label=${`Виконано: ${x.subject}`} class=${classMap({ cb: true, on: x.done })} @click=${(e: MouseEvent) => toggle(x, e)}></button>
         <span class="t2">${emo(subjEmoji(x.subject))} <b>${x.subject}</b> — ${x.text}<small>${!x.done && x.due < d.today ? emo('⚠️ протерміновано · ') : nothing}на ${fmtDay(x.due)}</small></span>
-        <button type="button" class="x" aria-label="Видалити завдання" @click=${() => del('school_homework', x.id, 'Видалити завдання?')}>✕</button></li>`)
+        ${canDeleteHw(x) ? html`<button type="button" class="x" aria-label="Видалити завдання" @click=${() => del('school_homework', x.id, 'Видалити завдання?')}>✕</button>` : nothing}</li>`)
       : html`<li class="msg">${emo('Домашки немає 🎉')}</li>`}</ul>`;
 }
 
@@ -527,3 +527,6 @@ export function navBadges(): { grades: number; hw: number } {
     hw: state.homework.filter((h) => h.child_id === state.kid && !h.done && h.due <= iso(addDays(new Date(today + 'T12:00'), 1))).length,
   };
 }
+
+/** Як hw_del у базі: батьки — будь-яку; дитина — лише свою (або стару без автора). */
+const canDeleteHw = (x: Homework): boolean => state.role === 'parent' || !x.created_by || x.created_by === state.me?.id;

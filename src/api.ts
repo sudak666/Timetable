@@ -98,7 +98,7 @@ export async function loadFamily(): Promise<void> {
     fetchAll((a, b) => sb.from('school_grades').select('id,child_id,subject,grade,date,status,amount,created_at').eq('family_id', fid).order('date', { ascending: false }).order('id').range(a, b)),
     fetchAll((a, b) => sb.from('school_ledger').select('id,child_id,kind,amount,note,date,created_at').eq('family_id', fid).order('date', { ascending: false }).order('id').range(a, b)),
     fetchAll((a, b) => sb.from('school_challenges').select('id,child_id,title,subject,min_grade,need,reward,start_date,end_date').eq('family_id', fid).order('id').range(a, b)),
-    fetchAll((a, b) => sb.from('school_homework').select('id,child_id,subject,due,text,done').eq('family_id', fid).order('due').order('id').range(a, b)),
+    fetchAll((a, b) => sb.from('school_homework').select('id,child_id,subject,due,text,done,created_by').eq('family_id', fid).order('due').order('id').range(a, b)),
     sb.from('school_timetables').select('child_id,bells,week,holidays,activities,updated_at').eq('family_id', fid),
   ]);
   const firstErr = [f, m, g, l, c, h].find((r) => r.error)?.error;
@@ -230,7 +230,8 @@ export async function enter(): Promise<void> {
   const rt = await getRealtime();
   if (channel) await rt.removeChannel(channel);
   const fid = row.family_id as string;
-  channel = rt.channel('fam-' + fid, { config: { presence: { key: user.id } } });
+  // Приватний канал: присутність бачать лише учасники сім'ї (RLS на realtime.messages, міграція 20261115).
+  channel = rt.channel('fam-' + fid, { config: { private: true, presence: { key: user.id } } });
   const ch = channel;
   ch.on('presence', { event: 'sync' }, () => set({ present: Object.keys(ch.presenceState()) }));
   for (const t of ['school_grades', 'school_ledger', 'school_members', 'school_challenges', 'school_homework', 'school_timetables'])

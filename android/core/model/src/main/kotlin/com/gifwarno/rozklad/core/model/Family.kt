@@ -63,7 +63,16 @@ data class Challenge(
     val endDate: LocalDate,
 )
 
-data class Homework(val id: String, val childId: String, val subject: String, val due: LocalDate, val text: String, val done: Boolean)
+/** [createdBy] — хто задав (null — невідомо, старі записи): дитина не видаляє домашку, яку задали батьки. */
+data class Homework(
+    val id: String,
+    val childId: String,
+    val subject: String,
+    val due: LocalDate,
+    val text: String,
+    val done: Boolean,
+    val createdBy: String? = null,
+)
 
 data class Streak(val len: Int, val min: Int, val bonus: Int)
 
