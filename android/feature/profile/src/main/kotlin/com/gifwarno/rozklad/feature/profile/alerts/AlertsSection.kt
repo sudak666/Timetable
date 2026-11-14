@@ -36,7 +36,7 @@ fun AlertsSection(region: String?, isParent: Boolean, alertsPush: Boolean?, acti
             if (isParent) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     GameButton(if (region == null) "Обрати місце" else "Змінити", onClick = actions.onPick, leading = "📍")
-                    if (region != null) TextButton(onClick = actions.onClear) { Text("Вимкнути") }
+                    if (region != null) TextButton(onClick = actions.onClear) { Text("Прибрати місце") }
                 }
             }
             if (region != null && alertsPush != null) {
