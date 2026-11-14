@@ -62,11 +62,13 @@ import com.gifwarno.rozklad.core.designsystem.component.EmptyState
 import com.gifwarno.rozklad.core.designsystem.component.GameProgressBar
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.component.LoadingState
+import com.gifwarno.rozklad.core.designsystem.component.LocalChromePadding
 import com.gifwarno.rozklad.core.designsystem.component.NumberTile
 import com.gifwarno.rozklad.core.designsystem.component.Pill
 import com.gifwarno.rozklad.core.designsystem.component.StrokeText
 import com.gifwarno.rozklad.core.designsystem.component.outlineWidth
 import com.gifwarno.rozklad.core.designsystem.component.outlinedBackground
+import com.gifwarno.rozklad.core.designsystem.component.withChrome
 import com.gifwarno.rozklad.core.designsystem.theme.GameFont
 import com.gifwarno.rozklad.core.designsystem.theme.GameStyle
 import com.gifwarno.rozklad.core.designsystem.theme.GameTitleStyle
@@ -91,11 +93,11 @@ fun TodayRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     when (val s = state) {
-        TodayScreenState.Loading -> LoadingState(modifier)
+        TodayScreenState.Loading -> LoadingState(modifier.padding(LocalChromePadding.current))
 
-        is TodayScreenState.NoChild -> InviteChildState("👨‍👩‍👧", s.isParent, s.inviteCode, modifier)
+        is TodayScreenState.NoChild -> InviteChildState("👨‍👩‍👧", s.isParent, s.inviteCode, modifier.padding(LocalChromePadding.current))
 
-        is TodayScreenState.NoSchedule -> Column(modifier) {
+        is TodayScreenState.NoSchedule -> Column(modifier.padding(LocalChromePadding.current)) {
             ChildSelector(s.children, s.childId, viewModel::selectChild, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
             EmptyState(
                 emoji = "🗓️",
@@ -155,7 +157,7 @@ internal fun TodayScreen(
     val (stars, addStar) = rememberStars()
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp).withChrome(),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item(key = "header") { header() }
