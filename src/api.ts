@@ -215,6 +215,7 @@ export async function enter(): Promise<void> {
   if (!user) return set({ view: 'auth', me: null, family: null, role: null });
   const meta = user.user_metadata as { full_name?: string } | undefined;
   set({ me: { id: user.id, email: user.email ?? '', fullName: meta?.full_name ?? '' } });
+  void reconcilePush();
   const { data: mem, error } = await sb.from('school_members').select('family_id,role').eq('user_id', user.id).order('family_id').limit(1);
   if (error) throw error;
   const row = mem?.[0];
@@ -238,13 +239,45 @@ export async function enter(): Promise<void> {
   channel.subscribe((status) => { if (status === 'SUBSCRIBED') void ch.track({ at: Date.now() }); });
 }
 
+/** Push-підписка цього браузера (null — немає або браузер не підтримує). */
+async function pushSubscription(): Promise<PushSubscription | null> {
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration();
+    return (await reg?.pushManager?.getSubscription()) ?? null;
+  } catch { return null; }
+}
+
+/**
+ * Відв'язати браузер від push: інакше після виходу сюди й далі приходили б сповіщення попереднього акаунта,
+ * а новий користувач не зміг би ввімкнути свої (рядок school_push належить іншому — RLS).
+ * Спершу рядок на сервері (поки сесія ще жива), потім сама підписка — навіть якщо сервер недоступний:
+ * тоді служба push відповість 410, і сервер прибере рядок сам.
+ */
+async function dropPush(): Promise<void> {
+  const s = await pushSubscription();
+  if (!s) return;
+  try { await sb.from('school_push').delete().eq('endpoint', s.endpoint); } catch { /* офлайн */ }
+  await s.unsubscribe().catch(() => false);
+}
+
+/** Підписка браузера лишилась від іншого акаунта (вихід до цього виправлення) — прибираємо, щоб не плутала. */
+async function reconcilePush(): Promise<void> {
+  const s = await pushSubscription();
+  if (!s) return;
+  const { data, error } = await sb.from('school_push').select('endpoint').eq('endpoint', s.endpoint).maybeSingle();
+  if (error || data) return;
+  await s.unsubscribe().catch(() => false);
+  set({ pushOn: false });
+}
+
 export async function signOut(): Promise<void> {
   if (channel && realtime) await realtime.removeChannel(channel);
   channel = null;
+  await dropPush();
   // scope 'local': якщо користувача вже немає на сервері (видалено), сесія однаково очищається.
   await sb.auth.signOut({ scope: 'local' });
   if (state.me) { store.set(SNAP + state.me.id, null); store.set(OUTBOX + state.me.id, null); }
-  set({ view: 'auth', me: null, family: null, role: null, present: [], queued: 0, stale: false, members: [], grades: [], ledger: [], challenges: [], homework: [], timetables: [], kid: null });
+  set({ view: 'auth', me: null, family: null, role: null, present: [], queued: 0, stale: false, pushOn: false, members: [], grades: [], ledger: [], challenges: [], homework: [], timetables: [], kid: null });
 }
 
 /**
