@@ -182,7 +182,7 @@ function bellsTab(d: Draft): TemplateResult {
     })}</ol>
     <div class="ed-row">
       <button type="button" ?disabled=${d.bells.length >= MAX_LESSONS} @click=${() => update(addBell)}>+ Дзвінок</button>
-      <button type="button" ?disabled=${!d.bells.length} @click=${() => void dropLastBell()}>− Останній</button>
+      <button type="button" ?disabled=${!d.bells.length} @click=${() => void dropLastBell()}>− Останній дзвінок</button>
       <button type="button" @click=${() => void typicalBells()}>Типові дзвінки</button>
     </div>`;
 }

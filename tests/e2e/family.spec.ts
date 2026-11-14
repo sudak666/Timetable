@@ -207,7 +207,7 @@ test('вступ у сім’ю без імені не пускає', async ({ p
   await page.route('**/rest/v1/rpc/school_join_family', (r) => { rpc++; return r.fulfill({ status: 204, body: '' }); });
   await page.goto('/#me');
   await page.getByPlaceholder('Код запрошення').fill('ABC123');
-  await page.getByRole('button', { name: /Приєднатись/ }).click();
+  await page.getByRole('button', { name: /Приєднатися/ }).click();
   await expect(page.getByRole('status')).toContainText('Напиши своє ім’я');
   await expect(page.getByPlaceholder("Твоє ім'я")).toBeFocused();
   expect(rpc).toBe(0);

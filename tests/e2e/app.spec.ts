@@ -11,7 +11,7 @@ test('розклад рендериться без помилок і поруш�
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error' && /Content Security Policy|Refused/.test(m.text())) errors.push(m.text()); });
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Розклад уроків' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Дванадцятка' })).toBeVisible();
   await expect(page.locator('.now h2')).toHaveText('Інформатика');
   await expect(page.locator('.day')).toHaveCount(5);
   await expect(page.locator('.day.today h3')).toContainText('Вівторок');
