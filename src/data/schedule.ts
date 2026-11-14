@@ -15,6 +15,8 @@ export interface TimetableRow {
   holidays: [string, string][];
   /** Позашкільні заняття (див. supabase/migrations/20261114_school_activities.sql). Старі знімки — без поля. */
   activities?: ActivityRow[];
+  /** Версія рядка (ставить тригер на сервері); є лише в рядках, прочитаних із сервера. */
+  updated_at?: string;
 }
 
 /** Заняття: t — назва, e — емодзі, d — дні 1..7 (1 = понеділок), a/b — «H:MM», p — місце, n — що взяти. */

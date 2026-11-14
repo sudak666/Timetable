@@ -91,6 +91,8 @@ data class TimetableEntity(
     val holidaysJson: String,
     /** Позашкільні заняття (колонка activities), JSON у форматі сервера. */
     @ColumnInfo(defaultValue = "[]") val activitiesJson: String = "[]",
+    /** Версія рядка на сервері (updated_at): з неї починається збереження з перевіркою чужих змін. null — невідома. */
+    val updatedAt: String? = null,
 )
 
 /**

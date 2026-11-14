@@ -37,4 +37,6 @@ dependencies {
     implementation(libs.firebase.crashlytics)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.androidx.core.ktx)
+
+    testImplementation(projects.core.testing)
 }

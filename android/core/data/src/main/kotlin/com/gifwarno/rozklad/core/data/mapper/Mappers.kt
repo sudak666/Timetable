@@ -172,6 +172,7 @@ internal fun NetworkTimetable.asEntity(familyId: String, json: Json) = Timetable
     weekJson = json.encodeToString(WEEK, week),
     holidaysJson = json.encodeToString(PAIRS, holidays),
     activitiesJson = json.encodeToString(CLUBS, activities),
+    updatedAt = updatedAt,
 )
 
 /** Пошкоджені дані не валять застосунок — такий розклад просто вважається незаповненим. */

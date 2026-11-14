@@ -12,7 +12,8 @@ export interface Family { id: string; name: string; invite_code: string }
 
 export type EditorTab = 'lessons' | 'bells' | 'holidays' | 'clubs';
 /** Відкритий редактор розкладу: base — збережений стан (для «є зміни?»), draft — чернетка. */
-export interface EditorState { kid: string; base: Draft; draft: Draft; tab: EditorTab; day: number; saving: boolean }
+/** baseAt — updated_at рядка, з якого почали редагувати (null — розкладу ще не було): так помічаємо чужі зміни. */
+export interface EditorState { kid: string; base: Draft; baseAt: string | null; draft: Draft; tab: EditorTab; day: number; saving: boolean }
 
 export interface State {
   tab: Tab;

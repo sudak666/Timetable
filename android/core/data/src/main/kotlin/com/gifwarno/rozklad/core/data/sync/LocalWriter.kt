@@ -56,6 +56,8 @@ internal class LocalWriter @Inject constructor(
     suspend fun submit(familyId: String, write: NetworkWrite) {
         db.withTransaction {
             applyLocally(familyId, write)
+            // Розклад надсилається цілим рядком: попередня ще не надіслана версія вже не потрібна.
+            if (write.kind == WriteKind.UPSERT) outboxDao.dropPending(write.table, write.rowId, write.kind.name)
             outboxDao.enqueue(
                 OutboxEntity(
                     familyId = familyId,

@@ -8,6 +8,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.gifwarno.rozklad.core.data.UserMessage
 import com.gifwarno.rozklad.core.database.OutboxDao
+import com.gifwarno.rozklad.core.database.OutboxEntity
 import com.gifwarno.rozklad.core.model.SyncStatus
 import com.gifwarno.rozklad.core.network.RozkladNetworkDataSource
 import com.gifwarno.rozklad.core.network.model.WriteResult
@@ -21,6 +22,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 
 /** Відправляє офлайн-чергу на сервер по порядку. Безпечно викликати будь-коли й скільки завгодно. */
 @Singleton
@@ -37,9 +41,16 @@ internal class SyncManager @Inject constructor(
 
     /** @return true — черга порожня; false — лишилися зміни (немає мережі). */
     suspend fun flush(): Boolean = mutex.withLock {
-        for (op in outboxDao.pending()) {
+        // Голову черги беремо щоразу заново: збереження розкладу може оновити версію в наступних записах.
+        while (true) {
+            val op = outboxDao.pending().firstOrNull() ?: break
             when (val r = network.write(op.toWrite(json))) {
                 WriteResult.Ok -> outboxDao.remove(op.seq)
+
+                is WriteResult.Saved -> {
+                    outboxDao.remove(op.seq)
+                    rebase(op, r.version)
+                }
 
                 WriteResult.Retry -> {
                     outboxDao.markAttempt(op.seq)
@@ -55,6 +66,20 @@ internal class SyncManager @Inject constructor(
             }
         }
         true
+    }
+
+    /**
+     * Розклад збережено, у нього нова версія. Наступні зміни цього ж рядка (зроблені, поки запис летів)
+     * походять від нашого ж стану — переводимо їх на нову версію, інакше вони конфліктували б самі з собою.
+     */
+    private suspend fun rebase(saved: OutboxEntity, version: String) {
+        outboxDao.setTimetableVersion(saved.rowId, version)
+        for (next in outboxDao.pending()) {
+            if (next.tableName != saved.tableName || next.rowId != saved.rowId || next.kind != saved.kind) continue
+            val body = json.parseToJsonElement(next.payload).jsonObject
+            if (VERSION !in body) continue
+            outboxDao.setPayload(next.seq, JsonObject(body + (VERSION to JsonPrimitive(version))).toString())
+        }
     }
 
     fun clearError() {
@@ -76,5 +101,6 @@ internal class SyncManager @Inject constructor(
 
     private companion object {
         const val BACKOFF_SECONDS = 30L
+        const val VERSION = "updated_at"
     }
 }

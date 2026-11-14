@@ -38,8 +38,10 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
@@ -312,10 +314,7 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
                 WriteResult.Ok
             }
 
-            WriteKind.UPSERT -> {
-                table.upsert(op.body) { onConflict = op.key }
-                WriteResult.Ok
-            }
+            WriteKind.UPSERT -> saveVersioned(op)
 
             // RLS і видалений рядок дають «0 рядків» без помилки — інакше показали б «збережено», а зміни немає.
             WriteKind.UPDATE -> {
@@ -354,7 +353,45 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
         WriteResult.Retry
     }
 
+    /**
+     * Збереження цілого рядка (розклад) з перевіркою версії, щоб офлайн-зміна з телефона не затерла
+     * свіжіші правки з сайту чи іншого телефона. Див. опис [WriteKind].
+     */
+    private suspend fun saveVersioned(op: NetworkWrite): WriteResult {
+        val table = client.from(op.table)
+        val base = op.body[VERSION] ?: run {
+            table.upsert(op.body) { onConflict = op.key }
+            return WriteResult.Ok
+        }
+        val body = JsonObject(op.body - VERSION)
+        val rows = try {
+            if (base is JsonNull) {
+                table.insert(body) { select(Columns.list(VERSION)) }.decodeList<JsonObject>()
+            } else {
+                table.update(body) {
+                    select(Columns.list(VERSION))
+                    filter {
+                        eq(op.key, op.rowId)
+                        eq(VERSION, base.jsonPrimitive.content)
+                    }
+                }.decodeList<JsonObject>()
+            }
+        } catch (e: RestException) {
+            // 409 — рядок уже створили на іншому пристрої.
+            if (e.statusCode == HTTP_CONFLICT) return WriteResult.Rejected(CONFLICT)
+            throw e
+        }
+        val version = rows.firstOrNull()?.get(VERSION)?.jsonPrimitive?.contentOrNull ?: return WriteResult.Rejected(CONFLICT)
+        return WriteResult.Saved(version)
+    }
+
     private companion object {
+        const val VERSION = "updated_at"
+        const val HTTP_CONFLICT = 409
+
+        /** Розклад змінили деінде, поки ця зміна чекала в черзі. */
+        const val CONFLICT = "розклад уже змінили на іншому пристрої — відкрий його ще раз і внеси зміну знову"
+
         /** Розмір сторінки: PostgREST у Supabase віддає не більше 1000 рядків за запит. */
         const val PAGE = 1000L
 

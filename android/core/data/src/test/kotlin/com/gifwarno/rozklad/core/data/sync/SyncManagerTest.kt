@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -92,6 +93,41 @@ class SyncManagerTest {
         assertEquals("Зміну не збережено: Недостатньо прав для цієї дії", sync.status.first().lastError)
         assertEquals(0, sync.status.first().pendingChanges)
     }
+
+    private fun timetable(base: String) = OutboxEntity(
+        familyId = "f1",
+        tableName = Tables.TIMETABLES,
+        kind = "UPSERT",
+        rowId = "k1",
+        payload = """{"child_id":"k1","updated_at":"$base"}""",
+        createdAt = 0,
+    )
+
+    @Test
+    fun `збережений розклад переводить наступну зміну цього ж рядка на нову версію`() = runTest {
+        dao.enqueue(timetable("v1"))
+        dao.enqueue(timetable("v1"))
+        network.results += listOf(WriteResult.Saved("v2"), WriteResult.Saved("v3"))
+
+        assertTrue(sync.flush())
+
+        assertEquals("v2", network.sent[1].body["updated_at"]?.jsonPrimitive?.content)
+        assertEquals("v3", dao.versions["k1"])
+    }
+
+    @Test
+    fun `розклад змінили деінде — зміну відкидаємо й пояснюємо`() = runTest {
+        dao.enqueue(timetable("v1"))
+        network.results += WriteResult.Rejected("розклад уже змінили на іншому пристрої — відкрий його ще раз і внеси зміну знову")
+
+        assertTrue(sync.flush())
+
+        assertTrue(dao.pending().isEmpty())
+        assertEquals(
+            "Зміну не збережено: розклад уже змінили на іншому пристрої — відкрий його ще раз і внеси зміну знову",
+            sync.status.first().lastError,
+        )
+    }
 }
 
 private class FakeOutboxDao : OutboxDao {
@@ -116,6 +152,18 @@ private class FakeOutboxDao : OutboxDao {
 
     override suspend fun markAttempt(seq: Long) =
         rows.update { list -> list.map { if (it.seq == seq) it.copy(attempts = it.attempts + 1) else it } }
+
+    override suspend fun dropPending(table: String, rowId: String, kind: String) =
+        rows.update { list -> list.filterNot { it.tableName == table && it.rowId == rowId && it.kind == kind } }
+
+    override suspend fun setPayload(seq: Long, payload: String) =
+        rows.update { list -> list.map { if (it.seq == seq) it.copy(payload = payload) else it } }
+
+    val versions = mutableMapOf<String, String>()
+
+    override suspend fun setTimetableVersion(childId: String, version: String) {
+        versions[childId] = version
+    }
 }
 
 /** Мережа, що відповідає на записи заздалегідь заданими результатами; решта методів тут не потрібні. */

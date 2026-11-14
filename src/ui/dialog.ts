@@ -47,7 +47,7 @@ export function modal(text: string, o: Opts = {}): Promise<string | boolean | nu
 }
 
 export const alert = (t: string) => modal(t, { ok: 'Зрозуміло' });
-export const confirm = async (t: string) => (await modal(t, { ok: 'Так', cancel: 'Скасувати' })) === true;
+export const confirm = async (t: string, ok = 'Так') => (await modal(t, { ok, cancel: 'Скасувати' })) === true;
 export const prompt = async (t: string, value: string | number = '', input: 'text' | 'number' | 'password' = 'number') => {
   const v = await modal(t, { input, value, ok: 'Готово', cancel: 'Скасувати' });
   return typeof v === 'string' ? v : null;

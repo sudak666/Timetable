@@ -143,7 +143,11 @@ sealed interface NetworkAuthState {
     data class SignedIn(val user: NetworkUser) : NetworkAuthState
 }
 
-/** INSERT — створити, якщо немає (ідемпотентно); UPSERT — створити або повністю замінити. */
+/**
+ * INSERT — створити, якщо немає (ідемпотентно); UPSERT — створити або повністю замінити.
+ * Для UPSERT поле `updated_at` у тілі — версія, з якої почали: рядок — оновити лише цю версію,
+ * null — лише створити (рядка ще не було), немає поля — замінити без перевірки (старі записи черги).
+ */
 enum class WriteKind { INSERT, UPSERT, UPDATE, DELETE }
 
 /** Одна зміна для сервера; вставки ідемпотентні за клієнтським id. */
@@ -164,4 +168,7 @@ sealed interface WriteResult {
 
     /** Сервер відхилив (RLS, валідація) — повтор не допоможе. */
     data class Rejected(val message: String) : WriteResult
+
+    /** Збережено з перевіркою версії (розклад); [version] — новий updated_at рядка. */
+    data class Saved(val version: String) : WriteResult
 }

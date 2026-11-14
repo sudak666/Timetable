@@ -322,3 +322,27 @@ test('редактор розкладу: незбережені зміни не 
   await page.getByRole('dialog').getByRole('button', { name: 'Скасувати' }).click();
   await expect(page.getByRole('button', { name: /Шахи/ })).toBeVisible();
 });
+
+test('редактор розкладу: чужа зміна під час редагування — питає, чи записати поверх', async ({ page }) => {
+  await mockFamily(page, 'parent');
+  const v1 = '2026-09-21T10:00:00.123456+00:00';
+  const writes: { method: string; url: string }[] = [];
+  await page.route(`https://${REF}.supabase.co/rest/v1/school_timetables**`, (r) => {
+    const m = r.request().method();
+    if (m === 'GET') return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ ...TIMETABLE, updated_at: v1 }]) });
+    writes.push({ method: m, url: r.request().url() });
+    // PATCH з умовою updated_at=v1 не зачепив рядка: його вже змінили деінде.
+    return r.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: /Редагувати розклад/ }).click();
+  await page.getByRole('button', { name: 'Прибрати 1 урок' }).click();
+  await page.getByRole('button', { name: 'Зберегти' }).click();
+  await expect(page.getByRole('dialog')).toContainText('Розклад уже змінили на іншому пристрої');
+  expect(writes[0]?.method).toBe('PATCH');
+  expect(decodeURIComponent(writes[0]!.url)).toContain(`updated_at=eq.${v1}`);
+  await page.getByRole('dialog').getByRole('button', { name: 'Записати мою' }).click();
+  await expect.poll(() => writes.length).toBe(2);
+  expect(writes[1]?.method).toBe('POST');
+  await expect(page.getByRole('heading', { name: /Розклад · Стас/ })).toHaveCount(0);
+});

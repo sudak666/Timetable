@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -277,8 +278,15 @@ internal class OfflineFirstFamilyRepository @Inject constructor(
 
     override suspend fun saveSchedule(familyId: String, childId: String, schedule: SchoolSchedule) {
         val dto = json.encodeToJsonElement(NetworkTimetable.serializer(), schedule.asNetwork(childId)).jsonObject
-        // updated_at ставить тригер на сервері.
-        val body = withFamily(JsonObject(dto.filterKeys { it != "updated_at" }), familyId)
+        // updated_at ставить тригер на сервері; у тілі — версія, з якої почали (див. WriteKind).
+        val current = withContext(io) { dao.timetable(childId) }
+        val base: JsonElement? = when {
+            current == null -> JsonNull
+            current.updatedAt != null -> JsonPrimitive(current.updatedAt)
+            else -> null // рядок зі старої версії бази без версії — без перевірки
+        }
+        val fields = dto.filterKeys { it != "updated_at" } + listOfNotNull(base?.let { "updated_at" to it })
+        val body = withFamily(JsonObject(fields), familyId)
         submit(familyId, NetworkWrite(Tables.TIMETABLES, WriteKind.UPSERT, childId, body, key = Tables.keyOf(Tables.TIMETABLES)))
     }
 
