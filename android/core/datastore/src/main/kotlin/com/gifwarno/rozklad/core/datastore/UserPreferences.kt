@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.Module
@@ -93,6 +94,13 @@ class UserPreferencesDataSource @Inject constructor(private val store: DataStore
         store.edit { if (token == null) it.remove(PUSH_TOKEN) else it[PUSH_TOKEN] = token }
     }
 
+    /** За скільки хвилин нагадувати про позашкільне заняття на цьому пристрої; 0 — не нагадувати. */
+    val clubReminderMinutes: Flow<Int> = store.data.map { it[CLUB_REMINDER] ?: DEFAULT_CLUB_REMINDER }
+
+    suspend fun setClubReminderMinutes(minutes: Int) {
+        store.edit { it[CLUB_REMINDER] = minutes.coerceAtLeast(0) }
+    }
+
     suspend fun clear() {
         store.edit { it.clear() }
     }
@@ -107,6 +115,8 @@ class UserPreferencesDataSource @Inject constructor(private val store: DataStore
         val PUSH_TOKEN = stringPreferencesKey("push_token")
         val ALERTS_PUSH = booleanPreferencesKey("alerts_push")
         val GAME_STYLE = stringPreferencesKey("game_style")
+        val CLUB_REMINDER = intPreferencesKey("club_reminder_minutes")
+        const val DEFAULT_CLUB_REMINDER = 30
     }
 }
 

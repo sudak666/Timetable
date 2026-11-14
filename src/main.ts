@@ -14,7 +14,7 @@ import { boom } from './ui/confetti';
 import { applyAccent, applyStyle } from './ui/theme';
 import { emo } from './lib/emoji';
 import { quizView } from './views/quiz';
-import { funCards, lessonAlertTick, nowCard, sidePanel, toggleLessonAlerts, weekGrid, weekStats } from './views/schedule';
+import { afterSchoolCard, funCards, lessonAlertTick, nowCard, sidePanel, toggleLessonAlerts, weekGrid, weekStats } from './views/schedule';
 import { clockOf, nextLessonDate, statusAt } from './lib/time';
 
 /* ---- відновлення налаштувань до першого рендера (без миготіння) ---- */
@@ -121,6 +121,7 @@ function page(): TemplateResult {
       return html`${G?.profileBar() ?? ''}
       ${bikeLane(G ? G.laneLabel() : emo('⚡ Електробайк мрії'))}
       <div class="top">${nowCard()}${sidePanel()}</div>
+      ${afterSchoolCard()}
       ${below ? html`${funCards(quizView())}${weekGrid()}${G?.editScheduleButton() ?? ''}${weekStats()}` : html`<div class="below-ph" aria-hidden="true"></div>`}`;
   }
 }
@@ -132,7 +133,7 @@ const app = () => {
     <header>
       <div><h1>Розклад уроків</h1><p class="clock"><time datetime=${d.toISOString()}>${d.toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' })} · ${d.toLocaleTimeString('uk-UA')}</time></p></div>
       <div class="tools">
-        <button type="button" class=${state.lessonAlerts ? 'ic on' : 'ic'} aria-pressed=${state.lessonAlerts} aria-label="Нагадування за 2 хвилини до уроку" @click=${toggleLessonAlerts}>${bell}</button>
+        <button type="button" class=${state.lessonAlerts ? 'ic on' : 'ic'} aria-pressed=${state.lessonAlerts} aria-label="Нагадування за 2 хвилини до уроку й за 15 — до заняття" @click=${toggleLessonAlerts}>${bell}</button>
         <button type="button" class="ic" aria-label="Перемкнути світлу / темну тему" @click=${toggleTheme}>${sunMoon}</button>
         <button type="button" class="ic" aria-label="Команди" aria-keyshortcuts="Control+K Meta+K" title="Команди (Ctrl+K)" @click=${palette}>${searchIc}</button>
       </div>

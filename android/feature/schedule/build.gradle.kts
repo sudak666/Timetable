@@ -9,6 +9,7 @@ android {
 }
 
 dependencies {
+    implementation(projects.core.datastore)
     implementation(libs.androidx.activity.compose)
     implementation(libs.kotlinx.serialization.json)
 }

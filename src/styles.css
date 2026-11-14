@@ -59,6 +59,8 @@ button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .l.cur{background:var(--glow)}.l.cur .t{color:var(--text)}
 .b.cur{background:#00705a;color:#fff}
 .opt{font-size:11px;color:var(--muted);font-weight:400}
+.after{margin-bottom:20px}.club-e{background:var(--brk);font-size:16px}
+.club-bag{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:4px;font-size:14px}
 :root .moon,:root[data-theme=dark] .sun{display:none}:root[data-theme=dark] .moon{display:block}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .sun{display:none}:root:not([data-theme=light]) .moon{display:block}}
 .ic{width:42px;height:42px;padding:0;display:grid;place-items:center;transition:transform .2s}
@@ -442,6 +444,9 @@ kbd{font:600 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;padding:4px 6px;
 .ed-list .ic{min-width:36px;min-height:36px;padding:0}
 .ed-list input[type=time],.ed-list input[type=date]{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text)}
 .ed-list input[type=date]{flex:1 1 130px;min-width:0}
+.ed-list input[type=text]{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);min-width:0}
+.ed-list .cl-t{flex:1 1 160px}.ed-list .cl-e{width:4.2em;text-align:center}.ed-list .cl-w{flex:1 1 100%}
+.days{display:flex;flex-wrap:wrap;gap:4px}.days button{min-width:40px;padding:6px 8px}
 .ed-list .hol{display:flex;flex:1 1 280px;gap:8px;align-items:center;min-width:0}
 .ed-err{list-style:none;margin:0;padding:10px 12px;border-radius:12px;background:var(--warn-bg);color:var(--warn-fg);display:grid;gap:4px}
 .no-sched{display:grid;justify-items:center;gap:6px;margin-bottom:20px;padding:24px 16px}

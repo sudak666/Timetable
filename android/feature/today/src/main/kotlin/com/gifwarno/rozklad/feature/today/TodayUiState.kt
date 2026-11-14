@@ -2,6 +2,7 @@ package com.gifwarno.rozklad.feature.today
 
 import com.gifwarno.rozklad.core.domain.SchoolCalendar
 import com.gifwarno.rozklad.core.domain.SchoolStatus
+import com.gifwarno.rozklad.core.model.Club
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -66,6 +67,10 @@ data class TodayUiState(
     val dayProgress: Float?,
     /** Сьогодні були уроки, і вони вже закінчились — привід для салюту. */
     val finishedToday: Boolean = false,
+    /** Картка «Після школи» (null — занять сьогодні й завтра немає). */
+    val afterSchool: AfterSchool? = null,
+    /** Що взяти на заняття — частина рюкзака. */
+    val clubBag: List<ClubBagItem> = emptyList(),
 )
 
 private val HM = DateTimeFormatter.ofPattern("H:mm")
@@ -79,8 +84,14 @@ private fun progress(start: LocalTime, end: LocalTime, now: LocalTime): Float =
  * Чиста функція: час + розклад → стан екрана. Тестується без Android.
  * null — у розкладі немає жодного уроку (ще не заповнено).
  * [alertSince] — початок поточної тривоги (місцевий час) або null, якщо тривоги немає.
+ * [clubs] — позашкільні заняття дитини.
  */
-fun buildTodayState(now: LocalDateTime, cal: SchoolCalendar, alertSince: LocalDateTime? = null): TodayUiState? {
+fun buildTodayState(
+    now: LocalDateTime,
+    cal: SchoolCalendar,
+    alertSince: LocalDateTime? = null,
+    clubs: List<Club> = emptyList(),
+): TodayUiState? {
     val t = now.toLocalTime()
     val today = now.toLocalDate()
     val status = cal.statusAt(now)
@@ -165,5 +176,7 @@ fun buildTodayState(now: LocalDateTime, cal: SchoolCalendar, alertSince: LocalDa
         backpack = lessons.map { it.subject }.distinct(),
         dayProgress = cal.dayProgress(now),
         finishedToday = status is SchoolStatus.Done && !cal.lessonsOn(today).isNullOrEmpty(),
+        afterSchool = buildAfterSchool(now, clubs),
+        clubBag = clubBag(now, clubs, schoolDone = !showToday, bagDate = shownDate),
     )
 }

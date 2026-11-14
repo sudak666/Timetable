@@ -26,5 +26,6 @@ object ScheduleValidator {
         }
         if (s.holidays.size > SchoolSchedule.MAX_HOLIDAYS) add("Забагато канікул (максимум ${SchoolSchedule.MAX_HOLIDAYS})")
         if (s.holidays.any { it.end.isBefore(it.start) }) add("Канікули: кінець раніше за початок")
+        addAll(Clubs.validate(s.clubs))
     }
 }

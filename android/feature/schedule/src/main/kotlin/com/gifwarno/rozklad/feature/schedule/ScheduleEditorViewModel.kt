@@ -5,9 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gifwarno.rozklad.core.data.repository.ActiveFamily
 import com.gifwarno.rozklad.core.data.repository.FamilyRepository
+import com.gifwarno.rozklad.core.datastore.UserPreferencesDataSource
 import com.gifwarno.rozklad.core.domain.ScheduleValidator
 import com.gifwarno.rozklad.core.domain.Timetable
 import com.gifwarno.rozklad.core.model.Bell
+import com.gifwarno.rozklad.core.model.Club
 import com.gifwarno.rozklad.core.model.Holiday
 import com.gifwarno.rozklad.core.model.Lesson
 import com.gifwarno.rozklad.core.model.SchoolSchedule
@@ -16,10 +18,12 @@ import java.time.LocalDate
 import java.time.LocalTime
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -50,7 +54,16 @@ class ScheduleEditorViewModel @Inject constructor(
     private val active: ActiveFamily,
     private val families: FamilyRepository,
     private val savedState: SavedStateHandle,
+    private val preferences: UserPreferencesDataSource,
 ) : ViewModel() {
+    /** За скільки хвилин нагадувати про заняття на цьому телефоні (0 — не нагадувати). Зберігається одразу. */
+    val reminderMinutes: StateFlow<Int> = preferences.clubReminderMinutes
+        .stateIn(viewModelScope, SharingStarted.Eagerly, DEFAULT_REMINDER)
+
+    fun setReminder(minutes: Int) {
+        viewModelScope.launch { preferences.setClubReminderMinutes(minutes) }
+    }
+
     private val _state = MutableStateFlow<ScheduleEditorState>(ScheduleEditorState.Loading)
     val state: StateFlow<ScheduleEditorState> = _state.asStateFlow()
 
@@ -162,6 +175,24 @@ class ScheduleEditorViewModel @Inject constructor(
 
     fun removeHoliday(index: Int) = edit { s, _ -> s.copy(holidays = s.holidays.filterIndexed { i, _ -> i != index }) }
 
+    /** Нове заняття або зміна наявного ([index] = null — додати). Порядок — за першим днем і часом. */
+    fun putClub(index: Int?, club: Club) = edit { s, _ ->
+        val clean = club.copy(
+            title = club.title.trim().take(Club.MAX_TITLE),
+            emoji = club.emoji.trim().take(Club.MAX_EMOJI),
+            place = club.place.trim().take(Club.MAX_PLACE),
+            bring = club.bring.trim().take(Club.MAX_BRING),
+        )
+        val list = when {
+            index != null && index in s.clubs.indices -> s.clubs.mapIndexed { i, c -> if (i == index) clean else c }
+            index == null && s.clubs.size < Club.MAX -> s.clubs + clean
+            else -> return@edit s
+        }
+        s.copy(clubs = list.sortedWith(compareBy({ it.days.minOrNull() }, { it.start })))
+    }
+
+    fun removeClub(index: Int) = edit { s, _ -> s.copy(clubs = s.clubs.filterIndexed { i, _ -> i != index }) }
+
     fun save() {
         val s = _state.value as? ScheduleEditorState.Editing ?: return
         val errors = ScheduleValidator.validate(s.draft)
@@ -179,6 +210,7 @@ class ScheduleEditorViewModel @Inject constructor(
 
     private companion object {
         const val DRAFT_KEY = "schedule_draft"
+        const val DEFAULT_REMINDER = 30
         const val SATURDAY_DAYS = 6
         const val BREAK_MINUTES = 10L
         const val LESSON_MINUTES = 45L

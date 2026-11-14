@@ -1,9 +1,11 @@
 package com.gifwarno.rozklad.feature.schedule
 
 import com.gifwarno.rozklad.core.model.Bell
+import com.gifwarno.rozklad.core.model.Club
 import com.gifwarno.rozklad.core.model.Holiday
 import com.gifwarno.rozklad.core.model.Lesson
 import com.gifwarno.rozklad.core.model.SchoolSchedule
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
 import kotlinx.serialization.Serializable
@@ -26,6 +28,19 @@ internal object DraftCodec {
         val week: List<List<LessonDto>>,
         /** «2026-12-24/2027-01-07». */
         val holidays: List<String>,
+        val clubs: List<ClubDto> = emptyList(),
+    )
+
+    /** Заняття: дні 1..7, час «16:00». */
+    @Serializable
+    private data class ClubDto(
+        val t: String,
+        val e: String,
+        val d: List<Int>,
+        val a: String,
+        val b: String,
+        val p: String = "",
+        val n: String = "",
     )
 
     @Serializable
@@ -41,6 +56,9 @@ internal object DraftCodec {
             bells = s.bells.map { "${it.start}-${it.end}" },
             week = s.week.map { day -> day.map { LessonDto(it.subject, it.optional) } },
             holidays = s.holidays.map { "${it.start}/${it.end}" },
+            clubs = s.clubs.map { c ->
+                ClubDto(c.title, c.emoji, c.days.map { it.value }.sorted(), "${c.start}", "${c.end}", c.place, c.bring)
+            },
         ),
     )
 
@@ -60,6 +78,9 @@ internal object DraftCodec {
                     holidays = d.holidays.map { h ->
                         val (start, end) = h.split('/', limit = 2)
                         Holiday(LocalDate.parse(start), LocalDate.parse(end))
+                    },
+                    clubs = d.clubs.map { c ->
+                        Club(c.t, c.e, c.d.map(DayOfWeek::of).toSet(), LocalTime.parse(c.a), LocalTime.parse(c.b), c.p, c.n)
                     },
                 ),
             )

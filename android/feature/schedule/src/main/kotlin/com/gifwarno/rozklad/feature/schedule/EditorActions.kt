@@ -1,6 +1,7 @@
 package com.gifwarno.rozklad.feature.schedule
 
 import androidx.compose.runtime.Immutable
+import com.gifwarno.rozklad.core.model.Club
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -20,6 +21,9 @@ internal data class EditorActions(
     val removeLastBell: () -> Unit,
     val addHoliday: (LocalDate, LocalDate) -> Unit,
     val removeHoliday: (Int) -> Unit,
+    val putClub: (Int?, Club) -> Unit,
+    val removeClub: (Int) -> Unit,
+    val setReminder: (Int) -> Unit,
     val save: () -> Unit,
 )
 
@@ -37,5 +41,8 @@ internal fun ScheduleEditorViewModel.actions() = EditorActions(
     removeLastBell = ::removeLastBell,
     addHoliday = ::addHoliday,
     removeHoliday = ::removeHoliday,
+    putClub = ::putClub,
+    removeClub = ::removeClub,
+    setReminder = ::setReminder,
     save = ::save,
 )

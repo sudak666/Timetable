@@ -3,11 +3,13 @@ package com.gifwarno.rozklad.feature.schedule
 import androidx.lifecycle.SavedStateHandle
 import com.gifwarno.rozklad.core.data.repository.ActiveFamily
 import com.gifwarno.rozklad.core.domain.Timetable
+import com.gifwarno.rozklad.core.model.Club
 import com.gifwarno.rozklad.core.testing.FakeFamilyRepository
 import com.gifwarno.rozklad.core.testing.FakeSessionRepository
 import com.gifwarno.rozklad.core.testing.MainDispatcherRule
 import com.gifwarno.rozklad.core.testing.TestData
 import com.gifwarno.rozklad.core.testing.fakePreferences
+import java.time.DayOfWeek
 import java.time.LocalTime
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -24,7 +26,12 @@ class ScheduleEditorViewModelTest {
 
     // lazy: створюємо після того, як MainDispatcherRule підмінив Dispatchers.Main
     private val vm by lazy {
-        ScheduleEditorViewModel(ActiveFamily(FakeSessionRepository.ready(), families, fakePreferences()), families, savedState)
+        ScheduleEditorViewModel(
+            ActiveFamily(FakeSessionRepository.ready(), families, fakePreferences()),
+            families,
+            savedState,
+            fakePreferences(),
+        )
     }
 
     private val savedState = SavedStateHandle()
@@ -58,7 +65,12 @@ class ScheduleEditorViewModelTest {
 
         // Нова ViewModel з тим самим SavedStateHandle — так Android відновлює екран після смерті процесу.
         val restored =
-            ScheduleEditorViewModel(ActiveFamily(FakeSessionRepository.ready(), families, fakePreferences()), families, savedState)
+            ScheduleEditorViewModel(
+                ActiveFamily(FakeSessionRepository.ready(), families, fakePreferences()),
+                families,
+                savedState,
+                fakePreferences(),
+            )
         val e = restored.state.value as ScheduleEditorState.Editing
         assertTrue(e.dirty)
         assertEquals(listOf("Хімія", "Біологія"), e.lessons.map { it.subject })
@@ -91,5 +103,35 @@ class ScheduleEditorViewModelTest {
         vm.setSaturday(false)
         assertEquals(5, editing.draft.week.size)
         assertEquals(0, editing.day)
+    }
+
+    @Test
+    fun `заняття додаються, сортуються, змінюються, переживають смерть процесу й зберігаються`() = runTest {
+        fun club(title: String, day: DayOfWeek, h: Int) = Club(" $title ", "⚽", setOf(day), LocalTime.of(h, 0), LocalTime.of(h + 1, 0))
+        vm.putClub(null, club("Шахи", DayOfWeek.WEDNESDAY, 15))
+        vm.putClub(null, club("Футбол", DayOfWeek.MONDAY, 16))
+        assertEquals(listOf("Футбол", "Шахи"), editing.draft.clubs.map { it.title })
+        vm.putClub(1, editing.draft.clubs[1].copy(bring = "дошка"))
+        assertEquals("дошка", editing.draft.clubs[1].bring)
+
+        val restored =
+            ScheduleEditorViewModel(
+                ActiveFamily(FakeSessionRepository.ready(), families, fakePreferences()),
+                families,
+                savedState,
+                fakePreferences(),
+            )
+        assertEquals(editing.draft.clubs, (restored.state.value as ScheduleEditorState.Editing).draft.clubs)
+
+        vm.removeClub(0)
+        vm.save()
+        assertEquals(listOf("Шахи"), families.savedSchedules.getValue(TestData.child.userId).clubs.map { it.title })
+    }
+
+    @Test
+    fun `нагадування — налаштування телефона`() = runTest {
+        assertEquals(30, vm.reminderMinutes.value)
+        vm.setReminder(0)
+        assertEquals(0, vm.reminderMinutes.value)
     }
 }

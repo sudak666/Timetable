@@ -76,7 +76,8 @@ fun ScheduleEditorRoute(onClose: () -> Unit, modifier: Modifier = Modifier, view
 
         is ScheduleEditorState.Editing -> {
             LaunchedEffect(s.saved) { if (s.saved) onClose() }
-            ScheduleEditorScreen(s, remember(viewModel) { viewModel.actions() }, onClose, modifier)
+            val reminder by viewModel.reminderMinutes.collectAsStateWithLifecycle()
+            ScheduleEditorScreen(s, remember(viewModel) { viewModel.actions() }, onClose, modifier, reminder)
         }
     }
 }
@@ -87,6 +88,7 @@ private fun ScheduleEditorScreen(
     actions: EditorActions,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    reminderMinutes: Int = 0,
 ) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var confirmExit by rememberSaveable { mutableStateOf(false) }
@@ -104,7 +106,9 @@ private fun ScheduleEditorScreen(
             )
         }
         GameSegmented(
-            options = listOf(0 to "📚 Уроки", 1 to "🔔 Дзвінки", 2 to "🏖️ Канікули"),
+            // Чотири вкладки на вузькому екрані: емодзі над підписом, інакше «Канікули» обрізаються.
+            options = listOf(0 to "📚\nУроки", 1 to "🔔\nДзвінки", 2 to "🏖️\nКанікули", 3 to "⚽\nЗаняття"),
+            maxLines = 2,
             selected = tab,
             onSelect = { tab = it },
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -126,7 +130,8 @@ private fun ScheduleEditorScreen(
         when (tab) {
             0 -> LessonsTab(state, actions)
             1 -> BellsTab(state.draft, actions)
-            else -> HolidaysTab(state.draft, actions)
+            2 -> HolidaysTab(state.draft, actions)
+            else -> ClubsTab(state.draft, actions, reminderMinutes)
         }
     }
 

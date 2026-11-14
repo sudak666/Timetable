@@ -113,11 +113,25 @@ data class NetworkTimetable(
     val bells: List<List<String>>,
     val week: List<List<NetworkLesson>>,
     val holidays: List<List<String>> = emptyList(),
+    /** Позашкільні заняття — див. supabase/migrations/20261114_school_activities.sql. */
+    val activities: List<NetworkActivity> = emptyList(),
     @SerialName("updated_at") val updatedAt: String? = null,
 )
 
 @Serializable
 data class NetworkLesson(@SerialName("s") val subject: String, @SerialName("o") val optional: Boolean = false)
+
+/** Заняття: назва, емодзі, дні 1..7 (1 = понеділок), час «H:MM», місце й «що взяти» (null — не вказано). */
+@Serializable
+data class NetworkActivity(
+    @SerialName("t") val title: String,
+    @SerialName("e") val emoji: String,
+    @SerialName("d") val days: List<Int>,
+    @SerialName("a") val start: String,
+    @SerialName("b") val end: String,
+    @SerialName("p") val place: String? = null,
+    @SerialName("n") val bring: String? = null,
+)
 
 data class NetworkUser(val id: String, val email: String, val fullName: String)
 

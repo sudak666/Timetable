@@ -167,8 +167,14 @@ internal fun TodayScreen(
         if (quests.isNotEmpty()) item(key = "quests") { QuestsCard(quests) }
         item(key = "title") { DayTitle(state.dayTitle, onEditSchedule) }
         item(key = "lessons") { LessonsCard(state.lessons) }
-        if (state.backpack.isNotEmpty()) {
-            item(key = "bag") { Backpack(state.backpack, state.isToday) }
+        state.afterSchool?.let { after ->
+            item(key = "after-title") {
+                StrokeText(after.title, GameTitleStyle.copy(fontSize = 20.sp, lineHeight = 26.sp), strokeWidth = 4.dp)
+            }
+            item(key = "after") { AfterSchoolCard(after.rows) }
+        }
+        if (state.backpack.isNotEmpty() || state.clubBag.isNotEmpty()) {
+            item(key = "bag") { Backpack(state.backpack, state.isToday, state.clubBag) }
         }
         if (weekend.isNotEmpty()) {
             item(key = "fun-title") {
@@ -503,6 +509,52 @@ private fun LessonItem(row: LessonRow) {
     }
 }
 
+/** Позашкільні заняття: час, назва, місце; поточне — підсвічене, минулі — сірі з галочкою. */
+@Composable
+private fun AfterSchoolCard(rows: List<ClubRow>) {
+    val c = RozkladTheme.colors
+    GameSurface {
+        Column(Modifier.fillMaxWidth().padding(10.dp)) {
+            rows.forEach { row ->
+                val current = row.state == LessonState.CURRENT
+                val past = row.state == LessonState.PAST
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (current) c.glow else Color.Transparent)
+                        .padding(horizontal = 8.dp, vertical = 9.dp)
+                        .semantics(mergeDescendants = true) { },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(row.emoji, style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        row.time,
+                        modifier = Modifier.padding(start = 10.dp).width(92.dp),
+                        style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum"),
+                        color = if (current) MaterialTheme.colorScheme.onSurface else c.muted,
+                    )
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            row.title,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = if (past) FontWeight.SemiBold else FontWeight.ExtraBold,
+                            color = if (past) c.muted else MaterialTheme.colorScheme.onSurface,
+                        )
+                        if (row.place.isNotBlank()) {
+                            Text("📍 ${row.place}", style = MaterialTheme.typography.labelSmall, color = c.muted, maxLines = 1)
+                        }
+                    }
+                    when {
+                        current -> Pill("ЗАРАЗ", color = c.accent, contentColor = Color.White)
+                        past -> Text("✓", color = c.positive, fontWeight = FontWeight.Black)
+                    }
+                }
+            }
+        }
+    }
+}
+
 /** Частка висоти картки під «траву» в стилі «Блоки». */
 private const val GRASS = 0.12f
 
@@ -534,7 +586,7 @@ private fun BreakItem(minutes: Long, now: Boolean, past: Boolean) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Backpack(subjects: List<String>, isToday: Boolean) {
+private fun Backpack(subjects: List<String>, isToday: Boolean, clubs: List<ClubBagItem>) {
     GameSurface {
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
             Text(
@@ -550,6 +602,19 @@ private fun Backpack(subjects: List<String>, isToday: Boolean) {
                     val info = Timetable.subject(s)
                     Pill("${info.emoji} $s", color = Color(info.color), contentColor = Color.White)
                 }
+            }
+            // Речі для занять — окремими рядками: «що взяти» буває довгим.
+            clubs.forEach { c ->
+                Text(
+                    buildString {
+                        append("${c.emoji} ${c.title}")
+                        c.day?.let { append(" ($it)") }
+                        append(": ${c.bring}")
+                    },
+                    Modifier.padding(top = 8.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
         }
     }
