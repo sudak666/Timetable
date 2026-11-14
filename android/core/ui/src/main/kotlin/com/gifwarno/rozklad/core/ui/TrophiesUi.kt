@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.gifwarno.rozklad.core.designsystem.component.FitText
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.component.outlineWidth
 import com.gifwarno.rozklad.core.designsystem.component.outlinedBackground
@@ -86,7 +87,7 @@ private fun RoadTile(step: RoadStep) {
                     is TrophyReward.Accent -> Box(Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(Color(r.color)))
                 }
             }
-            Text("Рівень ${step.level}", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 4.dp))
+            FitText("Рівень ${step.level}", Modifier.padding(top = 4.dp), style = MaterialTheme.typography.labelLarge)
             Text(
                 when {
                     step.got -> "✓ відкрито"

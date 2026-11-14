@@ -347,7 +347,7 @@ fun Pill(
     color: Color = RozkladTheme.colors.soft,
     contentColor: Color = RozkladTheme.colors.muted,
 ) {
-    Text(
+    FitText(
         text,
         modifier = modifier.clip(RoundedCornerShape(50)).background(color).padding(horizontal = 10.dp, vertical = 4.dp),
         color = contentColor,
@@ -488,7 +488,7 @@ fun RowScope.GameNavItem(selected: Boolean, onClick: () -> Unit, icon: ImageVect
     ) {
         val tint = if (selected) Color.White else c.muted
         Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(24.dp).scale(scale))
-        Text(label, color = tint, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+        FitText(label, color = tint, style = MaterialTheme.typography.labelMedium)
     }
 }
 

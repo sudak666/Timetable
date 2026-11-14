@@ -136,7 +136,7 @@ fun <T> GameSegmented(
                 depth = 3.dp,
                 onClick = { onSelect(value) },
             ) {
-                Text(
+                FitText(
                     label,
                     Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 4.dp),
                     style = MaterialTheme.typography.labelLarge,
@@ -161,15 +161,12 @@ fun StatTile(
         modifier.clip(RoundedCornerShape(14.dp)).background(background).padding(horizontal = 8.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
+        FitText(
             value,
-            style = MaterialTheme.typography.titleMedium,
-            fontFamily = GameFont,
-            fontWeight = FontWeight.Normal,
+            style = MaterialTheme.typography.titleMedium.copy(fontFamily = GameFont, fontWeight = FontWeight.Normal),
             color = color,
-            maxLines = 1,
         )
-        Text(label, style = MaterialTheme.typography.labelSmall, color = LocalContentColor.current.copy(alpha = 0.8f))
+        FitText(label, style = MaterialTheme.typography.labelSmall, color = LocalContentColor.current.copy(alpha = 0.8f))
     }
 }
 
