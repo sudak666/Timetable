@@ -17,6 +17,7 @@ object Clubs {
         ClubKind("🏀", "Баскетбол"),
         ClubKind("🏐", "Волейбол"),
         ClubKind("🏊", "Плавання"),
+        ClubKind("🚴", "Велоспорт"),
         ClubKind("🥋", "Бойові мистецтва"),
         ClubKind("🤸", "Гімнастика"),
         ClubKind("🎾", "Теніс"),
