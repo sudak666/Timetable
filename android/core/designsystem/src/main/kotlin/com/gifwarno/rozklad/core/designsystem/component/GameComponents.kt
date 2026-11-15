@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -468,9 +469,16 @@ fun GameNavBar(modifier: Modifier = Modifier, content: @Composable RowScope.() -
     }
 }
 
-/** Вкладка навігації: обрана — залита акцентом, інші — приглушені. */
+/** Вкладка навігації: обрана — залита акцентом, інші — приглушені; [badge] > 0 — червоне число над іконкою (як .nb у вебі). */
 @Composable
-fun RowScope.GameNavItem(selected: Boolean, onClick: () -> Unit, icon: ImageVector, label: String, modifier: Modifier = Modifier) {
+fun RowScope.GameNavItem(
+    selected: Boolean,
+    onClick: () -> Unit,
+    icon: ImageVector,
+    label: String,
+    modifier: Modifier = Modifier,
+    badge: Int = 0,
+) {
     val c = RozkladTheme.colors
     val haptics = LocalHapticFeedback.current
     val scale by animateFloatAsState(if (selected) 1.1f else 1f, spring(dampingRatio = 0.45f, stiffness = 600f), label = "nav")
@@ -487,10 +495,34 @@ fun RowScope.GameNavItem(selected: Boolean, onClick: () -> Unit, icon: ImageVect
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         val tint = if (selected) Color.White else c.muted
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(24.dp).scale(scale))
+        Box {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(24.dp).scale(scale))
+            if (badge > 0) {
+                val text = if (badge > MAX_BADGE) "$MAX_BADGE+" else badge.toString()
+                Text(
+                    text,
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = 12.dp, y = (-6).dp)
+                        .defaultMinSize(minWidth = 18.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(BADGE_RED)
+                        .padding(horizontal = 5.dp)
+                        .semantics { contentDescription = "$badge чекають підтвердження" },
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                )
+            }
+        }
         FitText(label, color = tint, style = MaterialTheme.typography.labelMedium)
     }
 }
+
+/** Червоний бейдж однаковий у світлій і темній темі: білий текст на ньому має контраст 5,4:1. */
+private val BADGE_RED = Color(0xFFC0392B)
+private const val MAX_BADGE = 99
 
 /**
  * Заливка з обведенням без світлого «ореолу» на краю (пара clip + border його дає):

@@ -8,6 +8,7 @@ import com.gifwarno.rozklad.core.data.repository.SessionRepository
 import com.gifwarno.rozklad.core.datastore.ThemeMode
 import com.gifwarno.rozklad.core.datastore.UserPreferencesDataSource
 import com.gifwarno.rozklad.core.designsystem.theme.GameStyle
+import com.gifwarno.rozklad.core.domain.Rewards
 import com.gifwarno.rozklad.core.domain.Trophies
 import com.gifwarno.rozklad.core.model.SessionState
 import com.gifwarno.rozklad.core.model.SyncStatus
@@ -50,6 +51,12 @@ class MainActivityViewModel @Inject constructor(
     val hasFamilyData: StateFlow<Boolean> = active.context
         .map { it != null }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
+
+    /** Число на вкладці «Оцінки»: скільки оцінок чекає підтвердження. */
+    val gradesBadge: StateFlow<Int> = active.context
+        .map { ctx -> ctx?.let { Rewards.pendingBadge(it.data.grades, it.user.id, it.isParent) } ?: 0 }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), 0)
 
     /** Колір, який людина обрала собі (school_members.theme), — як у вебі; null — фірмовий. */
     val accent: StateFlow<Long?> = active.context

@@ -55,6 +55,7 @@ class MainActivity : ComponentActivity() {
             val alert by viewModel.alertBanner.collectAsStateWithLifecycle()
             val accent by viewModel.accent.collectAsStateWithLifecycle()
             val style by viewModel.gameStyle.collectAsStateWithLifecycle()
+            val gradesBadge by viewModel.gradesBadge.collectAsStateWithLifecycle()
             val dark = when (theme) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 ThemeMode.LIGHT -> false
@@ -68,6 +69,7 @@ class MainActivity : ComponentActivity() {
                     actions = actions,
                     alert = alert,
                     deepLink = deepLink.value,
+                    gradesBadge = gradesBadge,
                 )
             }
         }
