@@ -97,6 +97,7 @@ fun RozkladApp(
     modifier: Modifier = Modifier,
     alert: AlertBannerText? = null,
     deepLink: String? = null,
+    gradesBadge: Int = 0,
 ) {
     ArenaBackground(modifier.fillMaxSize()) {
         when (session) {
@@ -113,7 +114,7 @@ fun RozkladApp(
                 modifier = Modifier.safeDrawingPadding(),
             )
 
-            is SessionState.Ready -> MainShell(sync, hasFamilyData, actions, alert, deepLink)
+            is SessionState.Ready -> MainShell(sync, hasFamilyData, actions, alert, deepLink, gradesBadge)
         }
     }
 }
@@ -125,6 +126,7 @@ private fun MainShell(
     actions: AppActions,
     alert: AlertBannerText?,
     deepLink: String?,
+    gradesBadge: Int,
     modifier: Modifier = Modifier,
 ) {
     LifecycleResumeEffect(Unit) {
@@ -214,6 +216,7 @@ private fun MainShell(
                         },
                         icon = if (selected) dest.selectedIcon else dest.icon,
                         label = dest.label,
+                        badge = if (dest == TopLevelDestination.GRADES) gradesBadge else 0,
                     )
                 }
             }

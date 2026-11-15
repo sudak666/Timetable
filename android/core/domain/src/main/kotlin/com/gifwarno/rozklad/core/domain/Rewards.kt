@@ -2,6 +2,7 @@ package com.gifwarno.rozklad.core.domain
 
 import com.gifwarno.rozklad.core.model.Challenge
 import com.gifwarno.rozklad.core.model.Grade
+import com.gifwarno.rozklad.core.model.GradeStatus
 import com.gifwarno.rozklad.core.model.LedgerEntry
 import com.gifwarno.rozklad.core.model.LedgerKind
 import com.gifwarno.rozklad.core.model.RewardSettings
@@ -150,6 +151,10 @@ object Rewards {
     fun xpOf(approved: List<Grade>): Int = approved.sumOf { it.value }
 
     fun levelOf(xp: Int): Int = xp / XP_PER_LEVEL + 1
+
+    /** Лічильник на вкладці «Оцінки» (як navBadges у вебі): батькам — усі непідтверджені, дитині — лише свої. */
+    fun pendingBadge(grades: List<Grade>, userId: String, isParent: Boolean): Int =
+        grades.count { it.status == GradeStatus.PENDING && (isParent || it.childId == userId) }
 }
 
 data class AutoReward(val id: String, val date: LocalDate, val createdAt: Instant, val amount: Int, val note: String, val icon: String)

@@ -125,4 +125,16 @@ class RewardsTest {
         assertEquals(0, Rewards.currentRun(a, s))
         assertEquals(3, Rewards.bestTenRun(a))
     }
+
+    @Test
+    fun `лічильник непідтверджених — батькам усі, дитині свої`() {
+        val grades = listOf(
+            g(10, "2026-11-10").copy(status = GradeStatus.PENDING),
+            g(8, "2026-11-11").copy(status = GradeStatus.PENDING, childId = "sister"),
+            g(12, "2026-11-12"),
+        )
+        assertEquals(2, Rewards.pendingBadge(grades, userId = "mom", isParent = true))
+        assertEquals(1, Rewards.pendingBadge(grades, userId = "k", isParent = false))
+        assertEquals(0, Rewards.pendingBadge(emptyList(), userId = "mom", isParent = true))
+    }
 }
