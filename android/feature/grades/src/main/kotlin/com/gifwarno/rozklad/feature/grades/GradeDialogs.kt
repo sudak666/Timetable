@@ -14,10 +14,15 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -40,7 +45,11 @@ import com.gifwarno.rozklad.core.domain.Rewards
 import com.gifwarno.rozklad.core.domain.Timetable
 import com.gifwarno.rozklad.core.model.Grade
 import com.gifwarno.rozklad.core.ui.gradeColor
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 /** Предмет → дата → натиснув оцінку = збережено. Три дотики, як у вебі. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,6 +57,7 @@ import java.time.LocalDate
 internal fun AddGradeSheet(onDismiss: () -> Unit, onAdd: (String, Int, LocalDate) -> Unit) {
     var subject by rememberSaveable { mutableStateOf(Timetable.SUBJECTS.first().name) }
     var daysAgo by rememberSaveable { mutableLongStateOf(0L) }
+    var picking by rememberSaveable { mutableStateOf(false) }
     val c = RozkladTheme.colors
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
@@ -83,10 +93,17 @@ internal fun AddGradeSheet(onDismiss: () -> Unit, onAdd: (String, Int, LocalDate
                     }
                 }
             }
+            // Четверта кнопка — календар для давніших днів; коли дату вибрано, на кнопці стоїть сама дата.
+            val older = daysAgo > LAST_QUICK_DAY
             GameSegmented(
-                options = listOf(0L to "Сьогодні", 1L to "Вчора", 2L to "Позавчора"),
-                selected = daysAgo,
-                onSelect = { daysAgo = it },
+                options = listOf(
+                    0L to "Сьогодні",
+                    1L to "Вчора",
+                    2L to "Позавчора",
+                    OTHER_DAY to if (older) "🗓️ ${LocalDate.now().minusDays(daysAgo).format(SHORT_DATE)}" else "🗓️ Інша",
+                ),
+                selected = if (older) OTHER_DAY else daysAgo,
+                onSelect = { if (it == OTHER_DAY) picking = true else daysAgo = it },
             )
             Text("Оцінка · ${Timetable.subject(subject).emoji} $subject", style = MaterialTheme.typography.labelLarge, color = c.muted)
             Grade.VALUES.chunked(GRADE_COLUMNS).forEach { row ->
@@ -117,8 +134,53 @@ internal fun AddGradeSheet(onDismiss: () -> Unit, onAdd: (String, Int, LocalDate
             }
         }
     }
+    // Після аркуша — щоб календар відкривався поверх нього.
+    if (picking) {
+        PastDateDialog(
+            initial = LocalDate.now().minusDays(daysAgo),
+            onDismiss = { picking = false },
+            onPick = {
+                daysAgo = ChronoUnit.DAYS.between(it, LocalDate.now()).coerceIn(0L, MAX_DAYS_BACK)
+                picking = false
+            },
+        )
+    }
 }
 
+/** Календар лише з минулими днями (не далі за [MAX_DAYS_BACK]) — оцінки наперед не буває. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PastDateDialog(initial: LocalDate, onDismiss: () -> Unit, onPick: (LocalDate) -> Unit) {
+    val today = LocalDate.now()
+    val earliest = today.minusDays(MAX_DAYS_BACK)
+    val state = rememberDatePickerState(
+        initialSelectedDateMillis = initial.toUtcMillis(),
+        yearRange = earliest.year..today.year,
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis.toUtcDate() in earliest..today
+
+            override fun isSelectableYear(year: Int): Boolean = year in earliest.year..today.year
+        },
+    )
+    val picked = state.selectedDateMillis?.toUtcDate()
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = { picked?.let(onPick) }, enabled = picked != null) { Text("Вибрати") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Скасувати") } },
+    ) {
+        DatePicker(state = state, title = { Text("Дата оцінки", Modifier.padding(start = 24.dp, top = 16.dp)) })
+    }
+}
+
+// DatePicker рахує дні в UTC-опівночі.
+private fun LocalDate.toUtcMillis(): Long = atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+
+private fun Long.toUtcDate(): LocalDate = Instant.ofEpochMilli(this).atZone(ZoneOffset.UTC).toLocalDate()
+
+private const val LAST_QUICK_DAY = 2L
+private const val OTHER_DAY = -1L
+private const val MAX_DAYS_BACK = 60L
+private val SHORT_DATE = DateTimeFormatter.ofPattern("dd.MM")
 private const val SUBJECT_ROWS = 3
 private const val SUBJECT_ROW_DP = 40
 private const val GRADE_COLUMNS = 6
