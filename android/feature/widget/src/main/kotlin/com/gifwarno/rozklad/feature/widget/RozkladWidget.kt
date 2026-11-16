@@ -231,9 +231,15 @@ private fun LessonRow(l: WidgetLesson, height: Float, showTime: Boolean) {
     val current = l.state == WidgetLessonState.CURRENT
     val past = l.state == WidgetLessonState.PAST
     val s = RowSize.of(height, showTime)
-    val row = GlanceModifier.fillMaxWidth().height(height.dp).padding(horizontal = 4.dp)
+    // Фон задаємо ЗАВЖДИ (прозорий для звичайних рядків): список у віджеті перевикористовує
+    // старі рядки, і без явного фону підсвітка минулого «поточного» уроку лишалася висіти.
     Row(
-        if (current) row.background(Highlight).cornerRadius(10.dp) else row,
+        GlanceModifier
+            .fillMaxWidth()
+            .height(height.dp)
+            .background(if (current) Highlight else Transparent)
+            .cornerRadius(10.dp)
+            .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
@@ -272,6 +278,7 @@ private fun LessonRow(l: WidgetLesson, height: Float, showTime: Boolean) {
 private val Card = ColorProvider(Color(0xFF1A1B36))
 private val Line = ColorProvider(Color(0xFF2A2C4F))
 private val Highlight = ColorProvider(Color(0xFF2E2A5C))
+private val Transparent = ColorProvider(Color.Transparent)
 private val Muted = ColorProvider(Color(0xFFA3A6CC))
 private val White = ColorProvider(Color.White)
 private val WhiteSoft = ColorProvider(Color(0xE6FFFFFF))
