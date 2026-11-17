@@ -22,7 +22,6 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.Email
-import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.exceptions.HttpRequestException
 import io.github.jan.supabase.exceptions.RestException
 import io.github.jan.supabase.postgrest.from
@@ -33,11 +32,10 @@ import io.ktor.client.plugins.HttpRequestTimeoutException
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -47,22 +45,20 @@ import kotlinx.serialization.json.put
 
 @Singleton
 internal class SupabaseNetworkDataSource @Inject constructor(private val client: SupabaseClient) : RozkladNetworkDataSource {
-    override val authState: Flow<NetworkAuthState> = client.auth.sessionStatus
-        .map { status ->
-            when (status) {
-                is SessionStatus.Initializing -> NetworkAuthState.Initializing
+    override val authState: Flow<NetworkAuthState> = authStates(
+        statuses = client.auth.sessionStatus,
+        storedUser = ::storedUser,
+        userOf = { it.user?.toNetwork() },
+    )
 
-                is SessionStatus.NotAuthenticated -> NetworkAuthState.SignedOut
-
-                // Не вдалося оновити токен (часто — офлайн): лишаємо користувача в застосунку з локальними даними.
-                is SessionStatus.RefreshFailure -> client.auth.currentUserOrNull()?.let { NetworkAuthState.SignedIn(it.toNetwork()) }
-                    ?: NetworkAuthState.SignedOut
-
-                is SessionStatus.Authenticated -> status.session.user?.let { NetworkAuthState.SignedIn(it.toNetwork()) }
-                    ?: NetworkAuthState.SignedOut
-            }
-        }
-        .distinctUntilChanged()
+    /** Сесія, збережена на пристрої (поки Supabase її ще не підняв або не зміг оновити токен). */
+    private suspend fun storedUser(): NetworkUser? = try {
+        client.auth.sessionManager.loadSessionOrNull()?.user?.toNetwork()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+        null
+    }
 
     private fun io.github.jan.supabase.auth.user.UserInfo.toNetwork() = NetworkUser(
         id = id,
