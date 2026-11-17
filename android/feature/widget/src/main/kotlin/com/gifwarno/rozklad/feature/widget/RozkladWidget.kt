@@ -51,6 +51,7 @@ import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import java.time.Clock
 import java.time.LocalDateTime
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
@@ -93,8 +94,17 @@ class RozkladWidget : GlanceAppWidget() {
             val alert = widgetAlertLine(family?.data?.airAlert, clock.instant(), clock.zone)
             // Наступне оновлення — на дзвінку; без даних — повторна спроба скоро, а не опівночі.
             LaunchedEffect(state) {
-                val at = if (state == WidgetState.Loading) now.plusSeconds(RETRY_SECONDS) else nextRefreshAt(now, family?.schedule)
-                WidgetRefreshScheduler.scheduleAt(context, now, at)
+                if (state != WidgetState.Loading) {
+                    WidgetRefreshScheduler.scheduleAt(context, now, nextRefreshAt(now, family?.schedule))
+                    return@LaunchedEffect
+                }
+                // Повтор, що спрацює, поки ця сесія ще жива, лише перемалює той самий стан і нового повтору не дасть —
+                // тож відсуваємо його, доки сесія триває: він спрацює вже після її закриття, у новій.
+                while (true) {
+                    val t = LocalDateTime.now(clock)
+                    WidgetRefreshScheduler.scheduleAt(context, t, t.plusSeconds(RETRY_SECONDS))
+                    delay(RETRY_SECONDS * 1_000 / 2)
+                }
             }
             GlanceTheme { WidgetContent(state, open, alert) }
         }

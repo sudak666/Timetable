@@ -33,6 +33,9 @@ internal object SupabaseModule {
         install(Auth) {
             alwaysAutoRefresh = true
             autoLoadFromStorage = true
+            // Інакше на згортанні застосунку Supabase зупиняє оновлення токена й скидає стан на Initializing:
+            // процес живе далі (віджет, пуші, фонова синхронізація), але без входу — віджет висить на «Завантажую».
+            enableLifecycleCallbacks = false
             // Вхід через Google у браузері: PKCE (код + секрет на пристрої), повернення на <пакет>://login-callback.
             flowType = FlowType.PKCE
             scheme = context.packageName
