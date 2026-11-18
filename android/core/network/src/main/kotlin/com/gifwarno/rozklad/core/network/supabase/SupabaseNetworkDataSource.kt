@@ -32,6 +32,7 @@ import io.ktor.client.plugins.HttpRequestTimeoutException
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -109,12 +110,14 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
     }
 
     override suspend fun deleteAccount() {
+        requireSession()
         client.postgrest.rpc("school_delete_account")
         // Користувача на сервері вже немає — /logout відповів би помилкою, тож чистимо сесію лише локально.
         client.auth.clearSession()
     }
 
     override suspend fun registerPushToken(token: String, alerts: Boolean) {
+        requireSession()
         client.postgrest.rpc(
             "school_register_fcm",
             buildJsonObject {
@@ -128,17 +131,20 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
         client.from("school_fcm_tokens").delete { filter { eq("token", token) } }
     }
 
-    override suspend fun membership(userId: String): NetworkMembership? = client.from("school_members")
-        .select(Columns.list("family_id", "role")) {
-            filter { eq("user_id", userId) }
-            // Якщо сімей кілька — завжди та сама (як у вебі), а не випадкова.
-            order("family_id", Order.ASCENDING)
-            limit(1)
-        }
-        .decodeList<NetworkMembership>()
-        .firstOrNull()
+    override suspend fun membership(userId: String): NetworkMembership? = authed {
+        client.from("school_members")
+            .select(Columns.list("family_id", "role")) {
+                filter { eq("user_id", userId) }
+                // Якщо сімей кілька — завжди та сама (як у вебі), а не випадкова.
+                order("family_id", Order.ASCENDING)
+                limit(1)
+            }
+            .decodeList<NetworkMembership>()
+            .firstOrNull()
+    }
 
     override suspend fun createFamily(familyName: String, parentName: String) {
+        requireSession()
         client.postgrest.rpc(
             "school_create_family",
             buildJsonObject {
@@ -149,6 +155,7 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
     }
 
     override suspend fun joinFamily(code: String, name: String) {
+        requireSession()
         // Невірний код сервер повертає як null, а не винятком: так він рахує невдалі спроби (ліміт — 10 на годину).
         val familyId = client.postgrest.rpc(
             "school_join_family",
@@ -160,15 +167,16 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
         checkNotNull(familyId) { "Невірний код" }
     }
 
-    override suspend fun parentCode(familyId: String): String? = client.postgrest
-        .rpc("school_parent_code", buildJsonObject { put("fid", familyId) })
-        .decodeAsOrNull<String>()
+    override suspend fun parentCode(familyId: String): String? = authed {
+        client.postgrest.rpc("school_parent_code", buildJsonObject { put("fid", familyId) }).decodeAsOrNull<String>()
+    }
 
-    override suspend fun rotateInviteCode(familyId: String): String = client.postgrest
-        .rpc("school_rotate_invite_code", buildJsonObject { put("fid", familyId) })
-        .decodeAs<String>()
+    override suspend fun rotateInviteCode(familyId: String): String = authed {
+        client.postgrest.rpc("school_rotate_invite_code", buildJsonObject { put("fid", familyId) }).decodeAs<String>()
+    }
 
     override suspend fun removeMember(familyId: String, userId: String) {
+        requireSession()
         // RLS мовчки пропускає чужі видалення (0 рядків) — перевіряємо, що рядок справді зник.
         val removed = client.from("school_members").delete {
             select(Columns.list("user_id"))
@@ -180,7 +188,9 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
         check(removed.isNotEmpty()) { "Прибрати учасника можуть лише батьки" }
     }
 
-    override suspend fun snapshot(familyId: String): NetworkSnapshot = coroutineScope {
+    override suspend fun snapshot(familyId: String): NetworkSnapshot = authed { snapshotOf(familyId) }
+
+    private suspend fun snapshotOf(familyId: String): NetworkSnapshot = coroutineScope {
         val family = async {
             client.from("school_families").select(Columns.list("id", "name", "invite_code", "rates", "alert_uid")) {
                 filter { eq("id", familyId) }
@@ -252,8 +262,18 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
             challenges = challenges.await(),
             homework = homework.await(),
             timetables = timetables.await(),
-            alert = familyRow.alertUid?.let { alert(it) },
+            alert = familyRow.alertUid?.let { alertOf(it) },
         )
+    }
+
+    /** Запит до даних лише зі справжньою сесією, а не з публічним ключем — див. [awaitSignedIn]. */
+    private suspend fun requireSession() {
+        if (!awaitSignedIn(client.auth.sessionStatus, SESSION_WAIT)) throw NoSessionException()
+    }
+
+    private suspend fun <T> authed(block: suspend () -> T): T {
+        requireSession()
+        return block()
     }
 
     /** Усі рядки запиту, сторінка за сторінкою, доки сторінка не виявиться неповною. */
@@ -268,15 +288,17 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
         }
     }
 
-    override suspend fun alertLocations(oblastUid: Int?): List<NetworkAlertLocation> =
+    override suspend fun alertLocations(oblastUid: Int?): List<NetworkAlertLocation> = authed {
         client.from("school_alert_locations").select(Columns.list("uid", "name", "kind", "oblast_uid", "raion_uid")) {
             filter {
                 if (oblastUid == null) isIn("kind", listOf("oblast", "city")) else eq("oblast_uid", oblastUid)
             }
             order("name", Order.ASCENDING)
         }.decodeList<NetworkAlertLocation>()
+    }
 
     override suspend fun setAlertRegion(familyId: String, uid: Int?) {
+        requireSession()
         // RLS мовчки пропускає чужі оновлення (0 рядків) — перевіряємо, що зміна справді відбулась.
         val changed = client.from("school_families").update(buildJsonObject { put("alert_uid", uid) }) {
             select(Columns.list("id"))
@@ -285,7 +307,9 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
         check(changed.isNotEmpty()) { "Змінити місце можуть лише батьки" }
     }
 
-    override suspend fun alert(uid: Int): NetworkAlert? = coroutineScope {
+    override suspend fun alert(uid: Int): NetworkAlert? = authed { alertOf(uid) }
+
+    private suspend fun alertOf(uid: Int): NetworkAlert? = coroutineScope {
         val location = async {
             client.from("school_alert_locations").select(Columns.list("uid", "name", "kind", "oblast_uid", "raion_uid")) {
                 filter { eq("uid", uid) }
@@ -300,6 +324,8 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
     }
 
     override suspend fun write(op: NetworkWrite): WriteResult = try {
+        // Без сесії UPDATE «не зачепив би рядків» і зміну відкинуло б назавжди — краще почекати й повторити.
+        requireSession()
         val table = client.from(op.table)
         when (op.kind) {
             WriteKind.INSERT -> {
@@ -382,6 +408,9 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
     }
 
     private companion object {
+        /** Скільки чекати, поки Supabase підніме сесію зі сховища чи оновить токен (повільна мережа). */
+        val SESSION_WAIT = 20.seconds
+
         const val VERSION = "updated_at"
         const val HTTP_CONFLICT = 409
 
@@ -398,3 +427,6 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
         const val EMAIL_CONFIRM_REDIRECT = "https://sudak666.github.io/Timetable/"
     }
 }
+
+/** Сесії ще немає (не піднялась зі сховища, офлайн не оновився токен) — тимчасово, як і відсутність мережі. */
+internal class NoSessionException : IOException("Немає звʼязку з сервером — вхід ще не підтверджено")

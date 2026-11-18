@@ -4,9 +4,12 @@ import com.gifwarno.rozklad.core.network.model.NetworkAuthState
 import com.gifwarno.rozklad.core.network.model.NetworkUser
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.auth.user.UserSession
+import kotlin.time.Duration
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Статус Supabase → стан входу застосунку.
@@ -46,3 +49,16 @@ internal fun authStates(
         emit(state)
     }
 }.distinctUntilChanged()
+
+/**
+ * Чекає справжньої сесії перед запитом до даних.
+ *
+ * [authStates] пускає людину в акаунт ще до того, як Supabase підняв сесію зі сховища чи оновив токен.
+ * Запит у цей момент іде без токена, лише з публічним ключем, і RLS мовчки віддає порожньо: застосунок вирішив би,
+ * що сім'ї немає («Майже готово!»), стер би кеш, а оновлення рядків «не зачепили б нічого» й загубились би.
+ *
+ * @return true — сесія є; false — вийшли або не дочекались (офлайн, токен так і не оновився).
+ */
+internal suspend fun awaitSignedIn(statuses: Flow<SessionStatus>, timeout: Duration): Boolean = withTimeoutOrNull(timeout) {
+    statuses.first { it is SessionStatus.Authenticated || it is SessionStatus.NotAuthenticated }
+} is SessionStatus.Authenticated

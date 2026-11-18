@@ -5,10 +5,16 @@ import com.gifwarno.rozklad.core.network.model.NetworkUser
 import io.github.jan.supabase.auth.status.RefreshFailureCause
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.auth.user.UserSession
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AuthStatesTest {
@@ -58,5 +64,42 @@ class AuthStatesTest {
             listOf(NetworkAuthState.SignedIn(user), NetworkAuthState.SignedOut, NetworkAuthState.Initializing),
             collect(authenticated, SessionStatus.NotAuthenticated(isSignOut = true), SessionStatus.Initializing),
         )
+    }
+
+    // Запит до даних (сім'я, знімок, записи) — лише після справжньої сесії, а не за збереженим користувачем.
+
+    @Test
+    fun `сесія вже є — запит іде одразу`() = runTest {
+        assertTrue(awaitSignedIn(MutableStateFlow<SessionStatus>(authenticated), 20.seconds))
+    }
+
+    @Test
+    fun `сесія ще піднімається зі сховища — запит чекає її, а не йде без токена`() = runTest {
+        val status = MutableStateFlow<SessionStatus>(SessionStatus.Initializing)
+        val ready = async { awaitSignedIn(status, 20.seconds) }
+        delay(1.seconds)
+        assertFalse(ready.isCompleted)
+        status.value = authenticated
+        assertTrue(ready.await())
+    }
+
+    @Test
+    fun `токен не оновився і потім оновився — дочекались`() = runTest {
+        val status = MutableStateFlow<SessionStatus>(offline)
+        val ready = async { awaitSignedIn(status, 20.seconds) }
+        delay(5.seconds)
+        status.value = authenticated
+        assertTrue(ready.await())
+    }
+
+    @Test
+    fun `офлайн і сесії так і немає — запиту не буде`() = runTest {
+        assertFalse(awaitSignedIn(MutableStateFlow<SessionStatus>(offline), 20.seconds))
+        assertFalse(awaitSignedIn(MutableStateFlow<SessionStatus>(SessionStatus.Initializing), 20.seconds))
+    }
+
+    @Test
+    fun `вийшли — запиту не буде`() = runTest {
+        assertFalse(awaitSignedIn(MutableStateFlow<SessionStatus>(SessionStatus.NotAuthenticated(isSignOut = true)), 20.seconds))
     }
 }
