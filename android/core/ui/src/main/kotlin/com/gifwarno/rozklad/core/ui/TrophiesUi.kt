@@ -35,10 +35,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.gifwarno.rozklad.core.designsystem.component.CardTitle
 import com.gifwarno.rozklad.core.designsystem.component.FitText
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
-import com.gifwarno.rozklad.core.designsystem.component.outlineWidth
 import com.gifwarno.rozklad.core.designsystem.component.outlinedBackground
+import com.gifwarno.rozklad.core.designsystem.component.sticker
+import com.gifwarno.rozklad.core.designsystem.component.stickerSlot
+import com.gifwarno.rozklad.core.designsystem.component.stickerTilt
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.domain.Badge
 import com.gifwarno.rozklad.core.domain.RoadStep
@@ -68,37 +71,62 @@ private fun RoadTile(step: RoadStep) {
         step.got -> "Рівень ${step.level}, відкрито"
         else -> "Рівень ${step.level}, відкриється на ${step.xpNeeded} XP"
     }
+    // Відкрите — наліпка, ще закрите — пунктирне місце під неї; наступний рівень — картка з чорнильною обвідкою.
+    if (!step.next) {
+        val shape = RoundedCornerShape(16.dp)
+        val tile = Modifier.width(96.dp).semantics(mergeDescendants = true) { contentDescription = label }
+        Box(
+            if (step.got) {
+                tile.sticker(stickerTilt(step.level), shape).background(lerp(c.gold, Color.White, STICKER_PALE), shape)
+            } else {
+                tile.stickerSlot(shape, c.muted.copy(alpha = SLOT_ALPHA))
+            },
+        ) { RoadTileContent(step) }
+        return
+    }
     GameSurface(
         modifier = Modifier.width(96.dp).semantics(mergeDescendants = true) { contentDescription = label },
-        color = if (step.next) {
-            c.card
-        } else if (step.got) {
-            c.card
-        } else {
-            c.soft
-        },
-        brush = if (step.got) Brush.verticalGradient(listOf(lerp(c.card, c.accent, TINT), c.card)) else null,
-        borderWidth = if (step.next) 3.dp else 2.dp,
-    ) {
-        Column(Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(Modifier.size(44.dp).alpha(if (step.got || step.next) 1f else LOCKED_ALPHA), contentAlignment = Alignment.Center) {
-                when (val r = step.reward) {
-                    is TrophyReward.Avatar -> Text(r.emoji, fontSize = 34.sp)
-                    is TrophyReward.Accent -> Box(Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(Color(r.color)))
-                }
+        outline = 2.5.dp,
+    ) { RoadTileContent(step) }
+}
+
+@Composable
+private fun RoadTileContent(step: RoadStep) {
+    val c = RozkladTheme.colors
+    val onSticker = step.got
+    // Порожнє місце лежить просто на сторінці (не на картці) — колір тексту задаємо явно.
+    val inSlot = !step.got && !step.next
+    Column(Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(44.dp).alpha(if (step.got || step.next) 1f else LOCKED_ALPHA), contentAlignment = Alignment.Center) {
+            when (val r = step.reward) {
+                is TrophyReward.Avatar -> Text(r.emoji, fontSize = 34.sp)
+                is TrophyReward.Accent -> Box(Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(Color(r.color)))
             }
-            FitText("Рівень ${step.level}", Modifier.padding(top = 4.dp), style = MaterialTheme.typography.labelLarge)
-            Text(
-                when {
-                    step.got -> "✓ відкрито"
-                    step.next -> "далі · ${step.xpNeeded} XP"
-                    else -> "🔒 ${step.xpNeeded} XP"
-                },
-                style = MaterialTheme.typography.labelSmall,
-                color = if (step.got) c.positive else c.muted,
-                textAlign = TextAlign.Center,
-            )
         }
+        FitText(
+            "Рівень ${step.level}",
+            Modifier.padding(top = 4.dp),
+            style = MaterialTheme.typography.labelLarge,
+            color = when {
+                onSticker -> STICKER_INK
+                inSlot -> c.muted
+                else -> Color.Unspecified
+            },
+        )
+        Text(
+            when {
+                step.got -> "✓ відкрито"
+                step.next -> "далі · ${step.xpNeeded} XP"
+                else -> "🔒 ${step.xpNeeded} XP"
+            },
+            style = MaterialTheme.typography.labelSmall,
+            color = when {
+                onSticker -> STICKER_INK
+                step.got -> c.positive
+                else -> c.muted
+            },
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -109,31 +137,30 @@ fun BadgesCard(badges: List<Badge>, modifier: Modifier = Modifier) {
     val c = RozkladTheme.colors
     GameSurface(modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
-            Text(
-                "🏅 Досягнення · ${badges.count { it.got }}/${badges.size}",
-                style = MaterialTheme.typography.titleMedium,
-            )
+            CardTitle("Досягнення · ${badges.count { it.got }}/${badges.size}")
             FlowRow(
                 Modifier.padding(top = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                badges.forEach { b ->
+                badges.forEachIndexed { i, b ->
                     val shape = RoundedCornerShape(50)
+                    val text = "${b.emoji} ${b.title}"
+                    val said = b.title + if (b.got) " — отримано" else " — ще ні"
+                    // Отримане — жовта наліпка з білим вирізом, решта — пунктирне місце під неї.
                     Text(
-                        "${b.emoji} ${b.title}",
-                        modifier = Modifier
-                            .outlinedBackground(
-                                if (b.got) Brush.horizontalGradient(listOf(c.gold, Color(0xFFFAB1A0))) else SolidColor(c.soft),
-                                shape,
-                                if (b.got) outlineWidth(2.dp) else 0.dp,
-                                c.ink,
+                        text,
+                        modifier = (
+                            if (b.got) {
+                                Modifier.sticker(stickerTilt(i), shape).background(c.gold, shape)
+                            } else {
+                                Modifier.stickerSlot(shape, c.muted.copy(alpha = SLOT_ALPHA))
+                            }
                             )
                             .padding(horizontal = 12.dp, vertical = 6.dp)
-                            .alpha(if (b.got) 1f else LOCKED_ALPHA)
-                            .semantics { contentDescription = b.title + if (b.got) " — отримано" else " — ще ні" },
+                            .semantics { contentDescription = said },
                         style = MaterialTheme.typography.labelLarge,
-                        color = if (b.got) Color(0xFF1B1C33) else c.muted,
+                        color = if (b.got) STICKER_INK else c.muted,
                     )
                 }
             }
@@ -170,13 +197,8 @@ fun LookPicker(
                     shape = RoundedCornerShape(14.dp),
                     color = if (on) lerp(c.card, c.accent, TINT) else c.soft,
                     depth = if (open) 3.dp else 0.dp,
-                    borderWidth = if (on) {
-                        3.dp
-                    } else if (open) {
-                        2.dp
-                    } else {
-                        0.dp
-                    },
+                    // Обраний аватар — обвідка чорнилом.
+                    outline = if (on) SELECTED_RING else 0.dp,
                     onClick = if (open) ({ onAvatar(a) }) else null,
                 ) {
                     Box(Modifier.size(56.dp), contentAlignment = Alignment.Center) {
@@ -207,7 +229,9 @@ fun LookPicker(
                     shape = CircleShape,
                     color = color,
                     depth = if (open) 3.dp else 0.dp,
-                    borderWidth = if (on) 4.dp else 2.dp,
+                    // Обраний колір — жовте кільце маркера: видно на будь-якому кольорі, і світлому, і темному.
+                    outline = if (on) SELECTED_RING else 0.dp,
+                    outlineColor = c.gold,
                     onClick = if (open) ({ onAccent(hex) }) else null,
                     onClickLabel = "Вибрати колір",
                 ) {
@@ -227,3 +251,15 @@ private const val LOCKED_ALPHA = 0.45f
 
 /** Непрозорий відтінок акценту: напівпрозорий фон пропускав би чорну «тверду» тінь. */
 private const val TINT = 0.28f
+
+/** Текст на жовтій наліпці — графіт (і вдень, і на дошці). */
+private val STICKER_INK = Color(0xFF23262F)
+
+/** Наліпка рівня — блідо-жовта, щоб емодзі й підписи на ній читались. */
+private const val STICKER_PALE = 0.55f
+
+/** Пунктир порожнього місця — ледь помітний. */
+private const val SLOT_ALPHA = 0.6f
+
+/** Обвідка обраного аватара чи кольору. */
+private val SELECTED_RING = 3.dp

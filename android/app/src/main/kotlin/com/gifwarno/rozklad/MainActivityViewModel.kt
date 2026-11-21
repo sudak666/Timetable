@@ -7,7 +7,6 @@ import com.gifwarno.rozklad.core.data.repository.FamilyRepository
 import com.gifwarno.rozklad.core.data.repository.SessionRepository
 import com.gifwarno.rozklad.core.datastore.ThemeMode
 import com.gifwarno.rozklad.core.datastore.UserPreferencesDataSource
-import com.gifwarno.rozklad.core.designsystem.theme.GameStyle
 import com.gifwarno.rozklad.core.domain.Rewards
 import com.gifwarno.rozklad.core.domain.Trophies
 import com.gifwarno.rozklad.core.model.SessionState
@@ -34,10 +33,6 @@ class MainActivityViewModel @Inject constructor(
     private val clock: Clock,
 ) : ViewModel() {
     val sessionState: StateFlow<SessionState> = session.session
-
-    val gameStyle: StateFlow<GameStyle> = preferences.preferences
-        .map { GameStyle.of(it.gameStyle) }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, GameStyle.CLASSIC)
 
     val themeMode: StateFlow<ThemeMode> = preferences.preferences
         .map { it.themeMode }

@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -21,10 +20,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
+/** Очікування даних: живе лого «12» пишеться знову й знову — замість звичайного крутильця. */
 @Composable
 fun LoadingState(modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator()
+        BrandMark(size = 88.dp, loop = true)
     }
 }
 
@@ -37,7 +37,7 @@ fun EmptyState(
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
 ) {
-    // Картка посередині — читається і на тлі «арени», і на звичайному.
+    // Картка посередині — читається і на папері, і на дошці.
     Box(modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
         GameSurface {
             Column(

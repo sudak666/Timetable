@@ -64,6 +64,8 @@ sealed interface GradesUiState {
         val pending: List<GradeItem>,
         val recent: List<GradeItem>,
         val rates: Map<Int, Int>,
+        /** Сьогодні за годинником застосунку (у демо-режимі — підмінений), а не системним. */
+        val today: LocalDate,
         /** Шлях нагород за рівнями й досягнення — як у вебі. */
         val road: List<RoadStep> = emptyList(),
         val challenges: List<ChallengeItem> = emptyList(),
@@ -124,6 +126,7 @@ class GradesViewModel @Inject constructor(
             pending = all.filter { it.status == GradeStatus.PENDING }.map(::item),
             recent = approved.take(RECENT_LIMIT).map(::item),
             rates = rates,
+            today = today,
             road = Trophies.road(level),
             challenges = challenges.sortedByDescending { it.endDate }.map { c ->
                 val hits = Rewards.challengeHits(c, approved.sortedWith(Rewards.byTime)).size

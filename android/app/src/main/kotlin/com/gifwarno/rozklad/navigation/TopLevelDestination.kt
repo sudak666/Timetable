@@ -11,6 +11,7 @@ import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material.icons.outlined.Today
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation3.runtime.NavKey
+import com.gifwarno.rozklad.core.designsystem.component.NavMotion
 import kotlinx.serialization.Serializable
 
 /* Ключі навігації (Navigation 3). Серіалізуються — стек переживає смерть процесу. */
@@ -29,9 +30,16 @@ import kotlinx.serialization.Serializable
 /** Вибір місця для повітряних тривог — відкривається поверх «Профілю». */
 @Serializable data object AlertRegionKey : NavKey
 
-enum class TopLevelDestination(val key: NavKey, val label: String, val selectedIcon: ImageVector, val icon: ImageVector) {
-    TODAY(TodayKey, "Сьогодні", Icons.Filled.Today, Icons.Outlined.Today),
-    GRADES(GradesKey, "Оцінки", Icons.Filled.Star, Icons.Outlined.StarOutline),
-    HOMEWORK(HomeworkKey, "Домашка", Icons.AutoMirrored.Filled.MenuBook, Icons.AutoMirrored.Outlined.MenuBook),
-    PROFILE(ProfileKey, "Профіль", Icons.Filled.Person, Icons.Outlined.Person),
+/** Вкладка нижнього меню; [motion] — її маленька анімація при натисканні (за змістом значка). */
+enum class TopLevelDestination(
+    val key: NavKey,
+    val label: String,
+    val selectedIcon: ImageVector,
+    val icon: ImageVector,
+    val motion: NavMotion,
+) {
+    TODAY(TodayKey, "Сьогодні", Icons.Filled.Today, Icons.Outlined.Today, NavMotion.FLIP),
+    GRADES(GradesKey, "Оцінки", Icons.Filled.Star, Icons.Outlined.StarOutline, NavMotion.SPIN),
+    HOMEWORK(HomeworkKey, "Домашка", Icons.AutoMirrored.Filled.MenuBook, Icons.AutoMirrored.Outlined.MenuBook, NavMotion.HOP),
+    PROFILE(ProfileKey, "Профіль", Icons.Filled.Person, Icons.Outlined.Person, NavMotion.WAVE),
 }

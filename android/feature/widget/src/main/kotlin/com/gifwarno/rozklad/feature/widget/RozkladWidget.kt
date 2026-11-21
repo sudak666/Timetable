@@ -285,11 +285,11 @@ private fun LessonRow(l: WidgetLesson, height: Float, showTime: Boolean) {
 }
 
 // Кольори 1:1 з темною темою застосунку (designsystem Theme.kt).
-private val Card = ColorProvider(Color(0xFF1A1B36))
-private val Line = ColorProvider(Color(0xFF2A2C4F))
-private val Highlight = ColorProvider(Color(0xFF2E2A5C))
+private val Card = ColorProvider(Color(0xFF20302A))
+private val Line = ColorProvider(Color(0xFF2B3D36))
+private val Highlight = ColorProvider(Color(0xFF3B4426))
 private val Transparent = ColorProvider(Color.Transparent)
-private val Muted = ColorProvider(Color(0xFFA3A6CC))
+private val Muted = ColorProvider(Color(0xFFB7C2BB))
 private val White = ColorProvider(Color.White)
 private val WhiteSoft = ColorProvider(Color(0xE6FFFFFF))
 private val AlertYellow = ColorProvider(Color(0xFFFFE08A))

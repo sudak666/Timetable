@@ -39,7 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gifwarno.rozklad.core.designsystem.component.GameSegmented
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
-import com.gifwarno.rozklad.core.designsystem.theme.GameFont
+import com.gifwarno.rozklad.core.designsystem.theme.Nunito
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.domain.Rewards
 import com.gifwarno.rozklad.core.domain.Timetable
@@ -54,7 +54,7 @@ import java.time.temporal.ChronoUnit
 /** Предмет → дата → натиснув оцінку = збережено. Три дотики, як у вебі. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun AddGradeSheet(onDismiss: () -> Unit, onAdd: (String, Int, LocalDate) -> Unit) {
+internal fun AddGradeSheet(today: LocalDate, onDismiss: () -> Unit, onAdd: (String, Int, LocalDate) -> Unit) {
     var subject by rememberSaveable { mutableStateOf(Timetable.SUBJECTS.first().name) }
     var daysAgo by rememberSaveable { mutableLongStateOf(0L) }
     var picking by rememberSaveable { mutableStateOf(false) }
@@ -64,7 +64,7 @@ internal fun AddGradeSheet(onDismiss: () -> Unit, onAdd: (String, Int, LocalDate
             Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 16.dp).navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text("⭐ Нова оцінка", style = MaterialTheme.typography.titleLarge)
+            Text("Нова оцінка", style = MaterialTheme.typography.titleLarge)
             Text("Предмет", style = MaterialTheme.typography.labelLarge, color = c.muted)
             // Три рядки з горизонтальною прокруткою — усі предмети поруч, а оцінки лишаються на екрані.
             LazyHorizontalGrid(
@@ -80,7 +80,6 @@ internal fun AddGradeSheet(onDismiss: () -> Unit, onAdd: (String, Int, LocalDate
                         color = if (on) Color(s.color) else c.soft,
                         contentColor = if (on) Color.White else MaterialTheme.colorScheme.onSurface,
                         depth = if (on) 3.dp else 0.dp,
-                        borderWidth = if (on) 2.dp else 0.dp,
                         onClick = { subject = s.name },
                         modifier = Modifier.semantics { selected = on },
                     ) {
@@ -100,7 +99,7 @@ internal fun AddGradeSheet(onDismiss: () -> Unit, onAdd: (String, Int, LocalDate
                     0L to "Сьогодні",
                     1L to "Вчора",
                     2L to "Позавчора",
-                    OTHER_DAY to if (older) "🗓️ ${LocalDate.now().minusDays(daysAgo).format(SHORT_DATE)}" else "🗓️ Інша",
+                    OTHER_DAY to if (older) "🗓️ ${today.minusDays(daysAgo).format(SHORT_DATE)}" else "🗓️ Інша",
                 ),
                 selected = if (older) OTHER_DAY else daysAgo,
                 onSelect = { if (it == OTHER_DAY) picking = true else daysAgo = it },
@@ -115,13 +114,13 @@ internal fun AddGradeSheet(onDismiss: () -> Unit, onAdd: (String, Int, LocalDate
                             color = gradeColor(v),
                             contentColor = Color.White,
                             depth = 4.dp,
-                            onClick = { onAdd(subject, v, LocalDate.now().minusDays(daysAgo)) },
+                            onClick = { onAdd(subject, v, today.minusDays(daysAgo)) },
                             onClickLabel = "Поставити ${Rewards.gradeLabel(v)}",
                         ) {
                             Text(
                                 Rewards.gradeLabel(v),
                                 Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                                fontFamily = GameFont,
+                                fontFamily = Nunito,
                                 fontSize = if (v == Grade.PASS) 15.sp else 22.sp,
                                 textAlign = TextAlign.Center,
                                 maxLines = 1,
@@ -137,10 +136,11 @@ internal fun AddGradeSheet(onDismiss: () -> Unit, onAdd: (String, Int, LocalDate
     // Після аркуша — щоб календар відкривався поверх нього.
     if (picking) {
         PastDateDialog(
-            initial = LocalDate.now().minusDays(daysAgo),
+            initial = today.minusDays(daysAgo),
+            today = today,
             onDismiss = { picking = false },
             onPick = {
-                daysAgo = ChronoUnit.DAYS.between(it, LocalDate.now()).coerceIn(0L, MAX_DAYS_BACK)
+                daysAgo = ChronoUnit.DAYS.between(it, today).coerceIn(0L, MAX_DAYS_BACK)
                 picking = false
             },
         )
@@ -150,8 +150,7 @@ internal fun AddGradeSheet(onDismiss: () -> Unit, onAdd: (String, Int, LocalDate
 /** Календар лише з минулими днями (не далі за [MAX_DAYS_BACK]) — оцінки наперед не буває. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PastDateDialog(initial: LocalDate, onDismiss: () -> Unit, onPick: (LocalDate) -> Unit) {
-    val today = LocalDate.now()
+private fun PastDateDialog(initial: LocalDate, today: LocalDate, onDismiss: () -> Unit, onPick: (LocalDate) -> Unit) {
     val earliest = today.minusDays(MAX_DAYS_BACK)
     val state = rememberDatePickerState(
         initialSelectedDateMillis = initial.toUtcMillis(),

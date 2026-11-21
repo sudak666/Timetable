@@ -1,6 +1,5 @@
 package com.gifwarno.rozklad.core.designsystem.component
 
-import android.provider.Settings
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
@@ -15,7 +14,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import kotlin.math.PI
 import kotlin.math.sin
@@ -33,14 +31,15 @@ private class Piece(
     val color: Color,
 )
 
+/** Барви «Щоденника»: маркер, червона ручка, чорнило, зелена й блакитна крейда, папір. */
 private val CONFETTI_COLORS = listOf(
-    Color(0xFFFDCB6E),
-    Color(0xFFFD79A8),
-    Color(0xFF6C5CE7),
-    Color(0xFF00B894),
-    Color(0xFF0984E3),
-    Color(0xFFE17055),
-    Color(0xFFFFFFFF),
+    Color(0xFFFFE14A),
+    Color(0xFFC8321F),
+    Color(0xFF1F3FA6),
+    Color(0xFF2FA36B),
+    Color(0xFF6FA8FF),
+    Color(0xFFFF8A7A),
+    Color(0xFFFBF8F0),
 )
 
 private const val PIECES = 110
@@ -53,11 +52,7 @@ private const val DURATION_MS = 3400
 @Composable
 fun ConfettiBurst(burst: Int, modifier: Modifier = Modifier) {
     if (burst <= 0) return
-    val context = LocalContext.current
-    val animationsOn = remember {
-        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
-    }
-    if (!animationsOn) return
+    if (!rememberAnimationsEnabled()) return
     val haptics = LocalHapticFeedback.current
     val progress = remember(burst) { Animatable(0f) }
     val pieces = remember(burst) {

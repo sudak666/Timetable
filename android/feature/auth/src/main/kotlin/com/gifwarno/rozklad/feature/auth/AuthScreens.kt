@@ -36,9 +36,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -49,12 +50,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gifwarno.rozklad.core.designsystem.component.BrandMark
 import com.gifwarno.rozklad.core.designsystem.component.ButtonShape
 import com.gifwarno.rozklad.core.designsystem.component.GameButton
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
-import com.gifwarno.rozklad.core.designsystem.component.StrokeText
-import com.gifwarno.rozklad.core.designsystem.theme.GameFont
+import com.gifwarno.rozklad.core.designsystem.component.TitleText
 import com.gifwarno.rozklad.core.designsystem.theme.GameTitleStyle
+import com.gifwarno.rozklad.core.designsystem.theme.Nunito
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.ui.PrivacyPolicyLink
 
@@ -150,8 +152,10 @@ internal fun AuthScreen(
             ) { Text("Забули пароль?") }
         }
         state.message?.let {
+            // TalkBack сам зачитує помилку чи підказку, щойно вона з'являється (аудит 21.11.2026, Н10).
             Text(
                 it,
+                Modifier.semantics { liveRegion = if (state.messageIsError) LiveRegionMode.Assertive else LiveRegionMode.Polite },
                 color = if (state.messageIsError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center,
             )
@@ -173,17 +177,17 @@ internal fun AuthScreen(
     }
 }
 
-/** «12» великими ігровими цифрами й назва. */
+/** Живе лого «12» (як на іконці застосунку) і назва. */
 @Composable
 private fun Logo() {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        StrokeText(
-            "12",
-            TextStyle(fontFamily = GameFont, fontSize = 96.sp, lineHeight = 100.sp),
-            color = RozkladTheme.colors.gold,
-            strokeWidth = 8.dp,
+        // Назва нижче вже читається вголос — саме лого для TalkBack не дублюємо.
+        BrandMark(size = 112.dp, contentDescription = null)
+        TitleText(
+            "Дванадцятка",
+            GameTitleStyle.copy(fontSize = 30.sp, lineHeight = 36.sp),
+            Modifier.padding(top = 14.dp),
         )
-        StrokeText("Дванадцятка", GameTitleStyle.copy(fontSize = 30.sp, lineHeight = 36.sp), strokeWidth = 5.dp)
     }
 }
 
@@ -208,7 +212,7 @@ internal fun JoinFamilyScreen(
         header = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("🏡", fontSize = 64.sp)
-                StrokeText("Майже готово!", GameTitleStyle.copy(fontSize = 28.sp, lineHeight = 34.sp), strokeWidth = 5.dp)
+                TitleText("Майже готово!", GameTitleStyle.copy(fontSize = 28.sp, lineHeight = 34.sp))
             }
         },
     ) {
@@ -254,7 +258,7 @@ internal fun JoinFamilyScreen(
                 singleLine = true,
                 shape = ButtonShape,
                 colors = fieldColors(),
-                textStyle = MaterialTheme.typography.titleLarge.copy(fontFamily = GameFont, letterSpacing = 3.sp),
+                textStyle = MaterialTheme.typography.titleLarge.copy(fontFamily = Nunito, letterSpacing = 3.sp),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { onJoin() }),
                 modifier = Modifier.fillMaxWidth(),
@@ -277,7 +281,14 @@ internal fun JoinFamilyScreen(
                 leading = "✨",
             )
         }
-        state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center) }
+        state.error?.let {
+            Text(
+                it,
+                Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center,
+            )
+        }
         TextButton(onClick = onSignOut) { Text("Вийти з акаунта") }
     }
 }
@@ -292,7 +303,7 @@ fun UnavailableScreen(message: String, onRetry: () -> Unit, onSignOut: () -> Uni
     }
 }
 
-/** Заголовок на тлі «арени», під ним — картка з формою. */
+/** Заголовок на сторінці, під ним — картка з формою. */
 @Composable
 private fun CenteredForm(header: @Composable () -> Unit, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Column(

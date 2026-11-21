@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,8 +39,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.gifwarno.rozklad.core.designsystem.component.CardTitle
+import com.gifwarno.rozklad.core.designsystem.component.GameDialog
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
-import com.gifwarno.rozklad.core.designsystem.theme.GameFont
+import com.gifwarno.rozklad.core.designsystem.theme.Nunito
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.domain.Timetable
 import com.gifwarno.rozklad.core.model.LedgerKind
@@ -74,7 +75,7 @@ internal fun HistoryCard(items: List<HistoryEntry>, actions: RowActions, onDelet
 
                     is HistoryEntry.Auto -> SimpleRow(
                         icon = e.reward.icon,
-                        iconBg = Brush.linearGradient(listOf(Color(0xFFFD79A8), c.accent)),
+                        iconBg = Brush.linearGradient(listOf(c.accentEnd, c.accent)),
                         title = e.reward.note,
                         subtitle = "${Format.dayShort(e.date)} · нараховано автоматично",
                         amount = Format.money(e.reward.amount),
@@ -153,7 +154,7 @@ internal fun StatsCard(state: GradesUiState.Ready) {
     GameSurface {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             state.compare?.let { m ->
-                Text("🏆 Я проти минулого місяця", style = MaterialTheme.typography.titleSmall)
+                CardTitle("Я проти минулого місяця")
                 // Без оцінок цього місяця порівнювати нема з чим — без стрілки.
                 CompareRow(
                     "Середній бал",
@@ -171,7 +172,7 @@ internal fun StatsCard(state: GradesUiState.Ready) {
                 )
             }
             if (state.rank.isNotEmpty()) {
-                Text("🏆 Рейтинг місяця", style = MaterialTheme.typography.titleSmall)
+                CardTitle("Рейтинг місяця")
                 state.rank.forEachIndexed { i, r ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(listOf("🥇", "🥈", "🥉").getOrElse(i) { "·" }, fontSize = 18.sp)
@@ -186,7 +187,7 @@ internal fun StatsCard(state: GradesUiState.Ready) {
             }
             if (state.subjectAvgs.isNotEmpty()) {
                 if (state.compare != null || state.rank.isNotEmpty()) HorizontalDivider(color = c.line)
-                Text("📈 Середній бал за предметами", style = MaterialTheme.typography.titleSmall)
+                CardTitle("Середній бал за предметами")
                 state.subjectAvgs.forEach { a ->
                     val label = "${Timetable.subject(a.subject).emoji} ${a.subject}"
                     Row(
@@ -205,7 +206,7 @@ internal fun StatsCard(state: GradesUiState.Ready) {
                                     .background(gradeColor(a.avg.roundToInt())),
                             )
                         }
-                        Text("%.1f".format(a.avg), Modifier.padding(start = 8.dp), fontFamily = GameFont)
+                        Text("%.1f".format(a.avg), Modifier.padding(start = 8.dp), fontFamily = Nunito)
                     }
                 }
             }
@@ -245,9 +246,9 @@ private fun CompareRow(label: String, now: String, prev: String, trend: Int) {
 internal fun GoalDialog(title: String, amount: Int, onDismiss: () -> Unit, onSave: (String, Int) -> Unit) {
     var t by rememberSaveable { mutableStateOf(title) }
     var a by rememberSaveable { mutableStateOf(if (amount > 0) amount.toString() else "") }
-    AlertDialog(
+    GameDialog(
         onDismissRequest = onDismiss,
-        title = { Text("🎯 Ціль") },
+        title = { Text("Ціль") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = t, onValueChange = {

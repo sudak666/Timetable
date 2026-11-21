@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="splash_background">#FCF8FF</color>
-    <color name="icon_background">#6C5CE7</color>
+    <!-- Папір «Щоденника» (Brand.Paper): сплеш перетікає в застосунок без спалаху. Уночі — дошка (values-night). -->
+    <color name="splash_background">#FBF8F0</color>
 </resources>

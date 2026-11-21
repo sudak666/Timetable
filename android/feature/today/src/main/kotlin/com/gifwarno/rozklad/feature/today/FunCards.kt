@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
+import com.gifwarno.rozklad.core.designsystem.component.CardTitle
 import com.gifwarno.rozklad.core.designsystem.component.GameButton
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
@@ -52,7 +53,7 @@ internal fun QuizCard(onCorrect: () -> Unit, modifier: Modifier = Modifier) {
             picked = null
         }
     }
-    FunCard("🧠 Вікторина на перерві", modifier) {
+    FunCard("Вікторина", modifier) {
         if (index >= round.size) {
             val verdict = when (right) {
                 QUIZ_SIZE -> "🏆 Ідеально!"
@@ -103,7 +104,7 @@ internal fun QuizCard(onCorrect: () -> Unit, modifier: Modifier = Modifier) {
 @Composable
 internal fun FactCard(modifier: Modifier = Modifier) {
     var i by rememberSaveable { mutableIntStateOf(Random.nextInt(FACTS.size)) }
-    FunCard("🦉 Цікавий факт", modifier) {
+    FunCard("Цікавий факт", modifier) {
         Text(
             FACTS[i % FACTS.size],
             style = MaterialTheme.typography.bodyLarge,
@@ -119,9 +120,9 @@ internal fun FactCard(modifier: Modifier = Modifier) {
 /** «До вихідних» і зірочки за сьогодні (зберігаються на цьому телефоні, як у вебі — у браузері). */
 @Composable
 internal fun WeekendStarsCard(weekend: String, stars: Int, onStar: () -> Unit, modifier: Modifier = Modifier) {
-    FunCard("🌈 До вихідних", modifier) {
+    FunCard("До вихідних", modifier) {
         Text(weekend, style = MaterialTheme.typography.bodyLarge)
-        Text("⭐ Мої зірочки за сьогодні", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 6.dp))
+        Text("Мої зірочки за сьогодні", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 6.dp))
         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
             if (stars > 0) {
                 Text(
@@ -146,7 +147,7 @@ internal fun WeekendStarsCard(weekend: String, stars: Int, onStar: () -> Unit, m
 private fun FunCard(title: String, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     GameSurface(modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Start)
+            CardTitle(title)
             content()
         }
     }
@@ -154,10 +155,10 @@ private fun FunCard(title: String, modifier: Modifier = Modifier, content: @Comp
 
 /** Зірочки дня на цьому пристрої: нова дата — знову з нуля. */
 @Composable
-internal fun rememberStars(): Pair<Int, () -> Unit> {
+internal fun rememberStars(date: LocalDate): Pair<Int, () -> Unit> {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(STARS_PREFS, Context.MODE_PRIVATE) }
-    val today = LocalDate.now().toString()
+    val today = date.toString()
     var stars by remember(today) { mutableIntStateOf(if (prefs.getString(KEY_DAY, null) == today) prefs.getInt(KEY_COUNT, 0) else 0) }
     val add = {
         stars = (stars + 1).coerceAtMost(MAX_STARS)

@@ -17,7 +17,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -38,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -46,11 +46,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.gifwarno.rozklad.core.designsystem.component.ButtonShape
+import com.gifwarno.rozklad.core.designsystem.component.CardTitle
 import com.gifwarno.rozklad.core.designsystem.component.GameButton
+import com.gifwarno.rozklad.core.designsystem.component.GameDialog
 import com.gifwarno.rozklad.core.designsystem.component.GameProgressBar
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.component.Pill
-import com.gifwarno.rozklad.core.designsystem.theme.GameFont
+import com.gifwarno.rozklad.core.designsystem.theme.Nunito
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.domain.Timetable
 import com.gifwarno.rozklad.core.ui.Format
@@ -96,9 +98,9 @@ internal fun ChallengesCard(items: List<ChallengeItem>, isParent: Boolean, onNew
                             ch.hits / ch.need.toFloat(),
                             Modifier.padding(top = 6.dp),
                             fill = if (ch.done) {
-                                Brush.horizontalGradient(listOf(Color(0xFF55EFC4), Color(0xFF00B894)))
+                                SolidColor(c.positive)
                             } else {
-                                Brush.horizontalGradient(listOf(c.accent, c.accentEnd))
+                                Brush.horizontalGradient(listOf(c.gold, c.goldEnd))
                             },
                             height = 10.dp,
                         )
@@ -133,7 +135,7 @@ internal fun ChallengeSheet(onDismiss: () -> Unit, onCreate: (ChallengeDraft) ->
             Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 16.dp).navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("🏅 Новий челендж", style = MaterialTheme.typography.titleLarge)
+            Text("Новий челендж", style = MaterialTheme.typography.titleLarge)
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it.take(MAX_TITLE) },
@@ -158,7 +160,6 @@ internal fun ChallengeSheet(onDismiss: () -> Unit, onCreate: (ChallengeDraft) ->
                         color = if (on) c.accent else c.soft,
                         contentColor = if (on) Color.White else MaterialTheme.colorScheme.onSurface,
                         depth = if (on) 3.dp else 0.dp,
-                        borderWidth = if (on) 2.dp else 0.dp,
                         onClick = { subject = value },
                         modifier = Modifier.semantics { selected = on },
                     ) {
@@ -205,7 +206,7 @@ private fun Stepper(label: String, value: Int, range: IntRange, onChange: (Int) 
         Text(
             "$value",
             Modifier.width(56.dp).semantics { contentDescription = "$label: $value" },
-            fontFamily = GameFont,
+            fontFamily = Nunito,
             style = MaterialTheme.typography.titleLarge,
             textAlign = TextAlign.Center,
         )
@@ -219,7 +220,7 @@ internal fun LedgerDialog(money: Money, balance: Int?, onDismiss: () -> Unit, on
     var amount by rememberSaveable { mutableStateOf("") }
     var note by rememberSaveable { mutableStateOf("") }
     val value = amount.toIntOrNull()?.takeIf { it in 1..MAX_AMOUNT }
-    AlertDialog(
+    GameDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -279,7 +280,7 @@ internal fun IntroCard() {
     if (seen) return
     GameSurface {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("✨ Як це працює", style = MaterialTheme.typography.titleMedium)
+            CardTitle("Як це працює")
             listOf(
                 "➕ Отримав оцінку — постав її тут",
                 "✅ Батьки підтверджують — і гроші йдуть у скарбничку",

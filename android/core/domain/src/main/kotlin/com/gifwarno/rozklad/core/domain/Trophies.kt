@@ -24,7 +24,7 @@ object Trophies {
 
     /** Колір застосунку (зберігається в school_members.theme як «#rrggbb») → рівень. */
     val THEMES: List<Pair<String, Int>> = listOf(
-        "#6c5ce7" to 1,
+        "#1f3fa6" to 1,
         "#0869b5" to 1,
         "#00866b" to 2,
         "#c2185b" to 3,

@@ -127,7 +127,13 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
         )
     }
 
+    /**
+     * Відв'язка пристрою під час виходу. Лише зі справжньою сесією: без токена RLS мовчки видалить 0 рядків.
+     * Чекаємо недовго — інакше «Вийти» без інтернету висіло б. Сам токен на телефоні відкликає PushManager
+     * (FirebaseMessaging.unregister), тож рядок, що лишився, сервер прибере сам за першої ж відмови FCM.
+     */
     override suspend fun unregisterPushToken(token: String) {
+        if (!awaitSignedIn(client.auth.sessionStatus, UNREGISTER_WAIT)) throw NoSessionException()
         client.from("school_fcm_tokens").delete { filter { eq("token", token) } }
     }
 
@@ -410,6 +416,9 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
     private companion object {
         /** Скільки чекати, поки Supabase підніме сесію зі сховища чи оновить токен (повільна мережа). */
         val SESSION_WAIT = 20.seconds
+
+        /** Під час виходу довго не чекаємо сесії — людина вже натиснула «Вийти». */
+        val UNREGISTER_WAIT = 3.seconds
 
         const val VERSION = "updated_at"
         const val HTTP_CONFLICT = 409

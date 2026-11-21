@@ -6,6 +6,9 @@
 | Файл | Шрифт | Автори | Ліцензія |
 |---|---|---|---|
 | `nunito_*.ttf` | Nunito | The Nunito Project Authors | SIL Open Font License 1.1 |
-| `russo_one.ttf` | Russo One | Jovanny Lemonad | SIL Open Font License 1.1 |
+| `caveat_700.ttf` | Caveat (Bold) | The Caveat Project Authors | SIL Open Font License 1.1 |
 
 Текст ліцензії: https://openfontlicense.org/open-font-license-official-text/
+
+`caveat_700.ttf` — інстанс wght=700 зі змінного `Caveat[wght].ttf` (github.com/google/fonts, `ofl/caveat`),
+лише латиниця, latin-ext і кирилиця (з «₴» і «№»). Заголовки «від руки» стилю «Щоденник».

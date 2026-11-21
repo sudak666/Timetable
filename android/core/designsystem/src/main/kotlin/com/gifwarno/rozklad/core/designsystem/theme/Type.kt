@@ -1,8 +1,6 @@
 package com.gifwarno.rozklad.core.designsystem.theme
 
 import androidx.compose.material3.Typography
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -19,27 +17,14 @@ val Nunito = FontFamily(
     Font(R.font.nunito_900, FontWeight.Black),
 )
 
-/** Шрифт стилю «Арена» (як у вебі). */
-internal val RussoOne = FontFamily(Font(R.font.russo_one, FontWeight.Normal))
+/** «Від руки» — заголовки й лого «Щоденника» (Caveat; лише жирний, латиниця й кирилиця). */
+val HandFont = FontFamily(Font(R.font.caveat_700, FontWeight.Bold))
 
 /**
- * «Ігровий» шрифт великих цифр і заголовків — залежить від обраного стилю.
- * «Блоки» — Nunito з обведенням: піксельний Pixelify Sans плутав «д»/«а», «С»/«О» і «5»/«S» (аудит 14.11.2026, В2).
+ * Caveat при тому самому розмірі виглядає дрібнішим (низькі малі літери) — збільшуємо, щоб заголовок
+ * «від руки» мав ту саму вагу на екрані, що й звичайний.
  */
-val GameFont: FontFamily
-    @Composable @ReadOnlyComposable
-    get() = when (LocalGameStyle.current) {
-        GameStyle.ARENA -> RussoOne
-        GameStyle.BLOCKS, GameStyle.CLASSIC -> Nunito
-    }
-
-/** Товщина «ігрового» шрифту: у Nunito — найжирніша, у Russo One — єдина. */
-private val gameWeight: FontWeight
-    @Composable @ReadOnlyComposable
-    get() = when (LocalGameStyle.current) {
-        GameStyle.ARENA -> FontWeight.Normal
-        GameStyle.BLOCKS, GameStyle.CLASSIC -> FontWeight.Black
-    }
+const val HAND_SCALE = 1.3f
 
 private val base = Typography()
 
@@ -47,9 +32,9 @@ private fun TextStyle.n(weight: FontWeight) = copy(fontFamily = Nunito, fontWeig
 
 /** Розміри — системні (масштабуються з налаштуваннями доступності), шрифт і товщина — як у вебі. */
 internal val RozkladTypography = Typography(
-    displayLarge = base.displayLarge.copy(fontFamily = RussoOne),
-    displayMedium = base.displayMedium.copy(fontFamily = RussoOne),
-    displaySmall = base.displaySmall.copy(fontFamily = RussoOne),
+    displayLarge = base.displayLarge.n(FontWeight.Black),
+    displayMedium = base.displayMedium.n(FontWeight.Black),
+    displaySmall = base.displaySmall.n(FontWeight.Black),
     headlineLarge = base.headlineLarge.n(FontWeight.Black),
     headlineMedium = base.headlineMedium.n(FontWeight.Black),
     headlineSmall = base.headlineSmall.n(FontWeight.ExtraBold),
@@ -65,11 +50,8 @@ internal val RozkladTypography = Typography(
 )
 
 /** Цифри однакової ширини — таймер не «тремтить». */
-val TimerTextStyle: TextStyle
-    @Composable @ReadOnlyComposable
-    get() = TextStyle(fontFamily = GameFont, fontWeight = gameWeight, fontSize = 56.sp, lineHeight = 60.sp, fontFeatureSettings = "tnum")
+val TimerTextStyle =
+    TextStyle(fontFamily = Nunito, fontWeight = FontWeight.Black, fontSize = 56.sp, lineHeight = 60.sp, fontFeatureSettings = "tnum")
 
-/** Великі «ігрові» заголовки (назва уроку на головній картці). */
-val GameTitleStyle: TextStyle
-    @Composable @ReadOnlyComposable
-    get() = TextStyle(fontFamily = GameFont, fontWeight = gameWeight, fontSize = 26.sp, lineHeight = 32.sp)
+/** Великі заголовки «від руки» (назва уроку на головній картці, дні, розділи); розмір підганяє TitleText. */
+val GameTitleStyle = TextStyle(fontFamily = HandFont, fontWeight = FontWeight.Bold, fontSize = 26.sp, lineHeight = 32.sp)

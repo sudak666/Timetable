@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,10 +37,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.gifwarno.rozklad.core.designsystem.component.ButtonShape
 import com.gifwarno.rozklad.core.designsystem.component.GameButton
+import com.gifwarno.rozklad.core.designsystem.component.GameDialog
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.component.NumberTile
 import com.gifwarno.rozklad.core.designsystem.component.Pill
@@ -149,7 +150,7 @@ internal fun TimeChip(text: String, onClick: () -> Unit) {
 @Composable
 internal fun TimeDialog(title: String, initial: LocalTime, onDismiss: () -> Unit, onConfirm: (LocalTime) -> Unit) {
     val state = rememberTimePickerState(initialHour = initial.hour, initialMinute = initial.minute, is24Hour = true)
-    AlertDialog(
+    GameDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = { TimePicker(state) },
@@ -237,7 +238,7 @@ private const val DATE_PICKER_HEIGHT = 520
 @Composable
 internal fun SubjectPickerDialog(onDismiss: () -> Unit, onPick: (String) -> Unit) {
     var custom by rememberSaveable { mutableStateOf("") }
-    AlertDialog(
+    GameDialog(
         onDismissRequest = onDismiss,
         title = { Text("Предмет") },
         text = {
@@ -260,7 +261,9 @@ internal fun SubjectPickerDialog(onDismiss: () -> Unit, onPick: (String) -> Unit
                             leadingContent = { SubjectBadge(s.name) },
                             headlineContent = { Text(s.name) },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            modifier = Modifier.clip(ButtonShape).clickable { onPick(s.name) },
+                            modifier = Modifier.clip(ButtonShape).clickable(onClickLabel = "Обрати предмет", role = Role.Button) {
+                                onPick(s.name)
+                            },
                         )
                     }
                 }

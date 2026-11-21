@@ -42,7 +42,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.gifwarno.rozklad.core.designsystem.component.ArenaTitle
 import com.gifwarno.rozklad.core.designsystem.component.EmptyState
 import com.gifwarno.rozklad.core.designsystem.component.GameButton
 import com.gifwarno.rozklad.core.designsystem.component.GameFab
@@ -51,6 +50,7 @@ import com.gifwarno.rozklad.core.designsystem.component.LoadingState
 import com.gifwarno.rozklad.core.designsystem.component.LocalChromePadding
 import com.gifwarno.rozklad.core.designsystem.component.Pill
 import com.gifwarno.rozklad.core.designsystem.component.RoundCheck
+import com.gifwarno.rozklad.core.designsystem.component.SectionTitle
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.domain.Timetable
 import com.gifwarno.rozklad.core.model.Homework
@@ -115,9 +115,9 @@ internal fun HomeworkScreen(
                 if (state.overdue.isEmpty() && state.upcoming.isEmpty()) {
                     item(key = "empty") { AllDone() }
                 }
-                section("🔥 Прострочено", state.overdue, overdue = true, onToggle, onDelete, state.deletable)
-                section("📌 Треба зробити", state.upcoming, overdue = false, onToggle, onDelete, state.deletable)
-                section("✅ Зроблено", state.done, overdue = false, onToggle, onDelete, state.deletable)
+                section("Прострочено", state.overdue, overdue = true, onToggle, onDelete, state.deletable)
+                section("Треба зробити", state.upcoming, overdue = false, onToggle, onDelete, state.deletable)
+                section("Зроблено", state.done, overdue = false, onToggle, onDelete, state.deletable)
             }
         }
     }
@@ -158,7 +158,7 @@ private fun LazyListScope.section(
     deletable: Set<String>,
 ) {
     if (items.isEmpty()) return
-    item(key = "t-$title") { ArenaTitle("$title · ${items.size}") }
+    item(key = "t-$title") { SectionTitle("$title · ${items.size}") }
     item(key = "l-$title") {
         GameSurface {
             Column(Modifier.fillMaxWidth().padding(4.dp)) {
@@ -257,7 +257,6 @@ private fun SubjectChip(name: String, on: Boolean, onClick: () -> Unit) {
         color = if (on) Color(s.color) else RozkladTheme.colors.soft,
         contentColor = if (on) Color.White else MaterialTheme.colorScheme.onSurface,
         depth = if (on) 3.dp else 0.dp,
-        borderWidth = if (on) 2.dp else 0.dp,
         onClick = onClick,
         modifier = Modifier.padding(bottom = 6.dp),
     ) {

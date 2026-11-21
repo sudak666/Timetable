@@ -4,7 +4,6 @@ import type { Challenge, Grade, Homework, Ledger, Member, Rates, Role, Streak } 
 import { DEFAULT_RATES, DEFAULT_STREAK } from './features/rewards';
 
 export type AuthView = 'loading' | 'auth' | 'join' | 'main' | 'offline';
-export type GameStyle = '' | 'arena' | 'blocks';
 export type Tab = 'today' | 'grades' | 'hw' | 'me';
 export const TABS: Tab[] = ['today', 'grades', 'hw', 'me'];
 
@@ -46,7 +45,6 @@ export interface State {
   pushOn: boolean;
   pushMsg: { text: string; ok?: boolean } | null;
   canInstall: boolean;
-  style: GameStyle;
   online: boolean;
   /** Змін у черзі на відправку */
   queued: number;
@@ -89,7 +87,6 @@ export const state: State = {
   pushOn: false,
   pushMsg: null,
   canInstall: false,
-  style: '',
   online: typeof navigator === 'undefined' ? true : navigator.onLine,
   queued: 0,
   present: [],

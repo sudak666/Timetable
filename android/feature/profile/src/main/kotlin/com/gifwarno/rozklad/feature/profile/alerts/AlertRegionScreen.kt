@@ -71,7 +71,7 @@ internal fun AlertRegionScreen(state: AlertRegionUiState, actions: RegionActions
     BackHandler(onBack = back)
 
     Column(modifier.fillMaxSize()) {
-        GameTopBar(title = inOblast?.oblast?.name ?: "📍 Місце для тривог", onBack = back)
+        GameTopBar(title = inOblast?.oblast?.name ?: "Місце для тривог", onBack = back)
         GameSurface(
             Modifier.fillMaxSize().padding(start = 12.dp, end = 12.dp, top = 8.dp),
             shape = RoundedCornerShape(24.dp),

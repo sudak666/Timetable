@@ -23,7 +23,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.PersonRemove
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -45,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -57,19 +57,19 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gifwarno.rozklad.core.data.repository.NAME_MAX
 import com.gifwarno.rozklad.core.datastore.ThemeMode
 import com.gifwarno.rozklad.core.designsystem.component.ButtonShape
+import com.gifwarno.rozklad.core.designsystem.component.CardTitle
 import com.gifwarno.rozklad.core.designsystem.component.FitText
 import com.gifwarno.rozklad.core.designsystem.component.GameButton
+import com.gifwarno.rozklad.core.designsystem.component.GameDialog
 import com.gifwarno.rozklad.core.designsystem.component.GameSegmented
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.component.LoadingState
 import com.gifwarno.rozklad.core.designsystem.component.LocalChromePadding
 import com.gifwarno.rozklad.core.designsystem.component.Pill
-import com.gifwarno.rozklad.core.designsystem.component.StrokeText
-import com.gifwarno.rozklad.core.designsystem.component.outlineWidth
+import com.gifwarno.rozklad.core.designsystem.component.TitleText
 import com.gifwarno.rozklad.core.designsystem.component.outlinedBackground
-import com.gifwarno.rozklad.core.designsystem.theme.GameFont
-import com.gifwarno.rozklad.core.designsystem.theme.GameStyle
 import com.gifwarno.rozklad.core.designsystem.theme.GameTitleStyle
+import com.gifwarno.rozklad.core.designsystem.theme.Nunito
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.domain.Trophies
 import com.gifwarno.rozklad.core.model.Role
@@ -137,7 +137,6 @@ fun ProfileRoute(onPickAlertRegion: () -> Unit, modifier: Modifier = Modifier, v
             onRename = viewModel::rename,
             password = PasswordActions(passwordState, viewModel::changePassword, viewModel::resetPasswordState),
             onSaveRates = viewModel::saveRates,
-            onGameStyle = viewModel::setGameStyle,
             family = FamilyActions(
                 state = familyAction,
                 onRotateCode = viewModel::rotateInviteCode,
@@ -163,7 +162,6 @@ internal fun ProfileScreen(
     alerts: AlertsSectionActions? = null,
     onLook: (avatar: String?, accent: String?) -> Unit = { _, _ -> },
     onSaveRates: (Map<Int, Int>, Streak) -> Unit = { _, _ -> },
-    onGameStyle: (GameStyle) -> Unit = {},
     onRename: (name: String, family: String?) -> Unit = { _, _ -> },
     password: PasswordActions? = null,
     family: FamilyActions? = null,
@@ -182,7 +180,7 @@ internal fun ProfileScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         GameSurface(
-            brush = Brush.linearGradient(listOf(c.accent, Color(0xFFB062E8), c.accentEnd)),
+            brush = Brush.linearGradient(listOf(c.accent, lerp(c.accent, Color.Black, HERO_SHADE))),
             contentColor = Color.White,
             depth = 6.dp,
         ) {
@@ -190,7 +188,7 @@ internal fun ProfileScreen(
                 Box(
                     Modifier
                         .size(76.dp)
-                        .outlinedBackground(Brush.linearGradient(listOf(c.gold, c.goldEnd)), CircleShape, outlineWidth(3.dp), c.ink)
+                        .background(Brush.linearGradient(listOf(c.gold, c.goldEnd)), CircleShape)
                         .clickable(onClickLabel = "Змінити аватар і колір", role = androidx.compose.ui.semantics.Role.Button) {
                             lookSheet =
                                 true
@@ -198,7 +196,12 @@ internal fun ProfileScreen(
                     contentAlignment = Alignment.Center,
                 ) { Text(state.avatar.ifBlank { "🙂" }, fontSize = 42.sp) }
                 Column(Modifier.weight(1f).padding(start = 14.dp)) {
-                    StrokeText(state.name, GameTitleStyle.copy(fontSize = 22.sp, lineHeight = 26.sp), strokeWidth = 4.dp, maxLines = 2)
+                    TitleText(
+                        state.name,
+                        GameTitleStyle.copy(fontSize = 22.sp, lineHeight = 26.sp),
+                        color = Color.White,
+                        maxLines = 2,
+                    )
                     Text(state.email, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.85f), maxLines = 1)
                     Pill(
                         if (state.isParent) "👑 Батьки · ${state.familyName}" else "🏠 ${state.familyName}",
@@ -240,7 +243,7 @@ internal fun ProfileScreen(
         }
 
         if (state.isParent) {
-            GameCard("🎟️ Запросити в сім’ю") {
+            GameCard("Запросити в сім’ю") {
                 CodeRow("Код для дитини", state.childInviteCode)
                 val context = LocalContext.current
                 GameButton(
@@ -269,7 +272,7 @@ internal fun ProfileScreen(
         }
 
         if (state.isParent) {
-            GameCard("⚙️ Курс оцінок і серія") {
+            GameCard("Курс оцінок і серія") {
                 val s = state.settings
                 // Нерозривні пробіли: «12 → +300 ₴» не розривається між рядками.
                 Text(
@@ -285,7 +288,7 @@ internal fun ProfileScreen(
             }
         }
 
-        GameCard("🏡 Сім’я") {
+        GameCard("Сім’я") {
             state.members.forEach { m ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(44.dp).clip(CircleShape).background(c.soft), contentAlignment = Alignment.Center) {
@@ -312,7 +315,7 @@ internal fun ProfileScreen(
         }
 
         if (pushState != null) {
-            GameCard("🔔 Сповіщення") {
+            GameCard("Сповіщення") {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("На цей телефон", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.ExtraBold)
@@ -337,15 +340,7 @@ internal fun ProfileScreen(
             )
         }
 
-        GameCard("🎮 Стиль") {
-            GameSegmented(
-                options = GameStyle.entries.map { it to it.label },
-                selected = state.gameStyle,
-                onSelect = onGameStyle,
-            )
-        }
-
-        GameCard("🎨 Тема") {
+        GameCard("Тема") {
             GameSegmented(
                 options = listOf(ThemeMode.SYSTEM to "Як у системі", ThemeMode.LIGHT to "Світла", ThemeMode.DARK to "Темна"),
                 selected = state.themeMode,
@@ -353,7 +348,7 @@ internal fun ProfileScreen(
             )
         }
 
-        GameCard("⚙️ Акаунт") {
+        GameCard("Акаунт") {
             if (password != null) {
                 GameButton(
                     "Змінити пароль",
@@ -420,7 +415,7 @@ internal fun ProfileScreen(
     }
 
     if (confirmRotate && family != null) {
-        AlertDialog(
+        GameDialog(
             onDismissRequest = { confirmRotate = false },
             title = { Text("Змінити код для дитини?") },
             text = { Text("Старий код перестане працювати. Хто вже в сім’ї — лишиться. Новий код покажемо тут.") },
@@ -438,7 +433,7 @@ internal fun ProfileScreen(
     if (removing != null && family != null) {
         // Ім'я — у називному відмінку на початку речення: відмінювати довільні імена ненадійно.
         val who = removing.name.ifBlank { "Учасник без імені" }
-        AlertDialog(
+        GameDialog(
             onDismissRequest = { removeMemberId = null },
             title = { Text("Прибрати із сім’ї?") },
             text = {
@@ -461,7 +456,7 @@ internal fun ProfileScreen(
     }
 
     if (confirmSignOut) {
-        AlertDialog(
+        GameDialog(
             onDismissRequest = { confirmSignOut = false },
             title = { Text("Вийти з акаунта?") },
             text = { Text("Зміни, які ще не надіслано з цього пристрою, буде втрачено.") },
@@ -484,7 +479,7 @@ internal class FamilyActions(val state: FamilyActionState, val onRotateCode: () 
 internal fun GameCard(title: String, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     GameSurface(modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
+            CardTitle(title)
             content()
         }
     }
@@ -502,7 +497,7 @@ private fun CodeRow(label: String, code: String) {
     ) {
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.labelMedium, color = RozkladTheme.colors.muted)
-            FitText(code, style = MaterialTheme.typography.titleLarge.copy(fontFamily = GameFont, letterSpacing = 3.sp))
+            FitText(code, style = MaterialTheme.typography.titleLarge.copy(fontFamily = Nunito, letterSpacing = 3.sp))
         }
         GameButton("Копіювати", onClick = { clipboard.setText(AnnotatedString(code)) })
     }
@@ -513,7 +508,7 @@ private fun CodeRow(label: String, code: String) {
 private fun LookSheet(state: ProfileUiState.Ready, onDismiss: () -> Unit, onLook: (String?, String?) -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 24.dp).navigationBarsPadding()) {
-            Text("🎨 Аватар і колір", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 12.dp))
+            Text("Аватар і колір", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 12.dp))
             LookPicker(
                 level = state.level,
                 avatar = state.avatar,
@@ -538,9 +533,9 @@ private fun LookSheet(state: ProfileUiState.Ready, onDismiss: () -> Unit, onLook
 internal fun RenameDialog(name: String, familyName: String?, onDismiss: () -> Unit, onSave: (String, String?) -> Unit) {
     var n by rememberSaveable { mutableStateOf(name) }
     var f by rememberSaveable { mutableStateOf(familyName.orEmpty()) }
-    AlertDialog(
+    GameDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (familyName != null) "✏️ Ім’я й сім’я" else "✏️ Ім’я") },
+        title = { Text(if (familyName != null) "Ім’я й сім’я" else "Ім’я") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
@@ -573,3 +568,6 @@ internal fun RenameDialog(name: String, familyName: String?, onDismiss: () -> Un
 
 /** Зміна пароля: стан і дії з ViewModel (null у прев'ю — кнопки немає). */
 internal class PasswordActions(val state: PasswordState, val onSave: (String) -> Unit, val onClosed: () -> Unit)
+
+/** Головна картка — чорнилом: від кольору акценту до трохи темнішого. */
+private const val HERO_SHADE = 0.3f
