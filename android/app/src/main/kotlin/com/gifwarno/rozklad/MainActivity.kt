@@ -3,15 +3,18 @@ package com.gifwarno.rozklad
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
+import android.view.animation.AccelerateInterpolator
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.splashscreen.SplashScreenViewProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gifwarno.rozklad.core.datastore.ThemeMode
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
@@ -32,10 +35,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // Сплеш тримаємо, поки не відомо, чи користувач увійшов (без миготіння екрана входу).
         splash.setKeepOnScreenCondition { viewModel.sessionState.value == SessionState.Loading }
-        // Тло «арени» темне в обох темах — значки системних панелей завжди світлі.
+        splash.setOnExitAnimationListener(::playSplashExit)
+        // До першого кадру — за системною темою (як сплеш); далі уточнює applySystemBars за стилем.
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
         )
         deepLink.value = intent?.getStringExtra(EXTRA_URL)
         handleOAuthRedirect(intent)
@@ -54,14 +58,19 @@ class MainActivity : ComponentActivity() {
             val hasData by viewModel.hasFamilyData.collectAsStateWithLifecycle()
             val alert by viewModel.alertBanner.collectAsStateWithLifecycle()
             val accent by viewModel.accent.collectAsStateWithLifecycle()
-            val style by viewModel.gameStyle.collectAsStateWithLifecycle()
             val gradesBadge by viewModel.gradesBadge.collectAsStateWithLifecycle()
             val dark = when (theme) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
             }
-            RozkladTheme(darkTheme = dark, accent = accent?.let { androidx.compose.ui.graphics.Color(it) }, style = style) {
+            // Світлий папір — темні значки годинника й батареї; дошка — світлі.
+            val lightBars = !dark
+            DisposableEffect(lightBars) {
+                applySystemBars(lightBars)
+                onDispose { }
+            }
+            RozkladTheme(darkTheme = dark, accent = accent?.let { androidx.compose.ui.graphics.Color(it) }) {
                 RozkladApp(
                     session = session,
                     sync = sync,
@@ -73,6 +82,37 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    /**
+     * Лого «злітає» назустріч (трохи збільшується), сплеш тане — і під ним уже сторінка зошита (уночі — дошка) того самого кольору.
+     * Системний масштаб анімацій ViewPropertyAnimator враховує сам: вимкнені анімації — сплеш зникає одразу.
+     */
+    private fun playSplashExit(provider: SplashScreenViewProvider) {
+        // Без значка (напр., запуск не з лаунчера) iconView може бракувати — тоді лише тане тло.
+        runCatching {
+            provider.iconView.animate()
+                .scaleX(SPLASH_EXIT_SCALE)
+                .scaleY(SPLASH_EXIT_SCALE)
+                .setDuration(SPLASH_EXIT_MS)
+                .setInterpolator(AccelerateInterpolator())
+                .start()
+        }
+        provider.view.animate()
+            .alpha(0f)
+            .setDuration(SPLASH_EXIT_MS)
+            .setInterpolator(AccelerateInterpolator())
+            .withEndAction(provider::remove)
+            .start()
+    }
+
+    private fun applySystemBars(light: Boolean) {
+        val bars = if (light) {
+            SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+        } else {
+            SystemBarStyle.dark(Color.TRANSPARENT)
+        }
+        enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
     }
 
     /** Застосунок уже відкритий, а людина натиснула сповіщення. */
@@ -92,5 +132,8 @@ class MainActivity : ComponentActivity() {
     private companion object {
         /** Той самий ключ, що й у сповіщеннях (core:push → PushNotifier.EXTRA_URL і data.url з сервера). */
         const val EXTRA_URL = "url"
+
+        const val SPLASH_EXIT_MS = 260L
+        const val SPLASH_EXIT_SCALE = 1.35f
     }
 }

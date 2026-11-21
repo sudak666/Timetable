@@ -1,5 +1,10 @@
 package com.gifwarno.rozklad.core.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -58,7 +63,18 @@ fun alertBannerText(alert: AirAlert?, now: Instant, zone: ZoneId): AlertBannerTe
  */
 @Composable
 fun AlertBanner(text: AlertBannerText?, modifier: Modifier = Modifier) {
-    text ?: return
+    // Плашка з'являється й зникає плавно (висота «розсуває» вміст), а щохвилинне оновлення тексту — без анімації.
+    AnimatedContent(
+        targetState = text,
+        modifier = modifier,
+        transitionSpec = { fadeIn(tween(BANNER_IN_MS, delayMillis = BANNER_OUT_MS)) togetherWith fadeOut(tween(BANNER_OUT_MS)) },
+        contentKey = { it?.active },
+        label = "alertBanner",
+    ) { t -> if (t != null) AlertCard(t) }
+}
+
+@Composable
+private fun AlertCard(text: AlertBannerText, modifier: Modifier = Modifier) {
     Surface(
         modifier.fillMaxWidth().padding(start = 16.dp, top = 8.dp, end = 16.dp),
         shape = MaterialTheme.shapes.medium,
@@ -73,3 +89,6 @@ fun AlertBanner(text: AlertBannerText?, modifier: Modifier = Modifier) {
         }
     }
 }
+
+internal const val BANNER_IN_MS = 260
+internal const val BANNER_OUT_MS = 120

@@ -43,7 +43,7 @@ internal fun RatesSheet(settings: RewardSettings, onDismiss: () -> Unit, onSave:
             Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 16.dp).navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text("⚙️ Курс оцінок", style = MaterialTheme.typography.titleLarge)
+            Text("Курс оцінок", style = MaterialTheme.typography.titleLarge)
             Text(
                 "Скільки гривень дає кожна оцінка (мінус — штраф). Новий курс діє для нових підтверджень.",
                 style = MaterialTheme.typography.bodySmall,
@@ -60,7 +60,7 @@ internal fun RatesSheet(settings: RewardSettings, onDismiss: () -> Unit, onSave:
                     }
                 }
             }
-            Text("🔥 Серія", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+            Text("Серія", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 MoneyField(streak[0], { streak[0] = it }, "Оцінок поспіль", Modifier.weight(1f), allowMinus = false)
                 MoneyField(streak[1], { streak[1] = it }, "Від балу", Modifier.weight(1f), allowMinus = false)

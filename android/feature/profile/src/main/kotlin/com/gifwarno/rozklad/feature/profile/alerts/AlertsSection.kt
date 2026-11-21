@@ -14,6 +14,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.gifwarno.rozklad.core.designsystem.component.CardTitle
 import com.gifwarno.rozklad.core.designsystem.component.GameButton
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 
@@ -28,7 +29,7 @@ data class AlertsSectionActions(val onPick: () -> Unit, val onClear: () -> Unit,
 fun AlertsSection(region: String?, isParent: Boolean, alertsPush: Boolean?, actions: AlertsSectionActions, modifier: Modifier = Modifier) {
     GameSurface(modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("🚨 Повітряні тривоги", style = MaterialTheme.typography.titleMedium)
+            CardTitle("Повітряні тривоги")
             Text(
                 region?.let(::shortName) ?: if (isParent) "Місце не обрано" else "Батьки ще не обрали місце",
                 style = MaterialTheme.typography.bodyLarge,

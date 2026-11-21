@@ -35,6 +35,8 @@ sealed interface TodayScreenState {
 
     data class Ready(
         val today: TodayUiState,
+        /** Дата за годинником застосунку (у демо-режимі — підмінена), а не системна. */
+        val date: LocalDate,
         val canEdit: Boolean,
         val children: List<Member>,
         val childId: String,
@@ -103,6 +105,7 @@ class TodayViewModel @Inject constructor(private val active: ActiveFamily, priva
         } else {
             TodayScreenState.Ready(
                 today = today,
+                date = now.toLocalDate(),
                 canEdit = d.ctx.canEditSchedule,
                 children = d.ctx.data.children,
                 childId = d.child.userId,

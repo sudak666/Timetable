@@ -26,7 +26,7 @@ data class WidgetLesson(
     val start: String,
     val state: WidgetLessonState,
     /** Колір предмета (ARGB) — для номерка, як у застосунку. */
-    val color: Long = 0xFF6C5CE7,
+    val color: Long = 0xFF4B5563,
 )
 
 /**

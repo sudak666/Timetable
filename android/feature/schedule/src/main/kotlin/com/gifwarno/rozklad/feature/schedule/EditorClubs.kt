@@ -20,7 +20,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -42,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.gifwarno.rozklad.core.designsystem.component.ButtonShape
 import com.gifwarno.rozklad.core.designsystem.component.GameButton
+import com.gifwarno.rozklad.core.designsystem.component.GameDialog
 import com.gifwarno.rozklad.core.designsystem.component.GameSegmented
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
@@ -135,7 +135,7 @@ private fun ReminderCard(minutes: Int, onChange: (Int) -> Unit) {
     }
     GameSurface {
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("🔔 Нагадувати на цьому телефоні", style = MaterialTheme.typography.titleSmall)
+            Text("Нагадувати на цьому телефоні", style = MaterialTheme.typography.titleSmall)
             GameSegmented(
                 options = REMINDER_OPTIONS.map { it to if (it == 0) "Ні" else "за $it хв" },
                 selected = if (minutes > 0 && !granted) 0 else minutes,
@@ -210,7 +210,7 @@ private fun ClubDialog(initial: Club?, onDismiss: () -> Unit, onSave: (Club) -> 
     val errors = Clubs.validate(listOf(club))
     val c = RozkladTheme.colors
 
-    AlertDialog(
+    GameDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (initial == null) "Нове заняття" else "Заняття") },
         text = {

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Android 12+: живе лого — червона «12» пишеться ручкою просто на сторінці зошита (уночі — крейдою на дошці).
+      На старіших версіях бібліотека сплешу показує статичну іконку (values/themes.xml):
+      там анімація не грає, а перший кадр анімованого лого порожній.
+    -->
+    <style name="Theme.Rozklad.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo_animated</item>
+        <!-- Потрібне лише Android 12–12L; з Android 13 тривалість береться з самої анімації. -->
+        <item name="windowSplashScreenAnimationDuration">950</item>
+        <item name="postSplashScreenTheme">@style/Theme.Rozklad</item>
+    </style>
+</resources>

@@ -25,7 +25,7 @@ fun buildAfterSchool(now: LocalDateTime, clubs: List<Club>): AfterSchool? {
     val todays = Clubs.on(today, clubs)
     if (todays.any { t.isBefore(it.end) }) {
         return AfterSchool(
-            title = "⚽ Після школи",
+            title = "Після школи",
             isToday = true,
             rows = todays.map { c ->
                 val state = when {
@@ -38,7 +38,7 @@ fun buildAfterSchool(now: LocalDateTime, clubs: List<Club>): AfterSchool? {
         )
     }
     val tomorrow = Clubs.on(today.plusDays(1), clubs).ifEmpty { return null }
-    return AfterSchool("⚽ Завтра після школи", isToday = false, rows = tomorrow.map { it.row(LessonState.UPCOMING) })
+    return AfterSchool("Завтра після школи", isToday = false, rows = tomorrow.map { it.row(LessonState.UPCOMING) })
 }
 
 private fun Club.row(state: LessonState) = ClubRow(emoji, title, Clubs.timeText(this), place, bring, state)

@@ -1,5 +1,10 @@
 package com.gifwarno.rozklad.core.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +24,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -67,18 +74,44 @@ fun moneyColor(v: Int): Color = when {
 /** Чесний індикатор: скільки змін чекає мережі, і що сервер відхилив. */
 @Composable
 fun SyncBanner(sync: SyncStatus, onDismissError: () -> Unit, modifier: Modifier = Modifier) {
+    AnimatedContent(
+        targetState = sync,
+        modifier = modifier,
+        transitionSpec = { fadeIn(tween(BANNER_IN_MS, delayMillis = BANNER_OUT_MS)) togetherWith fadeOut(tween(BANNER_OUT_MS)) },
+        // Анімуємо лише зміну виду плашки (помилка / черга / нічого), а не кожну зміну лічильника.
+        contentKey = { s -> if (s.lastError != null) "error" else s.pendingChanges > 0 },
+        label = "syncBanner",
+    ) { s -> SyncBannerContent(s, onDismissError) }
+}
+
+@Composable
+private fun SyncBannerContent(sync: SyncStatus, onDismissError: () -> Unit, modifier: Modifier = Modifier) {
     val error = sync.lastError
     when {
-        error != null -> Surface(modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.errorContainer) {
-            Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        // Така сама «плаваюча» картка, як плашка тривоги (аудит 21.11.2026, Н12).
+        error != null -> Surface(
+            modifier.fillMaxWidth().padding(start = 16.dp, top = 8.dp, end = 16.dp),
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        ) {
+            Row(
+                Modifier.padding(start = 14.dp, end = 4.dp, top = 2.dp, bottom = 2.dp).semantics { liveRegion = LiveRegionMode.Polite },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Icon(Icons.Outlined.ErrorOutline, contentDescription = null)
                 Text(error, Modifier.weight(1f).padding(horizontal = 8.dp), style = MaterialTheme.typography.bodySmall)
                 TextButton(onClick = onDismissError) { Text("OK") }
             }
         }
 
-        sync.pendingChanges > 0 -> Surface(modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.secondaryContainer) {
-            Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        sync.pendingChanges > 0 -> Surface(
+            modifier.fillMaxWidth().padding(start = 16.dp, top = 8.dp, end = 16.dp),
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        ) {
+            Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.CloudOff, contentDescription = null)
                 Text(
                     "Змін чекає відправки: ${sync.pendingChanges}. Надішлемо, щойно з’явиться інтернет.",

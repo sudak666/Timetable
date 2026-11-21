@@ -3,7 +3,6 @@ package com.gifwarno.rozklad.feature.profile
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -17,6 +16,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.gifwarno.rozklad.core.designsystem.component.GameDialog
 
 /** Стан зміни пароля в профілі. */
 sealed interface PasswordState {
@@ -48,9 +48,9 @@ internal fun PasswordDialog(state: PasswordState, onSave: (String) -> Unit, onDi
     var p2 by remember { mutableStateOf("") }
     val problem = passwordProblem(p1, p2)
     val saving = state == PasswordState.Saving
-    AlertDialog(
+    GameDialog(
         onDismissRequest = { if (!saving) onDismiss() },
-        title = { Text("🔑 Змінити пароль") },
+        title = { Text("Змінити пароль") },
         text = {
             if (state == PasswordState.Done) {
                 Text("Готово! Тепер входь із новим паролем.")

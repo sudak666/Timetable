@@ -16,10 +16,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Undo
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,6 +29,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,17 +43,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.gifwarno.rozklad.core.designsystem.component.ArenaTitle
 import com.gifwarno.rozklad.core.designsystem.component.ButtonShape
 import com.gifwarno.rozklad.core.designsystem.component.ConfettiBurst
 import com.gifwarno.rozklad.core.designsystem.component.EmptyState
 import com.gifwarno.rozklad.core.designsystem.component.GameButton
+import com.gifwarno.rozklad.core.designsystem.component.GameDialog
 import com.gifwarno.rozklad.core.designsystem.component.GameFab
 import com.gifwarno.rozklad.core.designsystem.component.GameProgressBar
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
@@ -60,12 +64,12 @@ import com.gifwarno.rozklad.core.designsystem.component.GradeTile
 import com.gifwarno.rozklad.core.designsystem.component.LoadingState
 import com.gifwarno.rozklad.core.designsystem.component.LocalChromePadding
 import com.gifwarno.rozklad.core.designsystem.component.Pill
+import com.gifwarno.rozklad.core.designsystem.component.SectionTitle
 import com.gifwarno.rozklad.core.designsystem.component.StatTile
-import com.gifwarno.rozklad.core.designsystem.component.StrokeText
-import com.gifwarno.rozklad.core.designsystem.component.outlineWidth
+import com.gifwarno.rozklad.core.designsystem.component.TitleText
 import com.gifwarno.rozklad.core.designsystem.component.outlinedBackground
-import com.gifwarno.rozklad.core.designsystem.theme.GameFont
 import com.gifwarno.rozklad.core.designsystem.theme.GameTitleStyle
+import com.gifwarno.rozklad.core.designsystem.theme.Nunito
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.domain.Rewards
 import com.gifwarno.rozklad.core.domain.Timetable
@@ -181,8 +185,10 @@ internal fun GradesScreen(
             )
         }
     }
-    if (showAdd) {
+    val today = (state as? GradesUiState.Ready)?.today
+    if (showAdd && today != null) {
         AddGradeSheet(
+            today = today,
             onDismiss = { showAdd = false },
             onAdd = { subject, value, date ->
                 onAddGrade(subject, value, date)
@@ -207,7 +213,7 @@ internal fun GradesScreen(
     }
     if (confirmAll && state is GradesUiState.Ready) {
         val items = state.pending.filter { it.canApprove }
-        AlertDialog(
+        GameDialog(
             onDismissRequest = { confirmAll = false },
             title = { Text("Підтвердити все?") },
             text = {
@@ -278,12 +284,12 @@ private fun ReadyContent(
         if (!state.isParent) item(key = "intro") { IntroCard() }
         item(key = "player") { PlayerCard(state, onMoney, onEditGoal) }
         if (state.road.isNotEmpty()) {
-            item(key = "road-title") { ArenaTitle("🏆 Шлях нагород") }
+            item(key = "road-title") { SectionTitle("Шлях нагород") }
             item(key = "road") { TrophyRoad(state.road) }
         }
         if (state.badges.isNotEmpty()) item(key = "badges") { BadgesCard(state.badges) }
         if (state.challenges.isNotEmpty() || state.isParent) {
-            item(key = "ch-title") { ArenaTitle("🏅 Челенджі") }
+            item(key = "ch-title") { SectionTitle("Челенджі") }
             item(key = "challenges") {
                 ChallengesCard(
                     items = state.challenges,
@@ -294,7 +300,7 @@ private fun ReadyContent(
             }
         }
         if (state.pending.isNotEmpty()) {
-            item(key = "pending-title") { ArenaTitle("⏳ Чекають підтвердження") }
+            item(key = "pending-title") { SectionTitle("⏳ Чекають підтвердження") }
             item(key = "pending") { GradeList(state.pending, actions) }
             val approvable = state.pending.count { it.canApprove }
             if (approvable >= 2) {
@@ -311,10 +317,10 @@ private fun ReadyContent(
             }
         }
         if (state.compare != null || state.rank.isNotEmpty() || state.subjectAvgs.isNotEmpty()) {
-            item(key = "stats-title") { ArenaTitle("📊 Статистика") }
+            item(key = "stats-title") { SectionTitle("Статистика") }
             item(key = "stats") { StatsCard(state) }
         }
-        item(key = "history-title") { ArenaTitle("🧾 Історія") }
+        item(key = "history-title") { SectionTitle("Історія") }
         item(key = "history") { HistoryCard(state.history, actions, onDeleteLedger) }
     }
 }
@@ -324,27 +330,31 @@ private fun ReadyContent(
 private fun PlayerCard(state: GradesUiState.Ready, onMoney: (Money) -> Unit, onEditGoal: () -> Unit) {
     val c = RozkladTheme.colors
     val tile = Color.White.copy(alpha = 0.16f)
-    GameSurface(brush = Brush.linearGradient(listOf(c.accent, Color(0xFFB062E8), c.accentEnd)), contentColor = Color.White, depth = 6.dp) {
+    GameSurface(
+        brush = Brush.linearGradient(listOf(c.accent, lerp(c.accent, Color.Black, HERO_SHADE))),
+        contentColor = Color.White,
+        depth = 6.dp,
+    ) {
         Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Avatar(state.child.avatar)
                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                    StrokeText(
+                    TitleText(
                         state.child.name,
                         GameTitleStyle.copy(fontSize = 22.sp, lineHeight = 26.sp),
-                        strokeWidth = 4.dp,
+                        color = Color.White,
                         maxLines = 1,
                     )
                     Pill("Рівень ${state.level}", color = c.gold, contentColor = c.ink, modifier = Modifier.padding(top = 4.dp))
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("💰 гаманець", style = MaterialTheme.typography.labelSmall)
-                    StrokeText(Format.balance(state.totals.balance), GameTitleStyle, strokeWidth = 4.dp, maxLines = 1)
+                    Text("гаманець", style = MaterialTheme.typography.labelSmall)
+                    TitleText(Format.balance(state.totals.balance), GameTitleStyle, color = Color.White, maxLines = 1)
                 }
             }
             Column {
                 Row {
-                    Text("⚡ Досвід", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                    Text("Досвід", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
                     Text("${state.xpInLevel}/${Rewards.XP_PER_LEVEL} XP", style = MaterialTheme.typography.labelLarge)
                 }
                 GameProgressBar(
@@ -366,13 +376,17 @@ private fun PlayerCard(state: GradesUiState.Ready, onMoney: (Money) -> Unit, onE
                 Column(Modifier.clip(ButtonShape).background(tile).padding(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            "🎯 Ціль: ${state.child.goalTitle}",
+                            "Ціль: ${state.child.goalTitle}",
                             style = MaterialTheme.typography.titleSmall,
                             modifier = Modifier.weight(1f),
                         )
+                        // Кнопка з нормальною ціллю дотику (≥ 48 dp) і роллю для TalkBack (аудит 21.11.2026, Н11).
                         Pill(
                             "змінити",
-                            Modifier.clickable(onClickLabel = "Змінити ціль", onClick = onEditGoal),
+                            Modifier
+                                .minimumInteractiveComponentSize()
+                                .clip(RoundedCornerShape(50))
+                                .clickable(onClickLabel = "Змінити ціль", role = Role.Button, onClick = onEditGoal),
                             color = Color.White.copy(alpha = 0.25f),
                             contentColor = Color.White,
                         )
@@ -380,7 +394,7 @@ private fun PlayerCard(state: GradesUiState.Ready, onMoney: (Money) -> Unit, onE
                     GameProgressBar(
                         (state.totals.balance.toFloat() / state.child.goalAmount).coerceIn(0f, 1f),
                         Modifier.padding(vertical = 6.dp),
-                        fill = Brush.horizontalGradient(listOf(Color(0xFF55EFC4), Color(0xFF00B894))),
+                        fill = SolidColor(c.positive),
                         track = Color.Black.copy(alpha = 0.2f),
                     )
                     val left = state.child.goalAmount - state.totals.balance.coerceAtLeast(0)
@@ -424,7 +438,7 @@ private fun Avatar(emoji: String) {
     Box(
         Modifier
             .size(60.dp)
-            .outlinedBackground(Brush.linearGradient(listOf(c.gold, c.goldEnd)), CircleShape, outlineWidth(3.dp), c.ink),
+            .background(Brush.linearGradient(listOf(c.gold, c.goldEnd)), CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         Text(emoji.ifBlank { "🙂" }, fontSize = 32.sp)
@@ -481,7 +495,7 @@ internal fun GradeRow(item: GradeItem, actions: RowActions) {
                 onClick = { actions.onApprove(g) },
                 onClickLabel = "Підтвердити",
             ) {
-                Text("✓", Modifier.padding(horizontal = 14.dp, vertical = 6.dp), fontFamily = GameFont, fontSize = 18.sp)
+                Text("✓", Modifier.padding(horizontal = 14.dp, vertical = 6.dp), fontFamily = Nunito, fontSize = 18.sp)
             }
         } else if (item.canDelete && g.status == GradeStatus.APPROVED) {
             IconButton(onClick = { actions.onUnapprove(g) }) {
@@ -495,3 +509,6 @@ internal fun GradeRow(item: GradeItem, actions: RowActions) {
         }
     }
 }
+
+/** Головна картка — чорнилом: від кольору акценту до трохи темнішого. */
+private const val HERO_SHADE = 0.3f

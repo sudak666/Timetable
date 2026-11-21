@@ -1,12 +1,15 @@
 package com.gifwarno.rozklad.feature.today
 
-import android.provider.Settings
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -46,9 +49,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -59,6 +63,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gifwarno.rozklad.core.designsystem.component.ButtonShape
+import com.gifwarno.rozklad.core.designsystem.component.CardTitle
 import com.gifwarno.rozklad.core.designsystem.component.ConfettiBurst
 import com.gifwarno.rozklad.core.designsystem.component.EmptyState
 import com.gifwarno.rozklad.core.designsystem.component.GameProgressBar
@@ -67,14 +72,13 @@ import com.gifwarno.rozklad.core.designsystem.component.LoadingState
 import com.gifwarno.rozklad.core.designsystem.component.LocalChromePadding
 import com.gifwarno.rozklad.core.designsystem.component.NumberTile
 import com.gifwarno.rozklad.core.designsystem.component.Pill
-import com.gifwarno.rozklad.core.designsystem.component.StrokeText
-import com.gifwarno.rozklad.core.designsystem.component.outlineWidth
+import com.gifwarno.rozklad.core.designsystem.component.TitleText
+import com.gifwarno.rozklad.core.designsystem.component.nowHighlight
 import com.gifwarno.rozklad.core.designsystem.component.outlinedBackground
+import com.gifwarno.rozklad.core.designsystem.component.rememberAnimationsEnabled
 import com.gifwarno.rozklad.core.designsystem.component.withChrome
-import com.gifwarno.rozklad.core.designsystem.theme.GameFont
-import com.gifwarno.rozklad.core.designsystem.theme.GameStyle
 import com.gifwarno.rozklad.core.designsystem.theme.GameTitleStyle
-import com.gifwarno.rozklad.core.designsystem.theme.LocalGameStyle
+import com.gifwarno.rozklad.core.designsystem.theme.Nunito
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.designsystem.theme.TimerTextStyle
 import com.gifwarno.rozklad.core.domain.Rewards
@@ -118,7 +122,7 @@ fun TodayRoute(
             // Салют — раз на день після останнього уроку (пам'ятаємо і при переході між вкладками) і за натисканням.
             var burst by remember { mutableIntStateOf(0) }
             var celebratedOn by rememberSaveable { mutableStateOf<String?>(null) }
-            val day = LocalDate.now().toString()
+            val day = s.date.toString()
             LaunchedEffect(s.today.finishedToday, day) {
                 if (s.today.finishedToday && celebratedOn != day) {
                     celebratedOn = day
@@ -128,6 +132,7 @@ fun TodayRoute(
             Box(modifier) {
                 TodayScreen(
                     state = s.today,
+                    date = s.date,
                     header = { ChildSelector(s.children, s.childId, viewModel::selectChild) },
                     onEditSchedule = if (s.canEdit) onEditSchedule else null,
                     player = s.player,
@@ -146,6 +151,7 @@ fun TodayRoute(
 @Composable
 internal fun TodayScreen(
     state: TodayUiState,
+    date: LocalDate,
     modifier: Modifier = Modifier,
     header: @Composable () -> Unit = {},
     onEditSchedule: (() -> Unit)? = null,
@@ -156,7 +162,7 @@ internal fun TodayScreen(
     week: WeekSchedule? = null,
     weekend: String = "",
 ) {
-    val (stars, addStar) = rememberStars()
+    val (stars, addStar) = rememberStars(date)
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp).withChrome(),
@@ -164,14 +170,23 @@ internal fun TodayScreen(
     ) {
         item(key = "header") { header() }
         if (player != null) item(key = "player") { PlayerStripView(player, onOpenPlayer) }
-        item(key = "now") { NowCardView(state.now, onDoneTap = if (state.finishedToday) onCelebrate else null) }
+        item(key = "now") {
+            // Урок → перерва → урок: картка м'яко перетікає в новий вигляд, а не перемикається стрибком.
+            // Щосекундний таймер того самого уроку анімацію не запускає (той самий ключ).
+            AnimatedContent(
+                targetState = state.now,
+                transitionSpec = { fadeIn(tween(NOW_IN_MS, delayMillis = NOW_OUT_MS)) togetherWith fadeOut(tween(NOW_OUT_MS)) },
+                contentKey = { it.phaseKey() },
+                label = "now",
+            ) { now -> NowCardView(now, onDoneTap = if (state.finishedToday) onCelebrate else null) }
+        }
         if (state.dayProgress != null) item(key = "progress") { DayProgress(state.dayProgress) }
         if (quests.isNotEmpty()) item(key = "quests") { QuestsCard(quests) }
         item(key = "title") { DayTitle(state.dayTitle, onEditSchedule) }
         item(key = "lessons") { LessonsCard(state.lessons) }
         state.afterSchool?.let { after ->
             item(key = "after-title") {
-                StrokeText(after.title, GameTitleStyle.copy(fontSize = 20.sp, lineHeight = 26.sp), strokeWidth = 4.dp)
+                TitleText(after.title, GameTitleStyle.copy(fontSize = 20.sp, lineHeight = 26.sp))
             }
             item(key = "after") { AfterSchoolCard(after.rows) }
         }
@@ -180,7 +195,7 @@ internal fun TodayScreen(
         }
         if (weekend.isNotEmpty()) {
             item(key = "fun-title") {
-                StrokeText("🎮 На перерві", GameTitleStyle.copy(fontSize = 20.sp, lineHeight = 26.sp), strokeWidth = 4.dp)
+                TitleText("На перерві", GameTitleStyle.copy(fontSize = 20.sp, lineHeight = 26.sp))
             }
             item(key = "quiz") {
                 QuizCard(onCorrect = {
@@ -193,7 +208,7 @@ internal fun TodayScreen(
         }
         if (week != null && week.days.isNotEmpty()) {
             item(key = "week-title") {
-                StrokeText("🗓️ Розклад на тиждень", GameTitleStyle.copy(fontSize = 20.sp, lineHeight = 26.sp), strokeWidth = 4.dp)
+                TitleText("Розклад на тиждень", GameTitleStyle.copy(fontSize = 20.sp, lineHeight = 26.sp))
             }
             item(key = "week") { WeekCard(week) }
         }
@@ -201,8 +216,8 @@ internal fun TodayScreen(
 }
 
 /**
- * Вигляд головної картки «Зараз»: градієнт і великий емодзі. [content] — колір тексту в «Звичайному» стилі, підібраний до градієнта
- * (контраст ≥ 4,5:1 по всій картці; аудит 14.11.2026, В1). В «Арені» й «Блоках» текст білий з обведенням.
+ * Вигляд головної картки «Зараз»: градієнт і великий емодзі. [content] — колір тексту, підібраний до градієнта
+ * (контраст ≥ 4,5:1 по всій картці; аудит 14.11.2026, В1).
  */
 private data class NowLook(val colors: List<Color>, val emoji: String, val content: Color = Color.White)
 
@@ -215,7 +230,7 @@ private fun PlayerStripView(p: PlayerStrip, onOpen: () -> Unit) {
             Box(
                 Modifier
                     .size(48.dp)
-                    .outlinedBackground(Brush.linearGradient(listOf(c.gold, c.goldEnd)), CircleShape, outlineWidth(2.dp), c.ink),
+                    .background(Brush.linearGradient(listOf(c.gold, c.goldEnd)), CircleShape),
                 contentAlignment = Alignment.Center,
             ) { Text(p.avatar, fontSize = 26.sp) }
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
@@ -232,7 +247,7 @@ private fun PlayerStripView(p: PlayerStrip, onOpen: () -> Unit) {
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text("💰", fontSize = 18.sp)
-                Text(Format.balance(p.balance), style = MaterialTheme.typography.titleMedium, fontFamily = GameFont, maxLines = 1)
+                Text(Format.balance(p.balance), style = MaterialTheme.typography.titleMedium, fontFamily = Nunito, maxLines = 1)
             }
         }
     }
@@ -249,17 +264,17 @@ private fun QuestsCard(quests: List<Quest>) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (daily.isNotEmpty()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("🎯 Завдання дня", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    CardTitle("Завдання дня", Modifier.weight(1f))
                     Pill(
                         "${daily.count { it.done }}/${daily.size}",
                         color = if (allDone) c.positive else c.soft,
-                        contentColor = if (allDone) Color.White else c.muted,
+                        contentColor = if (allDone) c.onPositive else c.muted,
                     )
                 }
                 daily.forEach { QuestRow(it) }
                 if (allDone) {
                     Text(
-                        "🏆 Усі завдання виконано — так тримати!",
+                        "Усі завдання дня виконано — завтра будуть нові",
                         style = MaterialTheme.typography.labelLarge,
                         color = c.positive,
                     )
@@ -290,7 +305,7 @@ private fun QuestRow(q: Quest) {
                 GameProgressBar(
                     q.progress / q.target.toFloat(),
                     Modifier.padding(top = 4.dp),
-                    fill = Brush.horizontalGradient(listOf(Color(0xFF55EFC4), Color(0xFF00B894))),
+                    fill = SolidColor(c.positive),
                     height = 10.dp,
                 )
             }
@@ -306,63 +321,51 @@ private fun QuestRow(q: Quest) {
 @Composable
 private fun NowCardView(card: NowCard, onDoneTap: (() -> Unit)? = null) {
     val c = RozkladTheme.colors
+    val inkDeep = lerp(c.accent, Color.Black, INK_SHADE)
+    // Урок і «до уроків» — чорнилом, перерва — зелена, «уроки закінчились» — жовтий маркер.
     val look = when (card) {
-        is NowCard.Lesson -> NowLook(listOf(Color(0xFFFFC93C), Color(0xFFFF8A1F), Color(0xFFFF4F5E)), subjectEmoji(card.subject), c.ink)
+        is NowCard.Lesson -> NowLook(listOf(c.accent, inkDeep), subjectEmoji(card.subject))
         is NowCard.Break -> NowLook(listOf(Color(0xFF00866B), Color(0xFF00604D)), "☕")
-        is NowCard.Before -> NowLook(listOf(c.accent, Color(0xFF4834D4)), "⏰")
-        is NowCard.Done -> NowLook(listOf(Color(0xFF4834D4), Color(0xFFC2185B)), if (card.holidayUntil != null) "🏖️" else "🎉")
-    }
-    // «Блоки»: трава зверху, земля знизу — як у вебі.
-    val blocks = LocalGameStyle.current == GameStyle.BLOCKS
-    val brush = if (blocks) {
-        Brush.verticalGradient(
-            0f to Color(0xFF6ABE30),
-            GRASS to Color(0xFF5AA526),
-            GRASS to Color(0xFF8B5A2B),
-            1f to Color(0xFF7A4E25),
-        )
-    } else {
-        Brush.linearGradient(look.colors)
+        is NowCard.Before -> NowLook(listOf(c.accent, inkDeep), "⏰")
+        is NowCard.Done -> NowLook(listOf(c.gold, c.gold), if (card.holidayUntil != null) "🏖️" else "🎉", MARKER_INK)
     }
     GameSurface(
-        brush = brush,
-        contentColor = if (LocalGameStyle.current == GameStyle.CLASSIC) look.content else Color.White,
+        brush = Brush.linearGradient(look.colors),
+        contentColor = look.content,
         depth = 6.dp,
         onClick = onDoneTap,
         onClickLabel = if (onDoneTap != null) "Ще салют" else null,
     ) {
         FloatingEmoji(look.emoji, Modifier.align(Alignment.TopEnd).padding(top = 14.dp, end = 16.dp))
-        Column(
-            Modifier.fillMaxWidth().padding(20.dp).semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
+        // TalkBack: «що зараз» (рядок і назва) — одним вузлом, який сам озвучується, коли змінюється стан
+        // (урок → перерва); таймер — окремо й по хвилинах, щоб не зачитувався щосекунди (аудит 21.11.2026, Н2).
+        Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             when (card) {
                 is NowCard.Lesson -> {
-                    Caption("Зараз · ${card.number} урок з ${card.total}")
-                    Headline(card.subject)
-                    Timer(card.secondsLeft)
+                    Phase("Зараз · ${card.number} урок з ${card.total}", card.subject)
+                    Timer(card.secondsLeft, "до дзвінка")
                     Subline(if (card.next != null) "до дзвінка · далі ${card.next}" else "до дзвінка · останній урок")
                     NowProgress(card.progress)
                 }
 
                 is NowCard.Break -> {
-                    Caption("Перерва ${card.breakMinutes} хв")
-                    Headline("Далі: ${card.nextSubject}")
-                    Timer(card.secondsLeft)
+                    Phase("Перерва ${card.breakMinutes} хв", "Далі: ${card.nextSubject}")
+                    Timer(card.secondsLeft, "до уроку")
                     Subline("до ${card.nextNumber} уроку о ${card.startsAt}")
                     NowProgress(card.progress)
                 }
 
                 is NowCard.Before -> {
-                    Caption("Сьогодні ${Format.lessons(card.lessonsCount)}")
-                    Headline("Перший: ${card.firstSubject}")
-                    Timer(card.secondsLeft)
+                    Phase("Сьогодні ${Format.lessons(card.lessonsCount)}", "Перший: ${card.firstSubject}")
+                    Timer(card.secondsLeft, "до початку уроків")
                     Subline("до початку о ${card.startsAt}")
                 }
 
                 is NowCard.Done -> {
-                    Caption(card.holidayUntil?.let { "Канікули до ${Format.dayShort(it)}" } ?: "Уроки закінчились!")
-                    Headline("Далі: ${card.nextDayName}, ${Format.date(card.nextDate)}")
+                    Phase(
+                        card.holidayUntil?.let { "Канікули до ${Format.dayShort(it)}" } ?: "Уроки закінчились!",
+                        "Далі: ${card.nextDayName}, ${Format.date(card.nextDate)}",
+                    )
                     Subline("Перший урок — ${card.firstSubject} о ${card.startsAt}")
                 }
             }
@@ -370,17 +373,33 @@ private fun NowCardView(card: NowCard, onDoneTap: (() -> Unit)? = null) {
     }
 }
 
+/** Рядок і назва стану картки — один вузол для TalkBack, що сам озвучується при зміні. */
+@Composable
+private fun Phase(caption: String, headline: String) {
+    Column(Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
+        Caption(caption)
+        Headline(headline)
+    }
+}
+
 private fun subjectEmoji(subject: String) = Timetable.subject(subject).emoji
+
+/** Що саме зараз (урок №, перерва перед уроком №, до уроків, після) — зміна цього ключа і є «новий стан» картки. */
+private fun NowCard.phaseKey(): String = when (this) {
+    is NowCard.Lesson -> "lesson-$number"
+    is NowCard.Break -> "break-$nextNumber"
+    is NowCard.Before -> "before"
+    is NowCard.Done -> "done"
+}
+
+private const val NOW_IN_MS = 320
+private const val NOW_OUT_MS = 140
 
 /** Емодзі, що повільно «плаває» (анімується лише шар — без перекомпозиції). */
 @Composable
 private fun FloatingEmoji(emoji: String, modifier: Modifier = Modifier) {
     // Вимкнені системні анімації (доступність, вестибулярні розлади) — емодзі стоїть на місці, як і салют.
-    val context = LocalContext.current
-    val animationsOn = remember {
-        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
-    }
-    if (!animationsOn) {
+    if (!rememberAnimationsEnabled()) {
         Text(emoji, fontSize = 46.sp, modifier = modifier.clearAndSetSemantics { })
         return
     }
@@ -403,38 +422,41 @@ private fun FloatingEmoji(emoji: String, modifier: Modifier = Modifier) {
     )
 }
 
+/** Рядок над назвою — звичайним текстом (без «надзаголовка» великими літерами). */
 @Composable
-private fun Caption(text: String) = NowText(
-    text.uppercase(),
-    MaterialTheme.typography.labelLarge.copy(letterSpacing = 1.sp),
-    Modifier.padding(end = 64.dp),
-)
+private fun Caption(text: String) = NowText(text, MaterialTheme.typography.titleSmall, Modifier.padding(end = 64.dp))
 
 @Composable
 private fun Headline(text: String) =
-    StrokeText(text, GameTitleStyle, Modifier.padding(end = 56.dp), color = LocalContentColor.current, strokeWidth = 5.dp, maxLines = 2)
+    TitleText(text, GameTitleStyle, Modifier.padding(end = 56.dp), color = LocalContentColor.current, maxLines = 2)
 
+/** Таймер: на екрані — секунди, для TalkBack — лише хвилини (і лише коли на нього наведуть). */
 @Composable
-private fun Timer(seconds: Long) = StrokeText(Format.timer(seconds), TimerTextStyle, color = LocalContentColor.current, strokeWidth = 6.dp)
+private fun Timer(seconds: Long, what: String) {
+    val minutes = (seconds + SECONDS_IN_MINUTE - 1) / SECONDS_IN_MINUTE
+    TitleText(
+        Format.timer(seconds),
+        TimerTextStyle,
+        Modifier.clearAndSetSemantics { contentDescription = "$what залишилось $minutes хв" },
+        color = LocalContentColor.current,
+    )
+}
+
+private const val SECONDS_IN_MINUTE = 60L
 
 @Composable
 private fun Subline(text: String) = NowText(text, MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.ExtraBold))
 
-/** Дрібний текст картки «Зараз»: у «Звичайному» — колір картки, в «Арені» й «Блоках» — білий з тонким обведенням. */
+/** Дрібний текст картки «Зараз» — кольором картки. */
 @Composable
-private fun NowText(text: String, style: TextStyle, modifier: Modifier = Modifier) {
-    if (LocalGameStyle.current == GameStyle.CLASSIC) {
-        Text(text, modifier, style = style)
-    } else {
-        StrokeText(text, style, modifier, strokeWidth = 3.dp)
-    }
-}
+private fun NowText(text: String, style: TextStyle, modifier: Modifier = Modifier) = Text(text, modifier, style = style)
 
+/** Смужка «замальовується» жовтим маркером (картки уроку й перерви — темні, маркер на них видно). */
 @Composable
 private fun NowProgress(value: Float) = GameProgressBar(
     progress = value,
     modifier = Modifier.padding(top = 12.dp),
-    fill = SolidColor(LocalContentColor.current),
+    fill = SolidColor(RozkladTheme.colors.gold),
     track = Color.Black.copy(alpha = 0.2f),
 )
 
@@ -443,8 +465,8 @@ private fun DayProgress(progress: Float) {
     GameSurface {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("⚡ Навчальний день", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.titleMedium, fontFamily = GameFont)
+                CardTitle("Навчальний день", Modifier.weight(1f))
+                Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.titleMedium, fontFamily = Nunito)
             }
             GameProgressBar(progress, Modifier.padding(top = 8.dp))
         }
@@ -454,7 +476,7 @@ private fun DayProgress(progress: Float) {
 @Composable
 private fun DayTitle(title: String, onEditSchedule: (() -> Unit)?) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-        StrokeText(title, GameTitleStyle.copy(fontSize = 22.sp, lineHeight = 28.sp), Modifier.weight(1f), strokeWidth = 4.dp)
+        TitleText(title, GameTitleStyle.copy(fontSize = 22.sp, lineHeight = 28.sp), Modifier.weight(1f))
         if (onEditSchedule != null) {
             GameSurface(shape = ButtonShape, onClick = onEditSchedule, onClickLabel = "Редагувати розклад") {
                 Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -488,8 +510,7 @@ private fun LessonItem(row: LessonRow) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (current) c.glow else Color.Transparent)
+            .nowHighlight(current, c)
             .padding(horizontal = 8.dp, vertical = 9.dp)
             .semantics(mergeDescendants = true) { },
         verticalAlignment = Alignment.CenterVertically,
@@ -536,8 +557,7 @@ private fun AfterSchoolCard(rows: List<ClubRow>) {
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(if (current) c.glow else Color.Transparent)
+                        .nowHighlight(current, c)
                         .padding(horizontal = 8.dp, vertical = 9.dp)
                         .semantics(mergeDescendants = true) { },
                     verticalAlignment = Alignment.CenterVertically,
@@ -570,8 +590,11 @@ private fun AfterSchoolCard(rows: List<ClubRow>) {
     }
 }
 
-/** Частка висоти картки під «траву» в стилі «Блоки». */
-private const val GRASS = 0.12f
+/** Наскільки темніший кінець «чорнильного» градієнта. */
+private const val INK_SHADE = 0.3f
+
+/** Текст на жовтому маркері. */
+private val MARKER_INK = Color(0xFF23262F)
 
 /** Велика перерва — від 15 хвилин (час поїсти). */
 private const val LONG_BREAK_MIN = 15
@@ -591,7 +614,7 @@ private fun BreakItem(minutes: Long, now: Boolean, past: Boolean) {
             text = text,
             color = if (now) c.positive else c.soft,
             contentColor = when {
-                now -> Color.White
+                now -> c.onPositive
                 long && !past -> c.positive
                 else -> c.muted
             },
@@ -604,10 +627,7 @@ private fun BreakItem(minutes: Long, now: Boolean, past: Boolean) {
 private fun Backpack(subjects: List<String>, isToday: Boolean, clubs: List<ClubBagItem>) {
     GameSurface {
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
-            Text(
-                if (isToday) "🎒 Рюкзак на сьогодні" else "🎒 Що зібрати",
-                style = MaterialTheme.typography.titleMedium,
-            )
+            CardTitle(if (isToday) "Рюкзак на сьогодні" else "Що зібрати")
             FlowRow(
                 Modifier.padding(top = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -639,6 +659,7 @@ private fun Backpack(subjects: List<String>, isToday: Boolean, clubs: List<ClubB
 @Composable
 private fun TodayPreview() {
     RozkladTheme {
-        TodayScreen(checkNotNull(buildTodayState(LocalDateTime.parse("2026-11-09T09:40"), SchoolCalendar(Timetable.EXAMPLE))))
+        val now = LocalDateTime.parse("2026-11-09T09:40")
+        TodayScreen(checkNotNull(buildTodayState(now, SchoolCalendar(Timetable.EXAMPLE))), now.toLocalDate())
     }
 }

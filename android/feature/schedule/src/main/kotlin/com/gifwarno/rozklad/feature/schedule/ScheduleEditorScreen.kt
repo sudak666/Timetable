@@ -16,12 +16,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CheckBox
-import androidx.compose.material.icons.outlined.CheckBoxOutlineBlank
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,9 +42,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gifwarno.rozklad.core.designsystem.component.CheckRow
 import com.gifwarno.rozklad.core.designsystem.component.EmptyState
 import com.gifwarno.rozklad.core.designsystem.component.FitText
 import com.gifwarno.rozklad.core.designsystem.component.GameButton
+import com.gifwarno.rozklad.core.designsystem.component.GameDialog
 import com.gifwarno.rozklad.core.designsystem.component.GameSegmented
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.component.GameTopBar
@@ -138,7 +137,7 @@ private fun ScheduleEditorScreen(
     }
 
     if (confirmExit) {
-        AlertDialog(
+        GameDialog(
             onDismissRequest = { confirmExit = false },
             title = { Text("Вийти без збереження?") },
             text = { Text("Зміни в розкладі буде втрачено.") },
@@ -247,7 +246,7 @@ private fun LessonsTab(state: ScheduleEditorState.Editing, actions: EditorAction
         )
     }
     if (copyMenu) {
-        AlertDialog(
+        GameDialog(
             onDismissRequest = { copyMenu = false },
             title = { Text("Скопіювати уроки з…") },
             text = {
@@ -300,14 +299,7 @@ private fun LessonEditRow(
         // FlowRow: за великого шрифту «Факультатив» переходить у новий рядок, а не обрізається до «Фа».
         FlowRow(Modifier.padding(start = 34.dp), itemVerticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onPick) { Text("Змінити предмет") }
-            TextButton(onClick = { actions.toggleOptional(index) }) {
-                Icon(
-                    if (optional) Icons.Outlined.CheckBox else Icons.Outlined.CheckBoxOutlineBlank,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 6.dp).size(18.dp),
-                )
-                Text("Факультатив", maxLines = 1)
-            }
+            CheckRow("Факультатив", checked = optional, onToggle = { actions.toggleOptional(index) })
         }
     }
 }

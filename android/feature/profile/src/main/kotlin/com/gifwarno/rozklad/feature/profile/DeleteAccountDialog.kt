@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -21,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import com.gifwarno.rozklad.core.designsystem.component.GameDialog
 
 /** Безповоротна дія: показуємо всі наслідки й просимо ввести слово-підтвердження. */
 @Composable
@@ -34,7 +34,7 @@ internal fun DeleteAccountDialog(
     var typed by rememberSaveable { mutableStateOf("") }
     val busy = deleteState == DeleteAccountState.InProgress
     val matches = typed.trim().uppercase() == DELETE_CONFIRM_WORD
-    AlertDialog(
+    GameDialog(
         onDismissRequest = { if (!busy) onDismiss() },
         // Під час видалення не даємо закрити діалог випадковим дотиком повз нього.
         properties = DialogProperties(dismissOnBackPress = !busy, dismissOnClickOutside = !busy),

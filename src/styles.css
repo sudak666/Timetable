@@ -1,21 +1,25 @@
 :root{--s-1:4px;--s-2:8px;--s-3:12px;--s-4:16px;--s-5:20px;--s-6:24px;--s-8:32px;--r-sm:8px;--r-md:12px;--r-lg:16px;--r-xl:20px;--r-pill:999px;--fs-xs:11px;--fs-sm:13px;--fs-md:15px;--fs-lg:clamp(18px,4vw,22px);--fs-xl:clamp(24px,5vw,36px);--shadow-1:0 1px 2px rgb(0 0 0/.05),0 4px 16px -4px rgb(0 0 0/.08);--shadow-2:0 2px 4px rgb(0 0 0/.06),0 12px 32px -8px rgb(0 0 0/.16);--ease-out:cubic-bezier(.2,.8,.2,1);--ease-spring:linear(0,.35 12%,.82 30%,1.02 45%,1 60%,.995 80%,1);--dur-1:.12s;--dur-2:.2s;--dur-3:.35s;--ring:0 0 0 3px color-mix(in srgb,var(--accent) 45%,transparent)}
 
-:root{--warn-bg:#fff1e6;--warn-fg:#a4301a;--good:#00705a;--bad:#c0392b;--bg:#f3f4fb;--card:#fff;--text:#1b1c33;--muted:#5f6384;--line:#e4e6f3;--accent:#6c5ce7;--glow:rgba(108,92,231,.22);--brk:#f0f1fa}
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--warn-bg:#3b1f1a;--warn-fg:#ffb4a2;--good:#4fd1a5;--bad:#ff8a80;--bg:#0f1024;--card:#1a1b36;--text:#eceefe;--muted:#a3a6cc;--line:#2a2c4f;--glow:rgba(108,92,231,.45);--brk:#15162d}}
-:root[data-theme=dark]{--warn-bg:#3b1f1a;--warn-fg:#ffb4a2;--good:#4fd1a5;--bad:#ff8a80;--bg:#0f1024;--card:#1a1b36;--text:#eceefe;--muted:#a3a6cc;--line:#2a2c4f;--glow:rgba(108,92,231,.45);--brk:#15162d}
+/* «Щоденник» (як в Android): зошит у клітинку, синє чорнило, червона ручка вчителя, жовтий маркер; уночі — дошка й крейда. */
+@font-face{font-family:Caveat;font-style:normal;font-weight:700;font-display:swap;src:url('./assets/fonts/caveat-700.woff2') format('woff2')}
+:root{--warn-bg:#fdece8;--warn-fg:#a4301a;--good:#00705a;--bad:#c0392b;--bg:#fbf8f0;--card:#fff;--text:#23262f;--muted:#4c5163;--line:#e6dfcf;--accent:#1f3fa6;--glow:rgba(31,63,166,.18);--brk:#f3eee2;--marker:#ffe14a;--hl:rgba(255,225,74,.6);--pen:#c8321f;--title:var(--accent);--hand:Caveat,"Segoe Print","Comic Sans MS",cursive}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--warn-bg:#5c1a14;--warn-fg:#ffdad6;--good:#4fd1a5;--bad:#ff8a7a;--bg:#16221d;--card:#20302a;--text:#edebe3;--muted:#b7c2bb;--line:#2b3d36;--glow:rgba(157,187,255,.22);--brk:#1b2a24;--marker:#f2d25c;--hl:rgba(242,210,92,.18);--pen:#ff8a7a;--title:var(--text)}}
+:root[data-theme=dark]{--warn-bg:#5c1a14;--warn-fg:#ffdad6;--good:#4fd1a5;--bad:#ff8a7a;--bg:#16221d;--card:#20302a;--text:#edebe3;--muted:#b7c2bb;--line:#2b3d36;--glow:rgba(157,187,255,.22);--brk:#1b2a24;--marker:#f2d25c;--hl:rgba(242,210,92,.18);--pen:#ff8a7a;--title:var(--text)}
 *{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
 button,a,summary,label,.chip{touch-action:manipulation;user-select:none;-webkit-user-select:none}
 :focus:not(:focus-visible){outline:none}
 body{font-family:"Nunito Variable",Nunito,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px 16px 48px;transition:background .3s;isolation:isolate}
-/* Декоративна арена залишається позаду непрозорих, читабельних карток. */
-/* Власне тло «арени» (як в Android): нічне небо, іскри й кубики — без чужих персонажів. */
-:root{--sky-top:#3a1f8f;--sky-bottom:#7b4fd8}
-:root[data-theme=dark]{--sky-top:#0b0820;--sky-bottom:#2a1866}
-@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--sky-top:#0b0820;--sky-bottom:#2a1866}}
-body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:url('./assets/arena-sky.svg') center/cover no-repeat,linear-gradient(var(--sky-top),var(--sky-bottom))}
+/* Тло позаду непрозорих карток: сторінка в клітинку з червоними полями; уночі — дошка з розводами крейди. */
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(90deg,transparent 9px,rgba(200,50,31,.35) 9px 11px,transparent 11px),linear-gradient(rgba(31,63,166,.09) 1px,transparent 1px) 0 0/18px 18px,linear-gradient(90deg,rgba(31,63,166,.09) 1px,transparent 1px) 0 0/18px 18px,var(--bg)}
+:root[data-theme=dark] body::before{background:radial-gradient(70% 35% at 20% 12%,rgba(237,235,227,.05),transparent 70%),radial-gradient(60% 30% at 85% 60%,rgba(237,235,227,.045),transparent 70%),var(--bg)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]) body::before{background:radial-gradient(70% 35% at 20% 12%,rgba(237,235,227,.05),transparent 70%),radial-gradient(60% 30% at 85% 60%,rgba(237,235,227,.045),transparent 70%),var(--bg)}}
 .wrap{max-width:1100px;margin:auto}
 header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:var(--shadow-2)}
-h1{font-size:clamp(24px,5vw,36px);font-weight:800;background:linear-gradient(90deg,var(--accent),#fd79a8);-webkit-background-clip:text;background-clip:text;color:transparent}
+/* Великі заголовки — від руки (Caveat; він дрібніший на вигляд, тож більший кегль). */
+h1{font-family:var(--hand);font-size:clamp(32px,6vw,48px);font-weight:700;line-height:1;color:var(--title)}
+.now h2{font-family:var(--hand);font-size:clamp(34px,8vw,44px);line-height:1;margin:2px 0 4px}
+.h4,.side h4{font-family:var(--hand);font-size:25px;font-weight:700;line-height:1.1;color:var(--title);margin-bottom:8px}
+.h5,.mini h5{font-family:var(--hand);font-size:21px;font-weight:700;color:var(--title);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
 #clock{color:var(--muted);font-weight:600}
 .tools{display:flex;gap:8px}
 button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:var(--r-md);padding:var(--s-2) var(--s-3);transition:transform var(--dur-1) var(--ease-out),background-color var(--dur-2),border-color var(--dur-2),box-shadow var(--dur-2)}
@@ -28,13 +32,11 @@ button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 @media(max-width:720px){.top{grid-template-columns:1fr}}
 .now{background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 70%,#1b1c33));color:#fff;border-radius:20px;padding:20px;box-shadow:0 10px 30px var(--glow)}
 .now.brk{background:linear-gradient(135deg,#00705a,#00a383)}
-.now small{text-transform:uppercase;letter-spacing:.08em;font-size:12px}
-.now h2{font-size:clamp(22px,5vw,30px);margin:4px 0}
+.now small{font-size:14px;font-weight:700;opacity:.9}
 .big{font-size:clamp(34px,8vw,48px);font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1;margin:6px 0}
 .bar{height:8px;background:rgba(255,255,255,.3);border-radius:8px;overflow:hidden;margin-top:12px}
-.bar i{display:block;height:100%;background:#fff;border-radius:8px;transition:width 1s linear}
+.bar i{display:block;height:100%;background:var(--marker);border-radius:3px 9px 4px 8px;transition:width 1s linear}
 .side{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px}
-.h4,.side h4{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{font-size:13px;padding:4px 10px;border-radius:20px;color:#fff;font-weight:600;cursor:pointer;border:0}
 .chip b{font-weight:500;margin-left:4px}
@@ -56,7 +58,7 @@ button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .b{display:flex;justify-content:center;gap:6px;font-size:11px;color:var(--muted);background:var(--brk);border-radius:8px;padding:3px;margin:3px 0}
 .b.long{color:var(--good);font-weight:700}
 .l.past .s,.l.past .t,.b.past{color:var(--muted)}.l.past .s{font-weight:500}.l.past .n{background:var(--muted)!important}.l.past img.emo{opacity:.55}
-.l.cur{background:var(--glow)}.l.cur .t{color:var(--text)}
+.l.cur{background:var(--hl)}.l.cur .t{color:var(--text)}
 .b.cur{background:#00705a;color:#fff}
 .opt{font-size:11px;color:var(--muted);font-weight:400}
 .after{margin-bottom:20px}.club-e{background:var(--brk);font-size:16px}
@@ -71,8 +73,7 @@ button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 @keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 var(--glow)}50%{box-shadow:0 0 0 8px transparent}}
 @keyframes float{0%,100%{transform:translate3d(0,0,0) rotate(-4deg)}50%{transform:translate3d(0,-8px,0) rotate(4deg)}}
-@keyframes shine{to{background-position:200% center}}
-h1{background-size:200% auto;animation:shine 6s linear infinite}
+
 .top>*,.day{animation:up .5s both}
 .day:nth-child(2){animation-delay:.07s}.day:nth-child(3){animation-delay:.14s}.day:nth-child(4){animation-delay:.21s}.day:nth-child(5){animation-delay:.28s}
 .day{transition:transform .2s}.day:hover{transform:translateY(-4px)}
@@ -105,17 +106,20 @@ button.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,var
 .gl{max-height:300px;overflow:auto;margin-top:10px}
 .gi{display:grid;grid-template-columns:42px 1fr auto auto;gap:10px;align-items:center;padding:8px;border-radius:10px}
 .gi+.gi{border-top:1px dashed var(--line)}
-.gi .g{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:17px}
+.gi .g{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:17px;background:var(--lv,#4b5563)}
+/* Оцінка — від руки червоною ручкою в клітинці; рамка — колір рівня. */
+.gi .g[style]{background:var(--card);box-shadow:inset 0 0 0 2px var(--lv);color:var(--pen);font-family:var(--hand);font-weight:700;font-size:26px}
 .gi small{color:var(--muted);display:block}
 .gi .x{border:0;background:none;color:var(--muted);padding:4px}
 .lvl{margin:6px 0 4px;font-weight:800}
-.lvl .bar{background:var(--line)}.lvl .bar i{background:linear-gradient(90deg,#fdcb6e,#e17055)}
+.lvl .bar{background:var(--line)}.lvl .bar i{background:var(--marker)}
 .badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .bd{font-size:13px;padding:5px 10px;border-radius:20px;background:var(--brk);color:var(--muted)}.bd:not(.got) img.emo{filter:grayscale(1);opacity:.5}
-.bd.got{opacity:1;background:linear-gradient(135deg,#fdcb6e,#fab1a0);color:#1b1c33;font-weight:700}
+.bd.got{opacity:1;background:var(--marker);color:#23262f;font-weight:700;box-shadow:0 0 0 3px #fff,0 3px 8px rgb(0 0 0/.22);transform:rotate(-2deg)}.bd.got:nth-child(even){transform:rotate(2deg)}
+.bd:not(.got){background:none;outline:2px dashed color-mix(in srgb,var(--muted) 60%,transparent);outline-offset:-2px}
 .rates{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6}
 .gi .ok{border:0;background:#00705a;color:#fff;padding:4px 10px;margin-right:4px;font-weight:900}
-.gi.wait{background:var(--brk);border:1px dashed #fdcb6e}
+.gi.wait{background:var(--brk);border:1px dashed var(--marker)}
  .wide{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;max-width:360px;padding:12px;font-weight:700}
 .or{color:var(--muted);font-size:13px;margin:12px 0 8px}
 .msg{font-size:14px;margin-top:8px;color:var(--muted)}
@@ -169,10 +173,9 @@ details summary::before{content:"";display:inline-block;width:7px;height:7px;bor
 details[open] summary::before{transform:rotate(45deg)}
 .cards2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:14px}
 .mini{background:var(--brk);border-radius:16px;padding:14px}
-.h5,.mini h5{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
 .mini h5 button{font-size:12px;padding:3px 10px;border-radius:10px;text-transform:none;letter-spacing:0}
 .mini .big2{font-size:20px;font-weight:900}
-.mini .bar{background:var(--line);margin-top:8px}.mini .bar i{background:linear-gradient(90deg,var(--accent),#fd79a8)}
+.mini .bar{background:var(--line);margin-top:8px}.mini .bar i{background:var(--marker)}
 .ch{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:10px 0}
 .ch+.ch{border-top:1px dashed var(--line)}
 .ch small{color:var(--muted);display:block}
@@ -183,9 +186,9 @@ details[open] summary::before{transform:rotate(45deg)}
 .hw.dn .t2{text-decoration:line-through;color:var(--muted)}
 .hw.late small{color:#d63031;font-weight:700}
 .cb{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);background:none;padding:0;display:grid;place-items:center;transition:.2s}
-.cb.on{background:#00b894;border-color:#00b894;color:#fff}
+.cb.on{background:var(--good);border-color:var(--good);color:var(--card)}
 .cb.on::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:translateY(-1px) rotate(45deg)}
-.hwdot{display:inline-block;margin-left:6px;font-size:11px;background:#fdcb6e;color:#1b1c33;border-radius:8px;padding:1px 6px;font-weight:800;vertical-align:middle}
+.hwdot{display:inline-block;margin-left:6px;font-size:11px;background:var(--marker);color:#23262f;border-radius:8px;padding:1px 6px;font-weight:800;vertical-align:middle}
 .chart{display:grid;grid-template-columns:auto 1fr auto;gap:6px 10px;align-items:center;font-size:14px;margin-top:6px}
 .chart .tr{height:14px;background:var(--line);border-radius:4px;overflow:hidden}
 .chart .tr i{display:block;height:100%;border-radius:0 4px 4px 0;background:var(--accent)}
@@ -219,7 +222,7 @@ details[open] summary::before{transform:rotate(45deg)}
 .prof .pn b{display:block;font-size:17px;font-weight:900}
 .prof .pn small{color:var(--muted);font-weight:700}
 .prof .pl{height:7px;border-radius:7px;background:var(--line);overflow:hidden;margin-top:5px;max-width:220px}
-.prof .pl i{display:block;height:100%;border-radius:7px;background:linear-gradient(90deg,#fdcb6e,#e17055)}
+.prof .pl i{display:block;height:100%;border-radius:3px 9px 4px 8px;background:var(--marker)}
 .prof .ps{display:flex;gap:8px;flex-wrap:wrap}
 .prof .st{display:flex;align-items:center;gap:6px;background:var(--brk);border-radius:14px;padding:7px 11px;font-weight:900;font-size:15px;border:0;color:var(--text);cursor:pointer}
 .prof .st small{font-weight:700;color:var(--muted);font-size:11px;display:block;line-height:1}
@@ -232,48 +235,12 @@ details[open] summary::before{transform:rotate(45deg)}
 .road .rs .rsw{width:34px;height:34px;border-radius:12px;margin:3px auto}
 .road .rs b{display:block;font-size:12px;margin-top:4px}
 .road .rs small{font-size:11px;color:var(--muted)}
-.road .rs.got{background:linear-gradient(160deg,color-mix(in srgb,var(--accent) 25%,var(--card)),var(--brk))}
-.road .rs.got::after{content:"";position:absolute;top:6px;right:6px;width:16px;height:16px;border-radius:50%;background:#00b894 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5' stroke='white' stroke-width='2.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+.road .rs.got{background:color-mix(in srgb,var(--marker) 45%,#fff);color:#23262f;box-shadow:0 0 0 3px #fff,0 4px 10px rgb(0 0 0/.2);transform:rotate(-2deg)}.road .rs.got:nth-child(even){transform:rotate(2deg)}.road .rs.got small{color:#4c5163}
+.road .rs.lock{background:none;outline:2px dashed color-mix(in srgb,var(--muted) 60%,transparent);outline-offset:-2px}
+.road .rs.got::after{content:"";position:absolute;top:6px;right:6px;width:16px;height:16px;border-radius:50%;background:#1d7a4f url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5' stroke='white' stroke-width='2.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
 .road .rs.lock .ri,.road .rs.lock .rsw{filter:grayscale(.8);opacity:.45}.road .rs.lock b{color:var(--muted)}
 .road .rs.next{box-shadow:inset 0 0 0 2px var(--accent)}
 /* ===== Ігрові стилі ===== */
-.stylebtn{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:280px}
-.stylebtn button{border-radius:14px;padding:10px 4px;font-weight:800;font-size:13px}
-.stylebtn button.on{box-shadow:inset 0 0 0 2px var(--accent)}
-/* Арена: соковитий «бравл»-стиль */
-[data-style=arena]{--ink:#1b1c33}
-[data-style=arena][data-theme=dark]{--ink:#000}
-@media (prefers-color-scheme:dark){[data-style=arena]:not([data-theme=light]){--ink:#000}}
-[data-style=arena] .now,[data-style=arena] .now *{--ink:#1b1c33}
-[data-style=arena] body{background:radial-gradient(1200px 600px at 50% -10%,color-mix(in srgb,var(--accent) 35%,transparent),transparent),var(--bg)}
-[data-style=arena] h1,[data-style=arena] .now h2,[data-style=arena] .big,[data-style=arena] .sum b,[data-style=arena] .prof .pn b,[data-style=arena] .day h3,[data-style=arena] .lvl,[data-style=arena] .big2,[data-style=arena] .gbtn button,[data-style=arena] .st{font-family:"Russo One","Nunito Variable",sans-serif;font-weight:400;letter-spacing:.01em}
-[data-style=arena] h1{background:none;-webkit-text-fill-color:#fff;color:#fff;-webkit-text-stroke:1.5px var(--ink);text-shadow:0 4px 0 var(--ink);animation:none}
-[data-style=arena] .now{background:linear-gradient(160deg,#ffd54a,#ff9f1c 45%,#ff5e62);color:var(--ink);box-shadow:0 6px 0 var(--ink),0 14px 30px rgba(0,0,0,.25);border:3px solid var(--ink)}
-[data-style=arena] .now h2,[data-style=arena] .now .big{color:#fff;-webkit-text-stroke:1.5px var(--ink);text-shadow:0 3px 0 var(--ink)}
-[data-style=arena] .now .bar{background:rgba(27,28,51,.25)}[data-style=arena] .now .bar i{background:#fff;box-shadow:inset 0 -3px 0 rgba(0,0,0,.15)}
-[data-style=arena] .side,[data-style=arena] .day,[data-style=arena] .prof{border:3px solid var(--ink);box-shadow:0 5px 0 var(--ink)}
-[data-style=arena] button:not(.x):not(.cb):not(.opt){border:2px solid var(--ink);box-shadow:0 3px 0 var(--ink);transition:transform .08s,box-shadow .08s}
-[data-style=arena] button:not(.x):not(.cb):not(.opt):active{transform:translateY(3px);box-shadow:0 0 0 var(--ink)}
-[data-style=arena] .gbtn button{color:#fff;-webkit-text-stroke:1px var(--ink);text-shadow:0 2px 0 var(--ink);font-size:18px}
-[data-style=arena] .sum div,[data-style=arena] .mini{border:2px solid var(--ink);box-shadow:0 3px 0 var(--ink)}
-[data-style=arena] .bar,[data-style=arena] .prof .pl{border:2px solid var(--ink);height:12px}
-[data-style=arena] .lvl .bar i,[data-style=arena] .prof .pl i{background:linear-gradient(180deg,#ffe066,#ffb300);box-shadow:inset 0 -3px 0 rgba(0,0,0,.18)}
-[data-style=arena] .prof .pa{border:3px solid var(--ink);box-shadow:0 3px 0 var(--ink)}
-/* Блоки: піксельний «кубічний» стиль */
-[data-style=blocks] body{background:linear-gradient(180deg,#8fd3ff 0,#cdeeff 380px,var(--bg) 700px)}
-[data-style=blocks]:is([data-theme=dark]) body{background:linear-gradient(180deg,#1b2a4a 0,#0f1024 600px)}
-@media (prefers-color-scheme:dark){[data-style=blocks]:not([data-theme=light]) body{background:linear-gradient(180deg,#1b2a4a 0,#0f1024 600px)}}
-[data-style=blocks] h1,[data-style=blocks] .now h2,[data-style=blocks] .big,[data-style=blocks] .sum b,[data-style=blocks] .prof .pn b,[data-style=blocks] .day h3,[data-style=blocks] .h4,[data-style=blocks] .lvl,[data-style=blocks] .big2,[data-style=blocks] .gbtn button,[data-style=blocks] .st,[data-style=blocks] .n{font-family:"Nunito Variable",sans-serif;font-weight:900;letter-spacing:.02em}
-[data-style=blocks] h1{background:none;-webkit-text-fill-color:#fff;color:#fff;text-shadow:3px 3px 0 #3b2a1a;animation:none}
-[data-style=blocks] .now{background:linear-gradient(180deg,#6abe30 0,#5aa526 18px,#8b5a2b 18px,#7a4e25 100%);border-radius:14px;box-shadow:inset 0 -6px 0 rgba(0,0,0,.2),0 8px 0 #4a3018}
-[data-style=blocks] .now h2,[data-style=blocks] .now .big{text-shadow:3px 3px 0 rgba(0,0,0,.35)}
-[data-style=blocks] .side,[data-style=blocks] .day,[data-style=blocks] .prof,[data-style=blocks] .mini,[data-style=blocks] .sum div{border-radius:12px;box-shadow:inset 0 -4px 0 rgba(0,0,0,.08),0 4px 0 color-mix(in srgb,var(--line) 70%,#000)}
-[data-style=blocks] button{border-radius:10px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.18)}
-[data-style=blocks] .bar,[data-style=blocks] .prof .pl{height:12px;border-radius:6px}
-[data-style=blocks] .bar i,[data-style=blocks] .prof .pl i{border-radius:6px;background:repeating-linear-gradient(90deg,#6abe30 0 14px,#5aa526 14px 16px)!important}
-[data-style=blocks] .now .bar i{background:repeating-linear-gradient(90deg,#fff 0 14px,rgba(255,255,255,.7) 14px 16px)!important}
-[data-style=blocks] .gbtn button{border-radius:10px;box-shadow:inset 0 -5px 0 rgba(0,0,0,.22),inset 0 3px 0 rgba(255,255,255,.2)}
-[data-style=blocks] .n,[data-style=blocks] .gi .g{border-radius:8px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2)}
 .single .day:not(.show){display:none}
 .hl .l:not(.match){opacity:.2}
 .l.match{background:var(--glow)}
@@ -281,8 +248,7 @@ details[open] summary::before{transform:rotate(45deg)}
 /* ===== база / доступність ===== */
 ul,ol{list-style:none;padding:0}
 h1,h2,h3{margin:0}
-.h4,.h5,.h6{font-weight:800}
-.h4{font-size:13px}
+.h6{font-weight:800}
 .gap{margin-top:16px}
 .lead{margin:6px 0 12px}
 .muted{color:var(--muted)}
@@ -300,7 +266,7 @@ main:focus{outline:none}
 .who{display:inline-flex;align-items:center;font-size:13px;font-weight:700;color:var(--muted)}
 .pend{color:var(--warn-fg);text-transform:none;letter-spacing:0}
 .acts2{display:flex;gap:2px}
-.gi .g.gb{background:linear-gradient(135deg,#fdcb6e,#e17055)}.gi .g.gp{background:#4b5563}.gi .g.gv{background:linear-gradient(135deg,#fd79a8,#6c5ce7)}
+.gi .g.gb{background:var(--marker)}.gi .g.gp{background:#4b5563}.gi .g.gv{background:var(--accent)}
 .gi img.emo,.gi .g img.emo{width:22px;height:22px}
 .kv{display:flex;justify-content:space-between;gap:8px}
 .kv small{color:var(--muted);font-weight:600}
@@ -362,7 +328,7 @@ table.chart .tr i{display:block;height:100%;border-radius:0 4px 4px 0}
 .bnav{display:flex;gap:4px;background:color-mix(in srgb,var(--card) 97%,transparent);backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);border:1px solid var(--line);z-index:40}
 .bnav a{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:52px;padding:6px 4px;border-radius:14px;color:var(--muted);text-decoration:none;font-size:12px;font-weight:800;transition:color .15s,background .15s;-webkit-tap-highlight-color:transparent}
 .bnav a svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s cubic-bezier(.3,1.5,.5,1)}
-.bnav a.on{color:#fff;background:var(--accent);box-shadow:0 4px 14px var(--glow)}
+.bnav a.on{color:#23262f;background:var(--marker);box-shadow:none}
 .bnav a.on svg{transform:translateY(-1px) scale(1.08)}
 .bnav a:active svg{transform:scale(.92)}
 .nb{position:absolute;top:4px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#c0392b;color:#fff;font-size:11px;line-height:18px;text-align:center;font-weight:900;box-shadow:0 0 0 2px var(--card)}
@@ -391,7 +357,7 @@ table.chart .tr i{display:block;height:100%;border-radius:0 4px 4px 0}
 header{flex-wrap:nowrap}
 header>div:first-child{min-width:0;flex:1}
 header .tools{flex:none}
-.clock,h1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}@media(max-width:520px){.clock{white-space:normal}}@media(max-width:420px){header h1{font-size:20px}}@media(max-width:350px){header h1{font-size:16px}}.clock{font-variant-numeric:tabular-nums}
+.clock,h1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}@media(max-width:520px){.clock{white-space:normal}}@media(max-width:420px){header h1{font-size:30px}}@media(max-width:350px){header h1{font-size:26px}}.clock{font-variant-numeric:tabular-nums}
 /* ===== тости ===== */
 .toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom));z-index:95;display:flex;flex-direction:column;gap:8px;width:min(420px,calc(100vw - 24px));pointer-events:none}
 .toasts>div{display:flex;flex-direction:column;gap:8px}

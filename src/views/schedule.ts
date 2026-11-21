@@ -69,7 +69,7 @@ export function afterSchoolCard(): TemplateResult | typeof nothing {
   const a = afterSchool(ACTIVITIES, state.now);
   if (!a) return nothing;
   return html`<section class="side after" aria-labelledby="as-h">
-    <h2 class="h4" id="as-h">${emo('⚽')} ${a.today ? 'Після школи' : 'Завтра після школи'}</h2>
+    <h2 class="h4" id="as-h">${a.today ? 'Після школи' : 'Завтра після школи'}</h2>
     <ol class="lessons">${a.rows.map(({ c, st }) => html`<li class=${classMap({ l: true, [st]: !!st })} aria-current=${st === 'cur' ? 'time' : nothing}>
       <span class="n club-e" aria-hidden="true">${emo(c.e)}</span>
       <span class="t">${c.a} – ${c.b}</span>
@@ -99,12 +99,12 @@ export function addStar(x?: number, y?: number): void {
 
 export function funCards(quiz: TemplateResult): TemplateResult {
   return html`<div class="fun">
-    <section class="side quiz" aria-labelledby="qz-h"><h2 class="h4" id="qz-h">${emo('🧠')} Вікторина на перерві</h2>${quiz}</section>
-    <section class="side" aria-labelledby="fact-h"><h2 class="h4" id="fact-h">${emo('🦉')} Цікавий факт</h2>
+    <section class="side quiz" aria-labelledby="qz-h"><h2 class="h4" id="qz-h">Вікторина на перерві</h2>${quiz}</section>
+    <section class="side" aria-labelledby="fact-h"><h2 class="h4" id="fact-h">Цікавий факт</h2>
       <p aria-live="polite">${emo(FACTS[state.factIdx % FACTS.length]!)}</p>
       <div class="row"><span></span><button type="button" @click=${() => set({ factIdx: state.factIdx + 1 })}>Ще факт</button></div></section>
-    <section class="side" aria-labelledby="wk-h"><h2 class="h4" id="wk-h">${emo('🌈')} До вихідних</h2><p>${weekendText()}</p>
-      <h2 class="h4" style="margin-top:12px">${emo('⭐')} Мої зірочки за сьогодні</h2>
+    <section class="side" aria-labelledby="wk-h"><h2 class="h4" id="wk-h">До вихідних</h2><p>${weekendText()}</p>
+      <h2 class="h4" style="margin-top:12px">Мої зірочки за сьогодні</h2>
       <div class="row"><span class="stars" aria-label=${`Зірочок: ${state.stars}`}>${state.stars ? emo('⭐'.repeat(state.stars)) : html`<small class="muted">Ще жодної — постав собі за добру справу</small>`}</span>
         <button type="button" @click=${(e: MouseEvent) => addStar(e.clientX, e.clientY)}>+ зірка</button></div></section>
   </div>`;

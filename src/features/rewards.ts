@@ -115,4 +115,4 @@ export const levelOf = (xp: number): number => Math.floor(xp / XP_PER_LEVEL) + 1
 export const gradeColor = (g: number): string => (g === PASS ? '#5b6472' : g >= 10 ? '#00866b' : g >= 7 ? '#0869b5' : g >= 4 ? '#8a5c00' : '#c62828');
 
 export const AVATARS: readonly [string, number][] = [['🦊', 1], ['🐼', 1], ['🐸', 1], ['🐙', 2], ['🐯', 2], ['🦁', 3], ['🐺', 3], ['🦉', 4], ['🐧', 4], ['🦄', 5], ['🤖', 6], ['👽', 7], ['🦖', 8], ['🐲', 10], ['👾', 12], ['🦈', 15]];
-export const THEMES: readonly [string, number][] = [['#6c5ce7', 1], ['#0869b5', 1], ['#00866b', 2], ['#c2185b', 3], ['#b84a00', 4], ['#8a5c00', 5], ['#c62828', 6], ['#2d3436', 8]];
+export const THEMES: readonly [string, number][] = [['#1f3fa6', 1], ['#0869b5', 1], ['#00866b', 2], ['#c2185b', 3], ['#b84a00', 4], ['#8a5c00', 5], ['#c62828', 6], ['#2d3436', 8]];

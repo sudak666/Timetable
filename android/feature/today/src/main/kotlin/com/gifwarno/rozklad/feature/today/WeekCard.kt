@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.component.NumberTile
+import com.gifwarno.rozklad.core.designsystem.component.nowHighlight
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.domain.Timetable
 
@@ -61,7 +62,6 @@ internal fun WeekCard(week: WeekSchedule, modifier: Modifier = Modifier) {
                         color = if (on) c.accent else c.soft,
                         contentColor = if (on) Color.White else MaterialTheme.colorScheme.onSurface,
                         depth = if (on) 3.dp else 0.dp,
-                        borderWidth = if (on) 2.dp else 0.dp,
                         onClick = { day = d.index },
                         modifier = Modifier.semantics { selected = on },
                     ) {
@@ -82,8 +82,7 @@ internal fun WeekCard(week: WeekSchedule, modifier: Modifier = Modifier) {
                     Modifier
                         .fillMaxWidth()
                         .alpha(if (dim) DIM_ALPHA else 1f)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(if (highlight == l.subject) c.glow else Color.Transparent)
+                        .nowHighlight(highlight == l.subject, c)
                         .padding(horizontal = 6.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -112,7 +111,7 @@ internal fun WeekCard(week: WeekSchedule, modifier: Modifier = Modifier) {
                         color = Color(info.color),
                         contentColor = Color.White,
                         depth = if (on) 3.dp else 0.dp,
-                        borderWidth = if (on) 3.dp else 0.dp,
+                        outline = if (on) 2.5.dp else 0.dp,
                         onClick = { highlight = if (on) null else sc.subject },
                         modifier = Modifier.alpha(if (highlight == null || on) 1f else DIM_ALPHA).semantics { selected = on },
                     ) {

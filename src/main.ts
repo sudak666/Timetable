@@ -8,10 +8,10 @@ import { parseQuickGrade } from './lib/command';
 import { addDays } from './lib/time';
 import { EMPTY_TIMETABLE, WEEK, applyTimetable, scheduleSubjects, subjectList } from './data/schedule';
 import { openPalette, type Cmd } from './ui/palette';
-import { set, state, store, subscribe, TABS, type GameStyle, type Tab } from './state';
+import { set, state, store, subscribe, TABS, type Tab } from './state';
 import { bikeLane } from './ui/bike';
 import { boom } from './ui/confetti';
-import { applyAccent, applyStyle } from './ui/theme';
+import { applyAccent } from './ui/theme';
 import { emo } from './lib/emoji';
 import { quizView } from './views/quiz';
 import { afterSchoolCard, funCards, lessonAlertTick, nowCard, sidePanel, toggleLessonAlerts, weekGrid, weekStats } from './views/schedule';
@@ -22,8 +22,8 @@ const root = document.documentElement;
 const theme = store.get('theme');
 if (theme === 'dark' || theme === 'light') root.dataset.theme = theme;
 applyAccent(store.get('accent'));
-const style = (store.get('style') ?? '') as GameStyle;
-if (style === 'arena' || style === 'blocks') { applyStyle(style); state.style = style; }
+// Ігрові стилі «Арена» й «Блоки» прибрано (21.11.2026) — стираємо збережений вибір.
+store.set('style', null);
 try {
   const o = JSON.parse(store.get('stars') ?? '{}') as { d?: string; n?: number };
   if (o.d === iso(new Date())) state.stars = Math.min(10, Number(o.n) || 0);

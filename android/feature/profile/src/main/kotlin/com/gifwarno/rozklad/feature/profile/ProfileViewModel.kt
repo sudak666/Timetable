@@ -7,7 +7,6 @@ import com.gifwarno.rozklad.core.data.repository.FamilyRepository
 import com.gifwarno.rozklad.core.data.repository.SessionRepository
 import com.gifwarno.rozklad.core.datastore.ThemeMode
 import com.gifwarno.rozklad.core.datastore.UserPreferencesDataSource
-import com.gifwarno.rozklad.core.designsystem.theme.GameStyle
 import com.gifwarno.rozklad.core.domain.Rewards
 import com.gifwarno.rozklad.core.domain.Trophies
 import com.gifwarno.rozklad.core.model.FamilyContext
@@ -55,7 +54,6 @@ sealed interface ProfileUiState {
         val accent: String = "",
         /** Курс оцінок і правила серії сім'ї. */
         val settings: RewardSettings = Rewards.DEFAULT_SETTINGS,
-        val gameStyle: GameStyle = GameStyle.CLASSIC,
         /** Ім'я в сім'ї як є (може бути порожнім — тоді в шапці пошта). */
         val myName: String = "",
         /** Свій userId — себе прибрати з сім'ї не можна. */
@@ -173,7 +171,6 @@ class ProfileViewModel @Inject constructor(
             },
             accent = ctx.me?.theme.orEmpty(),
             settings = ctx.data.settings,
-            gameStyle = GameStyle.of(prefs.gameStyle),
             myName = ctx.me?.name.orEmpty(),
             myId = ctx.user.id,
         )
@@ -236,10 +233,6 @@ class ProfileViewModel @Inject constructor(
             val ctx = active.context.filterNotNull().first()
             if (ctx.isParent) families.saveRates(ctx.familyId, rates, streak)
         }
-    }
-
-    fun setGameStyle(style: GameStyle) {
-        viewModelScope.launch { preferences.setGameStyle(style.name) }
     }
 
     fun setTheme(mode: ThemeMode) {

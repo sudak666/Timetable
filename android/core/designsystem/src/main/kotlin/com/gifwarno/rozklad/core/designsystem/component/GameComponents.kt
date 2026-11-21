@@ -1,10 +1,13 @@
 package com.gifwarno.rozklad.core.designsystem.component
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -14,7 +17,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -28,11 +30,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.CacheDrawScope
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
@@ -45,20 +53,23 @@ import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.progressBarRangeInfo
@@ -67,25 +78,25 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.gifwarno.rozklad.core.designsystem.theme.GameStyle
-import com.gifwarno.rozklad.core.designsystem.theme.LocalGameStyle
+import com.gifwarno.rozklad.core.designsystem.theme.HAND_SCALE
+import com.gifwarno.rozklad.core.designsystem.theme.HandFont
+import com.gifwarno.rozklad.core.designsystem.theme.RozkladColors
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
+import kotlin.math.PI
+import kotlin.math.min
+import kotlin.math.sin
 
 /** Форма карток (як --r-xl у вебі). */
-val CardShape: Shape
-    @Composable @ReadOnlyComposable
-    get() = if (LocalGameStyle.current == GameStyle.BLOCKS) RoundedCornerShape(10.dp) else RoundedCornerShape(20.dp)
+val CardShape: Shape = RoundedCornerShape(20.dp)
 
 /** Форма кнопок. */
-val ButtonShape: Shape
-    @Composable @ReadOnlyComposable
-    get() = if (LocalGameStyle.current == GameStyle.BLOCKS) RoundedCornerShape(8.dp) else RoundedCornerShape(14.dp)
+val ButtonShape: Shape = RoundedCornerShape(14.dp)
 
 /**
- * «Ігрова» поверхня: обведення й тверда тінь знизу (як стиль «Арена» у вебі).
- * З [onClick] — натискається «в глибину»: верх опускається на тінь, телефон легенько вібрує.
+ * Картка «Щоденника»: заливка й м'яка тінь (аркуш на сторінці). З [onClick] — натискається:
+ * тінь притискається, телефон легенько вібрує. [depth] = 0 — без тіні (пласка плашка, напр. невибрана «пігулка»).
+ * [outline] > 0 — обвідка чорнилом (уночі крейдою): так позначаємо обране (колір, аватар, день).
  */
 @Composable
 fun GameSurface(
@@ -95,61 +106,48 @@ fun GameSurface(
     brush: Brush? = null,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     depth: Dp = 4.dp,
-    borderWidth: Dp = 2.dp,
+    outline: Dp = 0.dp,
+    outlineColor: Color = Color.Unspecified,
     onClick: (() -> Unit)? = null,
     onClickLabel: String? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val c = RozkladTheme.colors
-    val classic = LocalGameStyle.current == GameStyle.CLASSIC
-    val ink = c.ink
-    // «Звичайний» — без рамки, м'яка розмита тінь Android; «Арена» і «Блоки» — обведення й тверда тінь.
-    val border = if (classic) 0.dp else borderWidth
-    val lift = if (classic) 0.dp else depth
+    val ring = outlineColor.takeOrElse { if (c.dark) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary }
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val press by animateDpAsState(if (pressed && onClick != null) lift else 0.dp, spring(stiffness = 1400f), label = "press")
     val elevation by animateDpAsState(
-        if (!classic || depth == 0.dp) {
-            0.dp
-        } else if (pressed && onClick != null) {
-            1.dp
-        } else {
-            CLASSIC_ELEVATION.dp
+        when {
+            depth == 0.dp -> 0.dp
+            pressed && onClick != null -> 1.dp
+            else -> ELEVATION.dp
         },
         label = "elevation",
     )
     val haptics = LocalHapticFeedback.current
+    // Зовнішня обгортка передає розмір (fillMaxWidth/weight) внутрішній, а та — ні вмісту: вміст сам вирівнюється.
     Box(
-        modifier.drawBehind {
-            val d = lift.toPx()
-            if (d > 0f) {
-                val outline = shape.createOutline(Size(size.width, size.height - d), layoutDirection, this)
-                translate(top = d) { drawOutline(outline, ink) }
-            }
-        },
-        // Верх займає весь розмір обгортки (fillMaxWidth/weight), інакше тінь ширша за кнопку.
+        modifier.then(
+            if (elevation >
+                0.dp
+            ) {
+                Modifier.shadow(elevation, shape, clip = false, ambientColor = c.ink, spotColor = c.ink)
+            } else {
+                Modifier
+            },
+        ),
         propagateMinConstraints = true,
     ) {
         Box(
             Modifier
-                .padding(bottom = lift)
-                .offset { IntOffset(0, press.roundToPx()) }
-                .then(
-                    if (elevation > 0.dp) {
-                        Modifier.shadow(elevation, shape, clip = false, ambientColor = c.ink, spotColor = c.ink)
-                    } else {
-                        Modifier
-                    },
-                )
-                // Рамка й заливка — одна фігура: спершу контур кольором рамки, поверх — заливка, менша на ширину рамки.
+                // Обвідка й заливка — одна фігура: спершу контур кольором обвідки, поверх — заливка, менша на її ширину.
                 // Так на краю немає світлого «ореолу», який дає пара clip + border.
                 .drawWithCache {
-                    val bw = border.toPx()
+                    val bw = outline.toPx()
                     val outer = shape.createOutline(size, layoutDirection, this)
                     val inner = shape.createOutline(Size(size.width - 2 * bw, size.height - 2 * bw), layoutDirection, this)
                     onDrawBehind {
-                        if (bw > 0f) drawOutline(outer, ink)
+                        if (bw > 0f) drawOutline(outer, ring)
                         translate(left = bw, top = bw) {
                             if (brush != null) drawOutline(inner, brush) else drawOutline(inner, color)
                         }
@@ -177,7 +175,7 @@ fun GameSurface(
     }
 }
 
-/** Об'ємна кнопка: акцентна заливка, білий жирний текст. */
+/** Кнопка: акцентна заливка, білий жирний текст. */
 @Composable
 fun GameButton(
     text: String,
@@ -194,7 +192,7 @@ fun GameButton(
         // Вимкнена кнопка — притлумлений власний колір, а не колір картки: її видно, але вона явно неактивна.
         color = if (enabled) color else lerp(RozkladTheme.colors.soft, color, DISABLED_TINT),
         contentColor = if (enabled) contentColor else contentColor.copy(alpha = DISABLED_TEXT),
-        depth = if (enabled) 4.dp else 2.dp,
+        depth = if (enabled) 4.dp else 0.dp,
         onClick = if (enabled) onClick else null,
     ) {
         Text(
@@ -211,48 +209,29 @@ fun GameButton(
     }
 }
 
-/** Білий текст з темним обведенням і тінню — великі «ігрові» написи на кольоровому тлі. */
+/**
+ * Великий напис «Щоденника». Стиль із [com.gifwarno.rozklad.core.designsystem.theme.HandFont] — від руки
+ * (Caveat трохи збільшуємо, бо він на вигляд дрібніший); інший стиль (напр. таймер) — як є.
+ * [color] не задано — чорнило на папері (уночі — крейда); на кольоровій картці передавайте колір картки.
+ */
 @Composable
-fun StrokeText(
+fun TitleText(
     text: String,
     style: TextStyle,
     modifier: Modifier = Modifier,
-    color: Color = Color.White,
-    stroke: Color = RozkladTheme.colors.ink,
-    strokeWidth: Dp = 4.dp,
+    color: Color = Color.Unspecified,
     maxLines: Int = Int.MAX_VALUE,
 ) {
-    val px = with(androidx.compose.ui.platform.LocalDensity.current) { strokeWidth.toPx() }
-    if (LocalGameStyle.current == GameStyle.CLASSIC) {
-        // «Звичайний» — без обведення, лише легка тінь.
-        Text(
-            text,
-            modifier,
-            style = style.copy(shadow = Shadow(Color.Black.copy(alpha = CLASSIC_TEXT_SHADOW), Offset(0f, px / 2), px)),
-            color = color,
-            maxLines = maxLines,
-        )
-        return
+    val styled = if (style.fontFamily == HandFont) {
+        style.copy(fontSize = style.fontSize * HAND_SCALE, lineHeight = style.fontSize * HAND_SCALE * HAND_LINE)
+    } else {
+        style
     }
-    Box(modifier.semantics(mergeDescendants = true) { contentDescription = text }) {
-        Text(
-            text,
-            style = style.copy(drawStyle = Stroke(width = px, join = androidx.compose.ui.graphics.StrokeJoin.Round)),
-            color = stroke,
-            maxLines = maxLines,
-            modifier = Modifier.clearAndSetSemantics { },
-        )
-        Text(
-            text,
-            style = style.copy(shadow = Shadow(stroke, Offset(0f, px * 0.75f), 0f)),
-            color = color,
-            maxLines = maxLines,
-            modifier = Modifier.clearAndSetSemantics { },
-        )
-    }
+    val ink = if (RozkladTheme.colors.dark) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.primary
+    Text(text, modifier, style = styled, color = color.takeOrElse { ink }, maxLines = maxLines)
 }
 
-/** Товста смужка прогресу з обведенням — як «рівень» у грі. */
+/** Товста смужка прогресу — «замальовується маркером». */
 @Composable
 fun GameProgressBar(
     progress: Float,
@@ -261,46 +240,26 @@ fun GameProgressBar(
     track: Color = RozkladTheme.colors.soft,
     height: Dp = 14.dp,
 ) {
-    val c = RozkladTheme.colors
-    val gameStyle = LocalGameStyle.current
-    val classic = gameStyle == GameStyle.CLASSIC
-    val blocks = gameStyle == GameStyle.BLOCKS
-    val p = progress.coerceIn(0f, 1f)
+    // Нові бали «доливаються» в смужку, а не стрибають; перший показ — одразу з потрібним значенням.
+    // Значення читається лише під час малювання — анімація перемальовує смужку без перекомпозиції.
+    val target = progress.coerceIn(0f, 1f)
+    val animated = animateFloatAsState(target, tween(PROGRESS_MS), label = "progress")
     Box(
         modifier
             .fillMaxWidth()
             .height(height)
-            .semantics { progressBarRangeInfo = ProgressBarRangeInfo(p, 0f..1f) }
+            .semantics { progressBarRangeInfo = ProgressBarRangeInfo(target, 0f..1f) }
             .drawBehind {
-                // Усе малюється вкладеними фігурами без clip+border — краї рівні, без «ореолу».
-                val bw = if (classic) 0f else 2.dp.toPx()
-                fun radius(h: Float) = CornerRadius(if (blocks) 4.dp.toPx() else h / 2)
-                if (bw > 0f) drawRoundRect(c.ink, cornerRadius = radius(size.height))
-                val inner = Size(size.width - 2 * bw, size.height - 2 * bw)
-                val r = radius(inner.height)
-                translate(left = bw, top = bw) {
-                    drawRoundRect(track, size = inner, cornerRadius = r)
-                    if (p > 0f) {
-                        val filled = Size(inner.width * p, inner.height)
-                        val path = Path().apply { addRoundRect(RoundRect(Rect(Offset.Zero, filled), r)) }
-                        clipPath(path) {
-                            drawRect(fill, size = filled)
-                            // Об'єм — плавним переходом: світліше зверху, темніше знизу (різкі смуги читались як лінії).
-                            drawRect(barShading(filled.height), size = filled)
-                            // «Блоки» — смужка з окремих «кубиків».
-                            if (blocks) {
-                                val step = BLOCK_STEP.dp.toPx()
-                                var x = step
-                                while (x < filled.width) {
-                                    drawRect(
-                                        Color.Black.copy(alpha = 0.18f),
-                                        topLeft = Offset(x, 0f),
-                                        size = Size(2.dp.toPx(), filled.height),
-                                    )
-                                    x += step
-                                }
-                            }
-                        }
+                val p = animated.value
+                val r = CornerRadius(size.height / 2)
+                drawRoundRect(track, cornerRadius = r)
+                if (p > 0f) {
+                    val filled = Size(size.width * p, size.height)
+                    val path = Path().apply { addRoundRect(RoundRect(Rect(Offset.Zero, filled), r)) }
+                    clipPath(path) {
+                        drawRect(fill, size = filled)
+                        // Об'єм — плавним переходом: світліше зверху, темніше знизу (різкі смуги читались як лінії).
+                        drawRect(barShading(filled.height), size = filled)
                     }
                 }
             },
@@ -357,109 +316,109 @@ fun Pill(
 }
 
 /**
- * Тло «арени»: нічне фіолетове небо із зірками й летючими кубиками — власний малюнок,
- * без чужих персонажів (застосунок публікується в Google Play).
+ * Тло за картками: сторінка зошита в клітинку з червоними полями, уночі — шкільна дошка з розводами крейди.
+ * Власний малюнок, без картинок.
  */
 @Composable
-fun ArenaBackground(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
+fun PageBackground(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
     val c = RozkladTheme.colors
-    val blocksSky = LocalGameStyle.current == GameStyle.BLOCKS
     Box(
-        modifier.drawBehind {
-            drawRect(Brush.verticalGradient(listOf(c.skyTop, c.skyBottom)))
-            drawCircle(
-                Brush.radialGradient(
-                    listOf(c.accentEnd.copy(alpha = if (c.dark) 0.18f else 0.30f), Color.Transparent),
-                    center = Offset(size.width * 0.8f, size.height * 0.08f),
-                    radius = size.width * 0.9f,
-                ),
-                radius = size.width * 0.9f,
-                center = Offset(size.width * 0.8f, size.height * 0.08f),
-            )
-            val u = size.minDimension / 100f
-            if (blocksSky) {
-                // «Блоки»: прямокутні піксельні хмари замість зірок.
-                CLOUDS.forEach { (x, y, w) ->
-                    val u2 = size.minDimension / 100f
-                    val tl = Offset(x * size.width, y * size.height)
-                    drawRect(Color.White.copy(alpha = if (c.dark) 0.10f else 0.75f), topLeft = tl, size = Size(w * u2, 6 * u2))
-                    drawRect(
-                        Color.White.copy(alpha = if (c.dark) 0.10f else 0.75f),
-                        topLeft = tl + Offset(w * u2 * 0.25f, -4 * u2),
-                        size = Size(w * u2 * 0.5f, 4 * u2),
-                    )
+        modifier.drawWithCache {
+            val notebook = if (c.dark) null else notebookGrid(GRID_DP.dp.toPx())
+            onDrawBehind {
+                if (notebook == null) {
+                    drawBoard(c)
+                } else {
+                    drawRect(c.page)
+                    drawPath(notebook, GRID_INK, style = Stroke(width = 1.dp.toPx()))
+                    val margin = MARGIN_DP.dp.toPx()
+                    drawLine(MARGIN_RED, Offset(margin, 0f), Offset(margin, size.height), strokeWidth = 2.dp.toPx())
                 }
-            } else {
-                STARS.forEach { (x, y, r) ->
-                    // Чотирипроменева «іскра» — читається як зірка, а не як випадкова крапка.
-                    val cx = x * size.width
-                    val cy = y * size.height
-                    val big = r * u * 1.6f
-                    val path = Path().apply {
-                        moveTo(cx, cy - big)
-                        quadraticTo(cx, cy, cx + big, cy)
-                        quadraticTo(cx, cy, cx, cy + big)
-                        quadraticTo(cx, cy, cx - big, cy)
-                        quadraticTo(cx, cy, cx, cy - big)
-                        close()
-                    }
-                    drawPath(path, Color(0xFFFFF3C4).copy(alpha = 0.55f))
-                }
-            }
-            BLOCKS.forEach { (x, y, s) ->
-                val side = s * u
-                val tl = Offset(x * size.width, y * size.height)
-                drawRoundRect(
-                    Color.Black.copy(alpha = 0.18f),
-                    topLeft = tl + Offset(0f, side * 0.12f),
-                    size = Size(side, side),
-                    cornerRadius = CornerRadius(side * 0.18f),
-                )
-                drawRoundRect(
-                    Color.White.copy(alpha = if (c.dark) 0.06f else 0.10f),
-                    topLeft = tl,
-                    size = Size(side, side),
-                    cornerRadius = CornerRadius(side * 0.18f),
-                )
             }
         },
         content = content,
     )
 }
 
-/** Хмари «Блоків»: (x, y — частки екрана; ширина в сотих короткої сторони). */
-private val CLOUDS = listOf(
-    Triple(0.05f, 0.08f, 26f),
-    Triple(0.62f, 0.15f, 32f),
-    Triple(0.30f, 0.34f, 22f),
-    Triple(0.70f, 0.52f, 28f),
-    Triple(0.08f, 0.70f, 30f),
-    Triple(0.55f, 0.86f, 24f),
+/** Клітинка зошита: усі лінії одним контуром, рахується раз на розмір екрана. */
+private fun CacheDrawScope.notebookGrid(step: Float): Path = Path().apply {
+    var x = step
+    while (x < size.width) {
+        moveTo(x, 0f)
+        lineTo(x, size.height)
+        x += step
+    }
+    var y = step
+    while (y < size.height) {
+        moveTo(0f, y)
+        lineTo(size.width, y)
+        y += step
+    }
+}
+
+/** Шкільна дошка: темно-зелене тло і кілька м'яких розводів крейди. */
+private fun DrawScope.drawBoard(c: RozkladColors) {
+    drawRect(c.page)
+    SMUDGES.forEach { (x, y, r) ->
+        val center = Offset(x * size.width, y * size.height)
+        val radius = r * size.minDimension
+        drawCircle(Brush.radialGradient(listOf(CHALK_DUST, Color.Transparent), center, radius), radius, center)
+    }
+}
+
+/** Клітинка — як у зошиті (5 мм ≈ 18 dp), поля — біля лівого краю. */
+private const val GRID_DP = 18
+private const val MARGIN_DP = 9
+private val GRID_INK = Color(0xFF1F3FA6).copy(alpha = 0.09f)
+private val MARGIN_RED = Color(0xFFC8321F).copy(alpha = 0.35f)
+private val CHALK_DUST = Color(0xFFEDEBE3).copy(alpha = 0.05f)
+
+/** Розводи крейди на дошці: (x, y — частки екрана; радіус — частка короткої сторони). */
+private val SMUDGES = listOf(
+    Triple(0.2f, 0.12f, 0.7f),
+    Triple(0.85f, 0.55f, 0.6f),
+    Triple(0.3f, 0.9f, 0.5f),
 )
 
 private const val DISABLED_TINT = 0.35f
 private const val DISABLED_TEXT = 0.7f
-private const val CLASSIC_ELEVATION = 3
+private const val ELEVATION = 3
 private val TIGHT_SIGNS = setOf("＋", "+", "−", "-")
-private const val CLASSIC_TEXT_SHADOW = 0.35f
-private const val BLOCK_STEP = 16
+private const val HAND_LINE = 1.05f
+private const val PROGRESS_MS = 600
+private const val NAV_COLOR_MS = 180
+private const val NAV_MOTION_NS = 520_000_000L
+private const val MAX_STEP_NS = 33_000_000L
+private const val FROZEN_NS = 60_000_000L
 
-/** (x, y — частки екрана; r — радіус у сотих короткої сторони). */
-private val STARS = listOf(
-    Triple(0.08f, 0.06f, 0.9f), Triple(0.27f, 0.13f, 0.6f), Triple(0.52f, 0.04f, 1.1f),
-    Triple(0.71f, 0.17f, 0.7f), Triple(0.92f, 0.09f, 0.8f), Triple(0.15f, 0.31f, 0.7f),
-    Triple(0.86f, 0.36f, 1.0f), Triple(0.40f, 0.42f, 0.5f), Triple(0.05f, 0.55f, 0.8f),
-    Triple(0.63f, 0.58f, 0.6f), Triple(0.95f, 0.66f, 0.7f), Triple(0.22f, 0.74f, 1.0f),
-    Triple(0.48f, 0.83f, 0.6f), Triple(0.78f, 0.88f, 0.9f), Triple(0.10f, 0.94f, 0.6f),
-)
-
-private val BLOCKS = listOf(
-    Triple(-0.04f, 0.18f, 16f),
-    Triple(0.88f, 0.24f, 12f),
-    Triple(0.80f, 0.70f, 18f),
-    Triple(-0.06f, 0.80f, 20f),
-    Triple(0.55f, 0.95f, 14f),
-)
+/**
+ * Програє рух значка. Натискання відкриває іншу вкладку, і кадри поруч із ним бувають важкі (малюється новий екран).
+ * Тому кадр довший за [FROZEN_NS] (екран стояв) рух не просуває, а решта — не більше ніж на [MAX_STEP_NS]:
+ * рух починається з першого плавного кадру й видно його повністю (звичайна анімація за часом «програвалась» би,
+ * поки екран стоїть).
+ */
+private suspend fun playMotion(progress: MutableFloatState) {
+    progress.floatValue = 0f
+    // Кадр, у якому з'являється новий екран і вкладка стає обраною, — далі рух.
+    var last = withFrameNanos { it }
+    var t = 0f
+    while (t < 1f) {
+        val now = withFrameNanos { it }
+        val dt = now - last
+        // Застиглий кадр (екран не оновлювався) рух не просуває — інакше він «програвався» б непомітно.
+        if (dt < FROZEN_NS) t += min(dt, MAX_STEP_NS).toFloat() / NAV_MOTION_NS
+        last = now
+        progress.floatValue = min(t, 1f)
+    }
+}
+private const val POP = 0.18f
+private const val FLIP_CAMERA = 12f
+private const val HOP_PEAK = 0.4f
+private const val HOP_LAND = 0.68f
+private const val HOP_HEIGHT = 7f
+private const val SQUASH = 0.16f
+private const val WAVE_ANGLE = -16f
+private const val WAVE_TURNS = 4f
 
 /** Плаваюча нижня навігація-«пігулка» (як .bnav у вебі). */
 @Composable
@@ -469,7 +428,71 @@ fun GameNavBar(modifier: Modifier = Modifier, content: @Composable RowScope.() -
     }
 }
 
-/** Вкладка навігації: обрана — залита акцентом, інші — приглушені; [badge] > 0 — червоне число над іконкою (як .nb у вебі). */
+/**
+ * Маленька анімація значка вкладки при натисканні — у кожної своя, за змістом значка.
+ * Повертає трансформацію значка для поступу `t` від 0 до 1.
+ */
+enum class NavMotion {
+    /** Календар: сторінка перегортається вперед (оберт навколо горизонтальної осі). */
+    FLIP,
+
+    /** Зірка: перевертається, як медаль (оберт навколо вертикальної осі), з легким пружинним доворотом. */
+    SPIN,
+
+    /** Книжка: підстрибує й «приземляється» на стіл — сплющується й випрямляється. */
+    HOP,
+
+    /** Людина: помахує, похитуючись від «ніг». */
+    WAVE,
+    ;
+
+    internal fun apply(layer: GraphicsLayerScope, t: Float) {
+        val pop = 1f + POP * sin(PI.toFloat() * t)
+        when (this) {
+            FLIP -> {
+                layer.rotationX = -360f * FastOutSlowInEasing.transform(t)
+                layer.cameraDistance = FLIP_CAMERA * layer.density
+                layer.scaleX = pop
+                layer.scaleY = pop
+            }
+
+            SPIN -> {
+                // Оберт зірки на місці майже не видно (вона симетрична), а «медаль» читається одразу.
+                layer.rotationY = 360f * SpinEasing.transform(t)
+                layer.cameraDistance = FLIP_CAMERA * layer.density
+                layer.scaleX = pop
+                layer.scaleY = pop
+            }
+
+            HOP -> {
+                // Злітає (0..0,45), падає (0,45..0,7), сплющується при «приземленні» й випрямляється.
+                val fall = ((t - HOP_PEAK) / (HOP_LAND - HOP_PEAK)).coerceIn(0f, 1f)
+                // Вгору — гальмуючи, вниз — з прискоренням (як справжній стрибок).
+                val up = if (t < HOP_PEAK) sin(PI.toFloat() / 2 * t / HOP_PEAK) else 1f - fall * fall
+                layer.translationY = -HOP_HEIGHT * layer.density * up
+                val squash = if (t > HOP_LAND) sin(PI.toFloat() * (t - HOP_LAND) / (1f - HOP_LAND)) else 0f
+                layer.scaleX = 1f + SQUASH * squash
+                layer.scaleY = 1f - SQUASH * squash
+                layer.transformOrigin = TransformOrigin(0.5f, 1f)
+            }
+
+            WAVE -> {
+                // Затухаюче похитування: −14°, +11°, −7°, +3°, 0.
+                layer.rotationZ = WAVE_ANGLE * sin(WAVE_TURNS * PI.toFloat() * t) * (1f - t)
+                layer.transformOrigin = TransformOrigin(0.5f, 1f)
+            }
+        }
+    }
+}
+
+/** Пружинний доворот: трохи далі цілі й назад (без «гумового» розгойдування). */
+private val SpinEasing = CubicBezierEasing(0.34f, 1.56f, 0.64f, 1f)
+
+/**
+ * Вкладка навігації: обрана — підпис «замальований» жовтим маркером, значок чорнилом; інші — приглушені.
+ * [badge] > 0 — червоне число над іконкою (як .nb у вебі). Кольори перетікають, а не блимають.
+ * [motion] — анімація значка при натисканні (і при повторному на ту саму вкладку).
+ */
 @Composable
 fun RowScope.GameNavItem(
     selected: Boolean,
@@ -478,25 +501,43 @@ fun RowScope.GameNavItem(
     label: String,
     modifier: Modifier = Modifier,
     badge: Int = 0,
+    motion: NavMotion? = null,
 ) {
     val c = RozkladTheme.colors
     val haptics = LocalHapticFeedback.current
+    val animate = rememberAnimationsEnabled()
+    // Поступ анімації значка (1 — спокій). Читається лише в шарі малювання — без перекомпозиції на кожен кадр.
+    val play = remember { mutableFloatStateOf(1f) }
+    var taps by remember { mutableIntStateOf(0) }
+    LaunchedEffect(taps) {
+        if (taps > 0 && motion != null && animate) playMotion(play)
+    }
     val scale by animateFloatAsState(if (selected) 1.1f else 1f, spring(dampingRatio = 0.45f, stiffness = 600f), label = "nav")
+    val marker by animateColorAsState(if (selected) c.gold else c.gold.copy(alpha = 0f), tween(NAV_COLOR_MS), label = "navMarker")
+    val tint by animateColorAsState(if (selected) MaterialTheme.colorScheme.primary else c.muted, tween(NAV_COLOR_MS), label = "navTint")
     Column(
         modifier
             .weight(1f)
             .clip(RoundedCornerShape(18.dp))
-            .background(if (selected) c.accent else Color.Transparent)
             .selectable(selected = selected, role = Role.Tab) {
                 if (!selected) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                taps++
                 onClick()
             }
             .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        val tint = if (selected) Color.White else c.muted
         Box {
-            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(24.dp).scale(scale))
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = tint,
+                // Значення анімації читаються лише в шарі малювання — без перекомпозиції на кожен кадр.
+                modifier = Modifier
+                    .size(24.dp)
+                    .scale(scale)
+                    .graphicsLayer { if (motion != null && play.floatValue < 1f) motion.apply(this, play.floatValue) },
+            )
             if (badge > 0) {
                 val text = if (badge > MAX_BADGE) "$MAX_BADGE+" else badge.toString()
                 Text(
@@ -516,9 +557,20 @@ fun RowScope.GameNavItem(
                 )
             }
         }
-        FitText(label, color = tint, style = MaterialTheme.typography.labelMedium)
+        FitText(
+            label,
+            modifier = Modifier.background(marker, MarkerShape).padding(horizontal = 8.dp),
+            color = if (selected) MARKER_TEXT else tint,
+            style = MaterialTheme.typography.labelMedium,
+        )
     }
 }
+
+/** Мазок маркера: трохи нерівні кути, як проведено від руки. */
+val MarkerShape: Shape = RoundedCornerShape(topStart = 3.dp, topEnd = 9.dp, bottomEnd = 4.dp, bottomStart = 8.dp)
+
+/** Текст на жовтому маркері — графіт, читається і вдень, і на дошці. */
+private val MARKER_TEXT = Color(0xFF23262F)
 
 /** Червоний бейдж однаковий у світлій і темній темі: білий текст на ньому має контраст 5,4:1. */
 private val BADGE_RED = Color(0xFFC0392B)
@@ -538,7 +590,23 @@ fun Modifier.outlinedBackground(fill: Brush, shape: Shape, borderWidth: Dp, bord
     }
 }
 
-/** Ширина обведення в поточному стилі: у «Звичайному» обведень немає. */
-@Composable
-@ReadOnlyComposable
-fun outlineWidth(width: Dp): Dp = if (LocalGameStyle.current == GameStyle.CLASSIC) 0.dp else width
+/**
+ * Підсвітка «зараз» (поточний урок, заняття, обраний предмет): удень — мазок жовтого маркера,
+ * уночі — обведено жовтою крейдою з ледь помітною заливкою (суцільна напівпрозора заливка на дошці виходила брудно-сірою).
+ */
+fun Modifier.nowHighlight(on: Boolean, colors: RozkladColors): Modifier = if (!on) {
+    this
+} else {
+    drawWithCache {
+        val outline = HighlightShape.createOutline(size, layoutDirection, this)
+        val chalk = Stroke(width = CHALK_LINE.dp.toPx())
+        onDrawBehind {
+            drawOutline(outline, colors.glow)
+            if (colors.dark) drawOutline(outline, colors.gold.copy(alpha = CHALK_ALPHA), style = chalk)
+        }
+    }
+}
+
+private val HighlightShape = RoundedCornerShape(12.dp)
+private const val CHALK_LINE = 1.5f
+private const val CHALK_ALPHA = 0.8f

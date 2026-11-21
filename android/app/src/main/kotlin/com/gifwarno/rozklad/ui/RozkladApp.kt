@@ -44,11 +44,11 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
-import com.gifwarno.rozklad.core.designsystem.component.ArenaBackground
 import com.gifwarno.rozklad.core.designsystem.component.GameNavBar
 import com.gifwarno.rozklad.core.designsystem.component.GameNavItem
 import com.gifwarno.rozklad.core.designsystem.component.LoadingState
 import com.gifwarno.rozklad.core.designsystem.component.LocalChromePadding
+import com.gifwarno.rozklad.core.designsystem.component.PageBackground
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.model.SessionState
 import com.gifwarno.rozklad.core.model.SyncStatus
@@ -99,7 +99,7 @@ fun RozkladApp(
     deepLink: String? = null,
     gradesBadge: Int = 0,
 ) {
-    ArenaBackground(modifier.fillMaxSize()) {
+    PageBackground(modifier.fillMaxSize()) {
         when (session) {
             SessionState.Loading -> LoadingState()
 
@@ -173,8 +173,7 @@ private fun MainShell(
     var topPx by remember { mutableIntStateOf(0) }
     var bottomPx by remember { mutableIntStateOf(0) }
     val chrome = with(density) { PaddingValues(top = topPx.toDp(), bottom = bottomPx.toDp()) }
-    val sky = RozkladTheme.colors.skyTop
-    val skyBottom = RozkladTheme.colors.skyBottom
+    val page = RozkladTheme.colors.page
 
     Box(modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))) {
         CompositionLocalProvider(LocalChromePadding provides chrome) {
@@ -186,7 +185,7 @@ private fun MainShell(
                 .fillMaxWidth()
                 .onSizeChanged { topPx = it.height }
                 // М'яке затемнення під годинником — текст не налазить на статус-бар.
-                .background(Brush.verticalGradient(listOf(sky, sky.copy(alpha = 0.85f), Color.Transparent)))
+                .background(Brush.verticalGradient(listOf(page, page.copy(alpha = 0.85f), Color.Transparent)))
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
                 .padding(bottom = 8.dp),
         ) {
@@ -199,7 +198,7 @@ private fun MainShell(
                 .fillMaxWidth()
                 .onSizeChanged { bottomPx = it.height }
                 // Знизу вміст м'яко тане — біля системних кнопок не мерехтять уроки.
-                .background(Brush.verticalGradient(listOf(Color.Transparent, skyBottom.copy(alpha = 0.85f), skyBottom)))
+                .background(Brush.verticalGradient(listOf(Color.Transparent, page.copy(alpha = 0.85f), page)))
                 .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime).only(WindowInsetsSides.Bottom))
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             contentAlignment = Alignment.Center,
@@ -217,6 +216,7 @@ private fun MainShell(
                         icon = if (selected) dest.selectedIcon else dest.icon,
                         label = dest.label,
                         badge = if (dest == TopLevelDestination.GRADES) gradesBadge else 0,
+                        motion = dest.motion,
                     )
                 }
             }
