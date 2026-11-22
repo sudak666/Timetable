@@ -85,7 +85,7 @@ internal class DemoData(
         val balance = earned + ledger.sumOf { if (it.kind == LedgerKind.BONUS) it.amount else -it.amount }
         // Ціль трохи більша за гаманець — смужка заповнена приблизно на дві третини.
         val goal = ((balance * 3 / 2 + 499) / 500 * 500).coerceAtLeast(1000)
-        val child = Member(CHILD_ID, Role.CHILD, "Тарас", "Велосипед", goal, "🐯", "#6c5ce7")
+        val child = Member(CHILD_ID, Role.CHILD, "Тарас", "Велосипед", goal, "🐯", "")
         FamilyData(
             family = Family(FAMILY_ID, "Сім’я Тараса", "DEMO12"),
             members = if (noKids) listOf(parent) else listOf(parent, child),
