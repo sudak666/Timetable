@@ -132,7 +132,7 @@ internal fun AuthScreen(
             value = state.password,
             onValueChange = onPassword,
             label = { Text("Пароль") },
-            supportingText = if (state.isSignUp) ({ Text("Щонайменше ${AuthUiState.MIN_PASSWORD} символів") }) else null,
+            supportingText = if (state.isSignUp) ({ Text("Щонайменше ${AuthUiState.MIN_NEW_PASSWORD} символів") }) else null,
             singleLine = true,
             shape = ButtonShape,
             colors = fieldColors(),

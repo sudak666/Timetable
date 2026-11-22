@@ -234,11 +234,24 @@ test('«Змінити пароль» у профілі: двічі, перев�
     if (r.request().method() === 'PUT') puts.push(r.request().postDataJSON());
     return r.fallback();
   });
+  // Have I Been Pwned: «password1» — злитий (SHA-1 E38AD…), решта — ні. У мережу йде лише префікс із 5 символів.
+  const ranges: string[] = [];
+  await page.route('https://api.pwnedpasswords.com/range/*', (r) => {
+    const prefix = r.request().url().split('/').pop()!;
+    ranges.push(prefix);
+    return r.fulfill({ body: prefix === 'E38AD' ? '214943DAAD1D64C102FAEC29DE4AFE9DA3D:2400000\r\n' : '0000000000000000000000000000000000A:0\r\n' });
+  });
   await page.goto('/#me');
   const change = page.getByRole('button', { name: /Змінити пароль/ });
   const enter = async (v: string) => { await page.getByRole('dialog').locator('input[type=password]').fill(v); await page.getByRole('button', { name: 'Готово' }).click(); };
+  await change.click(); await enter('short');
+  await expect(page.locator('.toast', { hasText: 'від 8 символів' })).toBeVisible();
+  await change.click(); await enter('password1');
+  await expect(page.locator('.toast', { hasText: 'витікав' })).toBeVisible();
+  expect(ranges).toContain('E38AD');
+  expect(ranges.every((x) => /^[0-9A-F]{5}$/.test(x))).toBe(true);
   await change.click(); await enter('newpass1'); await enter('newpass2');
-  await expect(page.locator('.toast')).toContainText('не збігаються');
+  await expect(page.locator('.toast', { hasText: 'не збігаються' })).toBeVisible();
   expect(puts).toHaveLength(0);
   await change.click(); await enter('newpass1'); await enter('newpass1');
   await expect.poll(() => puts.length).toBe(1);

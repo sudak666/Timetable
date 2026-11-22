@@ -22,10 +22,14 @@ data class AuthUiState(
 ) {
     val hasValidEmail: Boolean get() = EMAIL.matches(email.trim())
 
-    val canSubmit: Boolean get() = !busy && hasValidEmail && password.length >= MIN_PASSWORD
+    /** Для входу підходить і старий пароль від 6 символів; новий акаунт — від 8. */
+    val minPassword: Int get() = if (isSignUp) MIN_NEW_PASSWORD else MIN_PASSWORD
+
+    val canSubmit: Boolean get() = !busy && hasValidEmail && password.length >= minPassword
 
     companion object {
         const val MIN_PASSWORD = 6
+        const val MIN_NEW_PASSWORD = 8
         private val EMAIL = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
     }
 }

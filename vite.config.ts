@@ -12,7 +12,7 @@ const CSP = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://*.googleusercontent.com",
   "font-src 'self'",
-  `connect-src 'self' ${SB} ${SB.replace('https', 'wss')}`,
+  `connect-src 'self' ${SB} ${SB.replace('https', 'wss')} https://api.pwnedpasswords.com`,
   "worker-src 'self'",
   "manifest-src 'self'",
   "object-src 'none'",

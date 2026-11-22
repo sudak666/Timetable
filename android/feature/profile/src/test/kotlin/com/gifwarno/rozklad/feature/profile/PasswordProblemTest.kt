@@ -6,14 +6,14 @@ import org.junit.Test
 
 class PasswordProblemTest {
     @Test
-    fun `короткий пароль`() = assertEquals("Від 6 символів", passwordProblem("12345", "12345"))
+    fun `короткий пароль`() = assertEquals("Від 8 символів", passwordProblem("1234567", "1234567"))
 
     @Test
-    fun `другий ще не введено — без помилки, але зберегти не можна`() = assertEquals("", passwordProblem("123456", ""))
+    fun `другий ще не введено — без помилки, але зберегти не можна`() = assertEquals("", passwordProblem("12345678", ""))
 
     @Test
-    fun `не збігаються`() = assertEquals("Паролі не збігаються", passwordProblem("123456", "123457"))
+    fun `не збігаються`() = assertEquals("Паролі не збігаються", passwordProblem("12345678", "12345679"))
 
     @Test
-    fun `усе добре`() = assertNull(passwordProblem("123456", "123456"))
+    fun `усе добре`() = assertNull(passwordProblem("12345678", "12345678"))
 }

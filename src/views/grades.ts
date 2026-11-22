@@ -117,6 +117,9 @@ function authView(): TemplateResult {
   const signup = async () => {
     const f = document.getElementById('gMail') as HTMLFormElement;
     if (!f.reportValidity()) return;
+    // Новий акаунт — від 8 символів і не з бази злитих паролів (вхід зі старим паролем від 6 працює й далі).
+    const bad = await import('../lib/pwned').then((m) => m.newPasswordProblem(pass()));
+    if (bad) return set({ authMsg: { text: bad } });
     const { data, error } = await sb.auth.signUp({ email: email(), password: pass(), options: { emailRedirectTo: REDIRECT() } });
     if (error) return set({ authMsg: { text: error.message } });
     if (!data.session) set({ authMsg: { text: 'Готово! Перевір пошту й натисни посилання для підтвердження 📬', ok: true } });
@@ -130,7 +133,7 @@ function authView(): TemplateResult {
     <div class="or">або поштою</div>
     <form class="form" id="gMail" @submit=${login}>
       <label class="sr-only" for="gEmail">Пошта</label><input type="email" id="gEmail" placeholder="пошта" required autocomplete="email">
-      <label class="sr-only" for="gPass">Пароль</label><input type="password" id="gPass" placeholder="пароль (від 6 символів)" minlength="6" required autocomplete="current-password">
+      <label class="sr-only" for="gPass">Пароль</label><input type="password" id="gPass" placeholder="пароль" minlength="6" required autocomplete="current-password">
       <button>Увійти</button><button type="button" @click=${signup}>Зареєструватися</button>
     </form>
     <p class="legal"><button type="button" class="linkish" @click=${() => void import('./password').then((m) => m.forgotPassword(email()))}>Забули пароль?</button></p>

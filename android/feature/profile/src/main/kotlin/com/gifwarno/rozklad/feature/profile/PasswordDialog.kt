@@ -29,7 +29,8 @@ sealed interface PasswordState {
     data class Failed(val message: String) : PasswordState
 }
 
-internal const val MIN_PASSWORD = 6
+/** Новий пароль — від 8 символів (і не з бази злитих — перевіряє мережевий шар). */
+internal const val MIN_PASSWORD = 8
 private const val MAX_PASSWORD = 72
 
 /** Що не так із новим паролем (null — можна зберігати). */

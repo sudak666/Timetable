@@ -1,5 +1,7 @@
 package com.gifwarno.rozklad.core.network.supabase
 
+import com.gifwarno.rozklad.core.network.LeakedPasswordException
+import com.gifwarno.rozklad.core.network.LeakedPasswords
 import com.gifwarno.rozklad.core.network.RozkladNetworkDataSource
 import com.gifwarno.rozklad.core.network.model.NetworkAlert
 import com.gifwarno.rozklad.core.network.model.NetworkAlertLocation
@@ -75,6 +77,7 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
     }
 
     override suspend fun signUp(email: String, password: String): Boolean {
+        refuseLeaked(password)
         val user = client.auth.signUpWith(Email, redirectUrl = EMAIL_CONFIRM_REDIRECT) {
             this.email = email
             this.password = password
@@ -88,6 +91,7 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
     }
 
     override suspend fun changePassword(password: String) {
+        refuseLeaked(password)
         client.auth.updateUser { this.password = password }
     }
 
@@ -435,6 +439,11 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
         /** Підтвердження пошти відкривається у веб-версії — після нього можна увійти в застосунку. */
         const val EMAIL_CONFIRM_REDIRECT = "https://sudak666.github.io/Timetable/"
     }
+}
+
+/** Новий пароль, що вже витікав в інтернет, не відправляємо (без мережі перевірку пропускаємо — пароль приймає сервер). */
+private fun refuseLeaked(password: String) {
+    if (LeakedPasswords.isLeaked(password) == true) throw LeakedPasswordException()
 }
 
 /** Сесії ще немає (не піднялась зі сховища, офлайн не оновився токен) — тимчасово, як і відсутність мережі. */

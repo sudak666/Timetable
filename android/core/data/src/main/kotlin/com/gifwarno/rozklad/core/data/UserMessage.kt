@@ -16,6 +16,15 @@ object UserMessage {
 
             Regex("already registered|user already exists", RegexOption.IGNORE_CASE).containsMatchIn(m) -> "Такий акаунт уже існує — увійди"
 
+            // Вимоги Supabase до пароля (мінімальна довжина, «слабкий» чи злитий пароль) — зрозумілою мовою.
+            PASSWORD_LENGTH.find(m) != null -> "Пароль має бути від ${PASSWORD_LENGTH.find(m)!!.groupValues[1]} символів"
+
+            Regex(
+                "weak|pwned|leaked|compromised",
+                RegexOption.IGNORE_CASE,
+            ).containsMatchIn(m) && m.contains("password", ignoreCase = true) ->
+                "Цей пароль занадто простий або вже витікав — придумай інший"
+
             Regex("JWT|expired|invalid claim", RegexOption.IGNORE_CASE).containsMatchIn(m) -> "Сесія застаріла — увійди ще раз"
 
             Regex("row-level security|permission denied|violates", RegexOption.IGNORE_CASE).containsMatchIn(m) ->
@@ -29,6 +38,7 @@ object UserMessage {
         }
     }
 
+    private val PASSWORD_LENGTH = Regex("password should be at least (\\d+)", RegexOption.IGNORE_CASE)
     private val NETWORK = Regex("Unable to resolve host|timeout|timed out|Failed to connect|connection", RegexOption.IGNORE_CASE)
     private const val MAX_LEN = 200
 }

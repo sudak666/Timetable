@@ -18,6 +18,14 @@ class AuthInputTest {
     }
 
     @Test
+    fun `новий акаунт — від 8 символів, вхід — і зі старим паролем від 6`() {
+        val email = "kid@gmail.com"
+        assertFalse(AuthUiState(email = email, password = "abcdefg", isSignUp = true).canSubmit)
+        assertTrue(AuthUiState(email = email, password = "abcdefgh", isSignUp = true).canSubmit)
+        assertTrue(AuthUiState(email = email, password = "abcdef", isSignUp = false).canSubmit)
+    }
+
+    @Test
     fun `кілька адрес у полі — кнопка вимкнена, а не тиха помилка входу`() {
         // Так було на телефоні: однорядкове поле показувало першу адресу, а всередині — три.
         val pasted = cleanEmail("a@gmail\na@gmail.com\na@gmail.com")
