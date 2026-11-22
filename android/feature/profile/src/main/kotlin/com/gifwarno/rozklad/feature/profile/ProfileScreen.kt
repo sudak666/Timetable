@@ -72,6 +72,7 @@ import com.gifwarno.rozklad.core.designsystem.theme.GameTitleStyle
 import com.gifwarno.rozklad.core.designsystem.theme.Nunito
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.domain.Trophies
+import com.gifwarno.rozklad.core.model.Paper
 import com.gifwarno.rozklad.core.model.Role
 import com.gifwarno.rozklad.core.model.Streak
 import com.gifwarno.rozklad.core.ui.Format
@@ -134,6 +135,7 @@ fun ProfileRoute(onPickAlertRegion: () -> Unit, modifier: Modifier = Modifier, v
             onPushToggle = onPushToggle,
             alerts = alerts,
             onLook = viewModel::setLook,
+            onPaper = viewModel::setPaper,
             onRename = viewModel::rename,
             password = PasswordActions(passwordState, viewModel::changePassword, viewModel::resetPasswordState),
             onSaveRates = viewModel::saveRates,
@@ -161,6 +163,7 @@ internal fun ProfileScreen(
     modifier: Modifier = Modifier,
     alerts: AlertsSectionActions? = null,
     onLook: (avatar: String?, accent: String?) -> Unit = { _, _ -> },
+    onPaper: (Paper) -> Unit = {},
     onSaveRates: (Map<Int, Int>, Streak) -> Unit = { _, _ -> },
     onRename: (name: String, family: String?) -> Unit = { _, _ -> },
     password: PasswordActions? = null,
@@ -189,7 +192,7 @@ internal fun ProfileScreen(
                     Modifier
                         .size(76.dp)
                         .background(Brush.linearGradient(listOf(c.gold, c.goldEnd)), CircleShape)
-                        .clickable(onClickLabel = "Змінити аватар і колір", role = androidx.compose.ui.semantics.Role.Button) {
+                        .clickable(onClickLabel = "Змінити аватар, колір і папір", role = androidx.compose.ui.semantics.Role.Button) {
                             lookSheet =
                                 true
                         },
@@ -222,7 +225,7 @@ internal fun ProfileScreen(
                 leading = "✏️",
             )
             GameButton(
-                "Аватар і колір",
+                "Вигляд",
                 onClick = { lookSheet = true },
                 modifier = Modifier.weight(1f),
                 color = c.card,
@@ -398,7 +401,7 @@ internal fun ProfileScreen(
     }
 
     if (lookSheet) {
-        LookSheet(state, onDismiss = { lookSheet = false }, onLook = onLook)
+        LookSheet(state, onDismiss = { lookSheet = false }, onLook = onLook, onPaper = onPaper)
     }
 
     if (confirmDelete) {
@@ -505,20 +508,22 @@ private fun CodeRow(label: String, code: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LookSheet(state: ProfileUiState.Ready, onDismiss: () -> Unit, onLook: (String?, String?) -> Unit) {
+private fun LookSheet(state: ProfileUiState.Ready, onDismiss: () -> Unit, onLook: (String?, String?) -> Unit, onPaper: (Paper) -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 24.dp).navigationBarsPadding()) {
-            Text("Аватар і колір", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 12.dp))
+            Text("Аватар, колір і папір", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 12.dp))
             LookPicker(
                 level = state.level,
                 avatar = state.avatar,
                 accent = state.accent,
                 onAvatar = { onLook(it, null) },
                 onAccent = { onLook(null, it) },
+                paper = state.paper,
+                onPaper = onPaper,
             )
             if (state.level < Trophies.PARENT_LEVEL) {
                 Text(
-                    "Нові аватари й кольори відкриваються з рівнями — отримуй оцінки, щоб їх розблокувати!",
+                    "Нові аватари, кольори й папір відкриваються з рівнями — отримуй оцінки, щоб їх розблокувати!",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 16.dp),

@@ -65,12 +65,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gifwarno.rozklad.core.designsystem.component.ButtonShape
 import com.gifwarno.rozklad.core.designsystem.component.CardTitle
 import com.gifwarno.rozklad.core.designsystem.component.ConfettiBurst
+import com.gifwarno.rozklad.core.designsystem.component.CoverTag
 import com.gifwarno.rozklad.core.designsystem.component.EmptyState
 import com.gifwarno.rozklad.core.designsystem.component.GameProgressBar
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.component.LoadingState
 import com.gifwarno.rozklad.core.designsystem.component.LocalChromePadding
-import com.gifwarno.rozklad.core.designsystem.component.NumberTile
+import com.gifwarno.rozklad.core.designsystem.component.NotebookCover
 import com.gifwarno.rozklad.core.designsystem.component.Pill
 import com.gifwarno.rozklad.core.designsystem.component.TitleText
 import com.gifwarno.rozklad.core.designsystem.component.nowHighlight
@@ -515,7 +516,7 @@ private fun LessonItem(row: LessonRow) {
             .semantics(mergeDescendants = true) { },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        NumberTile(row.number, if (past) c.muted else Color(info.color))
+        NotebookCover(row.number, Color(info.color), faded = past)
         Text(
             row.time,
             modifier = Modifier.padding(start = 10.dp).width(92.dp),
@@ -635,7 +636,7 @@ private fun Backpack(subjects: List<String>, isToday: Boolean, clubs: List<ClubB
             ) {
                 subjects.forEach { s ->
                     val info = Timetable.subject(s)
-                    Pill("${info.emoji} $s", color = Color(info.color), contentColor = Color.White)
+                    CoverTag("${info.emoji} $s", Color(info.color))
                 }
             }
             // Речі для занять — окремими рядками: «що взяти» буває довгим.

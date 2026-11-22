@@ -10,8 +10,8 @@ import com.gifwarno.rozklad.core.datastore.UserPreferencesDataSource
 import com.gifwarno.rozklad.core.domain.Rewards
 import com.gifwarno.rozklad.core.domain.Trophies
 import com.gifwarno.rozklad.core.model.FamilyContext
-import com.gifwarno.rozklad.core.model.GradeStatus
 import com.gifwarno.rozklad.core.model.Member
+import com.gifwarno.rozklad.core.model.Paper
 import com.gifwarno.rozklad.core.model.RewardSettings
 import com.gifwarno.rozklad.core.model.Role
 import com.gifwarno.rozklad.core.model.Streak
@@ -52,6 +52,8 @@ sealed interface ProfileUiState {
         val level: Int = Trophies.PARENT_LEVEL,
         /** Обраний колір «#rrggbb» або порожньо. */
         val accent: String = "",
+        /** Обраний на цьому пристрої папір сторінки. */
+        val paper: Paper = Paper.GRID,
         /** Курс оцінок і правила серії сім'ї. */
         val settings: RewardSettings = Rewards.DEFAULT_SETTINGS,
         /** Ім'я в сім'ї як є (може бути порожнім — тоді в шапці пошта). */
@@ -162,14 +164,9 @@ class ProfileViewModel @Inject constructor(
             deletionWarnings = deletionWarnings(ctx.isParent, ctx.data.members, ctx.user.id, ctx.data.family.name),
             pendingChanges = ctx.sync.pendingChanges,
             alertRegion = ctx.data.airAlert?.regionName,
-            level = if (ctx.isParent) {
-                Trophies.PARENT_LEVEL
-            } else {
-                Rewards.levelOf(
-                    Rewards.xpOf(ctx.data.grades.filter { it.childId == ctx.user.id && it.status == GradeStatus.APPROVED }),
-                )
-            },
+            level = if (ctx.isParent) Trophies.PARENT_LEVEL else Rewards.childLevel(ctx.data.grades, ctx.user.id),
             accent = ctx.me?.theme.orEmpty(),
+            paper = Paper.fromKey(prefs.paper),
             settings = ctx.data.settings,
             myName = ctx.me?.name.orEmpty(),
             myId = ctx.user.id,
@@ -233,6 +230,10 @@ class ProfileViewModel @Inject constructor(
             val ctx = active.context.filterNotNull().first()
             if (ctx.isParent) families.saveRates(ctx.familyId, rates, streak)
         }
+    }
+
+    fun setPaper(paper: Paper) {
+        viewModelScope.launch { preferences.setPaper(paper.key) }
     }
 
     fun setTheme(mode: ThemeMode) {

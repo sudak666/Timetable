@@ -33,8 +33,11 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.gifwarno.rozklad.core.designsystem.component.CoverTextStart
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
-import com.gifwarno.rozklad.core.designsystem.component.NumberTile
+import com.gifwarno.rozklad.core.designsystem.component.NotebookCover
+import com.gifwarno.rozklad.core.designsystem.component.TagShape
+import com.gifwarno.rozklad.core.designsystem.component.coverSpine
 import com.gifwarno.rozklad.core.designsystem.component.nowHighlight
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.domain.Timetable
@@ -86,7 +89,7 @@ internal fun WeekCard(week: WeekSchedule, modifier: Modifier = Modifier) {
                         .padding(horizontal = 6.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    NumberTile(l.number, Color(info.color), size = 26.dp)
+                    NotebookCover(l.number, Color(info.color), width = 24.dp)
                     Text(
                         l.time,
                         Modifier.padding(start = 10.dp).width(92.dp),
@@ -107,7 +110,7 @@ internal fun WeekCard(week: WeekSchedule, modifier: Modifier = Modifier) {
                     val info = Timetable.subject(sc.subject)
                     val on = highlight == sc.subject
                     GameSurface(
-                        shape = RoundedCornerShape(50),
+                        shape = TagShape,
                         color = Color(info.color),
                         contentColor = Color.White,
                         depth = if (on) 3.dp else 0.dp,
@@ -117,7 +120,9 @@ internal fun WeekCard(week: WeekSchedule, modifier: Modifier = Modifier) {
                     ) {
                         Text(
                             "${sc.subject} ×${sc.count}",
-                            Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            Modifier
+                                .coverSpine(Color(info.color), inset = if (on) 2.5.dp else 0.dp)
+                                .padding(start = CoverTextStart, end = 10.dp, top = 5.dp, bottom = 5.dp),
                             style = MaterialTheme.typography.labelMedium,
                         )
                     }

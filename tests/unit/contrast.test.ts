@@ -15,10 +15,13 @@ describe('WCAG AA: білий текст на кольорових плашка�
   it.each(THEMES.map(([c]) => c))('акцент %s', (c) => expect(contrast(c, '#ffffff')).toBeGreaterThanOrEqual(4.5));
 });
 
-it('приглушений текст на картках ≥ 4.5:1 (світла й темна тема)', () => {
-  expect(contrast('#5f6384', '#ffffff')).toBeGreaterThanOrEqual(4.5);
-  expect(contrast('#5f6384', '#f0f1fa')).toBeGreaterThanOrEqual(4.5);
-  expect(contrast('#a3a6cc', '#1a1b36')).toBeGreaterThanOrEqual(4.5);
+it('приглушений текст на картках і сторінці ≥ 4.5:1 (зошит, крафт, дошка)', () => {
+  for (const bg of ['#ffffff', '#f3eee2', '#fbf8f0', '#e4d2ae']) expect(contrast('#4c5163', bg)).toBeGreaterThanOrEqual(4.5);
+  for (const bg of ['#20302a', '#16221d']) expect(contrast('#b7c2bb', bg)).toBeGreaterThanOrEqual(4.5);
+});
+
+it('заголовки від руки кольором акценту на крафті ≥ 3:1 (великий текст)', () => {
+  for (const [c] of THEMES) expect(contrast(c, '#e4d2ae')).toBeGreaterThanOrEqual(3);
 });
 
 it('картка «Зараз»: білий текст на градієнті акцент → акцент 70% + ink 30% (styles.css .now) ≥ 4.5:1', () => {

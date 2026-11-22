@@ -152,6 +152,10 @@ object Rewards {
 
     fun levelOf(xp: Int): Int = xp / XP_PER_LEVEL + 1
 
+    /** Рівень дитини за її підтвердженими оцінками. */
+    fun childLevel(grades: List<Grade>, childId: String): Int =
+        levelOf(xpOf(grades.filter { it.childId == childId && it.status == GradeStatus.APPROVED }))
+
     /** Лічильник на вкладці «Оцінки» (як navBadges у вебі): батькам — усі непідтверджені, дитині — лише свої. */
     fun pendingBadge(grades: List<Grade>, userId: String, isParent: Boolean): Int =
         grades.count { it.status == GradeStatus.PENDING && (isParent || it.childId == userId) }

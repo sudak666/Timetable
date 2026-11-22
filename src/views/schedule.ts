@@ -132,7 +132,7 @@ export function weekGrid(): TemplateResult {
         <ol class="lessons">${d.lessons.map((l, j) => {
           const [a, b] = RANGES[j] ?? [0, 0], nx = RANGES[j + 1], k = st(a, b);
           return html`<li class=${classMap({ l: true, [k]: !!k, match: state.highlight === l.subject })} aria-current=${k === 'cur' ? 'time' : nothing}>
-              <span class="n" style=${styleMap({ background: subjColor(l.subject) })}>${j + 1}</span>
+              <span class="n" style=${styleMap({ '--sc': subjColor(l.subject) })}>${j + 1}</span>
               <span class="t">${(BELLS[j] ?? '').replace('-', ' – ')}</span>
               <span class="s">${emo(subjEmoji(l.subject))} ${l.subject}${l.optional ? html` <span class="opt">факультатив</span>` : nothing}${due.has(date + '|' + l.subject) ? html`<span class="hwdot" title="Є домашка">ДЗ</span>` : nothing}</span>
             </li>${j < d.lessons.length - 1 && nx ? html`<li class=${classMap({ b: true, long: nx[0] - b >= 20, [st(b, nx[0])]: !!st(b, nx[0]) })} aria-label=${`Перерва ${nx[0] - b} хвилин`}>${emo('☕')} перерва ${nx[0] - b} хв${nx[0] - b >= 20 ? ' · велика' : ''}</li>` : nothing}`;

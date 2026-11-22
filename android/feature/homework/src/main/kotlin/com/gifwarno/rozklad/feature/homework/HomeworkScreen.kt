@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
@@ -42,15 +41,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gifwarno.rozklad.core.designsystem.component.CoverTag
+import com.gifwarno.rozklad.core.designsystem.component.CoverTextStart
 import com.gifwarno.rozklad.core.designsystem.component.EmptyState
 import com.gifwarno.rozklad.core.designsystem.component.GameButton
 import com.gifwarno.rozklad.core.designsystem.component.GameFab
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.component.LoadingState
 import com.gifwarno.rozklad.core.designsystem.component.LocalChromePadding
-import com.gifwarno.rozklad.core.designsystem.component.Pill
 import com.gifwarno.rozklad.core.designsystem.component.RoundCheck
 import com.gifwarno.rozklad.core.designsystem.component.SectionTitle
+import com.gifwarno.rozklad.core.designsystem.component.TagShape
+import com.gifwarno.rozklad.core.designsystem.component.coverSpine
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.domain.Timetable
 import com.gifwarno.rozklad.core.model.Homework
@@ -186,7 +188,7 @@ private fun HomeworkRow(hw: Homework, overdue: Boolean, onToggle: (Homework) -> 
                 textDecoration = if (hw.done) TextDecoration.LineThrough else null,
             )
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                Pill("${info.emoji} ${hw.subject}", color = Color(info.color), contentColor = Color.White)
+                CoverTag("${info.emoji} ${hw.subject}", Color(info.color))
                 Text(
                     "до ${Format.dayShort(hw.due)}",
                     Modifier.padding(start = 8.dp),
@@ -252,15 +254,22 @@ private fun AddHomeworkSheet(
 @Composable
 private fun SubjectChip(name: String, on: Boolean, onClick: () -> Unit) {
     val s = Timetable.subject(name)
+    // Обраний предмет — його обкладинка (барва й корінець), решта — аркуші без барви.
     GameSurface(
-        shape = RoundedCornerShape(50),
+        shape = TagShape,
         color = if (on) Color(s.color) else RozkladTheme.colors.soft,
         contentColor = if (on) Color.White else MaterialTheme.colorScheme.onSurface,
         depth = if (on) 3.dp else 0.dp,
         onClick = onClick,
         modifier = Modifier.padding(bottom = 6.dp),
     ) {
-        Text("${s.emoji} $name", Modifier.padding(horizontal = 12.dp, vertical = 7.dp), style = MaterialTheme.typography.labelLarge)
+        Text(
+            "${s.emoji} $name",
+            Modifier
+                .then(if (on) Modifier.coverSpine(Color(s.color)) else Modifier)
+                .padding(start = if (on) CoverTextStart else 12.dp, end = 12.dp, top = 7.dp, bottom = 7.dp),
+            style = MaterialTheme.typography.labelLarge,
+        )
     }
 }
 

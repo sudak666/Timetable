@@ -9,6 +9,7 @@ import com.gifwarno.rozklad.core.datastore.ThemeMode
 import com.gifwarno.rozklad.core.datastore.UserPreferencesDataSource
 import com.gifwarno.rozklad.core.domain.Rewards
 import com.gifwarno.rozklad.core.domain.Trophies
+import com.gifwarno.rozklad.core.model.Paper
 import com.gifwarno.rozklad.core.model.SessionState
 import com.gifwarno.rozklad.core.model.SyncStatus
 import com.gifwarno.rozklad.core.ui.AlertBannerText
@@ -18,6 +19,7 @@ import java.time.Clock
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.map
@@ -58,6 +60,14 @@ class MainActivityViewModel @Inject constructor(
         .map { Trophies.parseColor(it?.me?.theme) }
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** Папір сторінки: обраний на цьому пристрої, якщо вже відкритий на рівні дитини (батькам — будь-який). */
+    val paper: StateFlow<Paper> = combine(preferences.preferences, active.context) { prefs, ctx ->
+        val level = if (ctx == null || ctx.isParent) Trophies.PARENT_LEVEL else Rewards.childLevel(ctx.data.grades, ctx.user.id)
+        Trophies.paperFor(Paper.fromKey(prefs.paper), level)
+    }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, Paper.GRID)
 
     /** Плашка тривоги над вкладками; null — немає тривоги або місце не обрано. */
     val alertBanner: StateFlow<AlertBannerText?> = active.context

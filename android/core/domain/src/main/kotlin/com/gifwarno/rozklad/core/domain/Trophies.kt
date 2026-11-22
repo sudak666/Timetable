@@ -1,13 +1,16 @@
 package com.gifwarno.rozklad.core.domain
 
 import com.gifwarno.rozklad.core.model.Grade
+import com.gifwarno.rozklad.core.model.Paper
 import java.time.LocalDate
 
-/** Нагорода на шляху трофеїв: аватар або колір, що відкривається на рівні. */
+/** Нагорода на шляху трофеїв: папір, аватар або колір, що відкривається на рівні. */
 sealed interface TrophyReward {
     data class Avatar(val emoji: String) : TrophyReward
 
     data class Accent(val color: Long) : TrophyReward
+
+    data class Sheet(val paper: Paper) : TrophyReward
 }
 
 data class RoadStep(val level: Int, val reward: TrophyReward, val got: Boolean, val next: Boolean, val xpNeeded: Int)
@@ -34,6 +37,18 @@ object Trophies {
         "#2d3436" to 8,
     )
 
+    /** Папір сторінки → рівень (вибір зберігається на пристрої). Крафт заповнює порожній 9-й рівень шляху. */
+    val PAPERS: List<Pair<Paper, Int>> = listOf(
+        Paper.GRID to 1,
+        Paper.LINES to 2,
+        Paper.DOTS to 4,
+        Paper.GRAPH to 6,
+        Paper.KRAFT to 9,
+    )
+
+    /** Обраний папір, якщо він уже відкритий на цьому рівні; інакше — клітинка. */
+    fun paperFor(paper: Paper, level: Int): Paper = paper.takeIf { p -> PAPERS.any { it.first == p && it.second <= level } } ?: Paper.GRID
+
     /** Батькам відкрито все (як у вебі). */
     const val PARENT_LEVEL = 99
 
@@ -42,9 +57,10 @@ object Trophies {
         return h.substring(1).toLongOrNull(RADIX)?.let { OPAQUE or it }
     }
 
-    /** Шлях: на кожному рівні > 1 — перша нагорода цього рівня (спершу аватари, потім кольори). */
+    /** Шлях: на кожному рівні > 1 — перша нагорода цього рівня (спершу папір, потім аватари, потім кольори). */
     fun road(level: Int): List<RoadStep> {
         val byLevel = linkedMapOf<Int, TrophyReward>()
+        PAPERS.forEach { (p, l) -> byLevel.putIfAbsent(l, TrophyReward.Sheet(p)) }
         AVATARS.forEach { (a, l) -> byLevel.putIfAbsent(l, TrophyReward.Avatar(a)) }
         THEMES.forEach { (c, l) -> byLevel.putIfAbsent(l, TrophyReward.Accent(checkNotNull(parseColor(c)))) }
         val levels = byLevel.keys.filter { it > 1 }.sorted()
