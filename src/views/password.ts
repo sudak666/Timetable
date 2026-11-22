@@ -4,10 +4,11 @@
  * піднімає сесію з адреси й надсилає подію PASSWORD_RECOVERY (див. watchAuth в api.ts).
  */
 import { errText, sb } from '../api';
+import { MIN_NEW_PASSWORD, newPasswordProblem } from '../lib/pwned';
 import { alert, prompt } from '../ui/dialog';
 import { toast } from '../ui/toast';
 
-export const MIN_PASSWORD = 6;
+export const MIN_PASSWORD = MIN_NEW_PASSWORD;
 
 /** Куди веде посилання з листа — та сама сторінка, звідки його попросили. */
 const redirect = () => location.origin + location.pathname;
@@ -27,10 +28,11 @@ export async function forgotPassword(prefill: string): Promise<void> {
 }
 
 /** Новий пароль двічі (щоб не помилитися) і збереження. true — змінено. */
-export async function changePassword(title = 'Новий пароль (від 6 символів)'): Promise<boolean> {
+export async function changePassword(title = `Новий пароль (від ${MIN_PASSWORD} символів)`): Promise<boolean> {
   const p1 = await prompt(title, '', 'password');
   if (p1 === null) return false;
-  if (p1.length < MIN_PASSWORD) return void toast(`Пароль має бути від ${MIN_PASSWORD} символів`, 'err'), false;
+  const bad = await newPasswordProblem(p1);
+  if (bad) return void toast(bad, 'err'), false;
   const p2 = await prompt('Повтори новий пароль', '', 'password');
   if (p2 === null) return false;
   if (p1 !== p2) return void toast('Паролі не збігаються — спробуй ще раз', 'err'), false;
@@ -47,5 +49,5 @@ export async function changePassword(title = 'Новий пароль (від 6 
 /** Перехід із листа відновлення: сесія вже є — одразу просимо новий пароль. */
 export async function finishRecovery(): Promise<void> {
   history.replaceState(null, '', location.pathname + location.search);
-  await changePassword('Задай новий пароль (від 6 символів)');
+  await changePassword(`Задай новий пароль (від ${MIN_PASSWORD} символів)`);
 }
