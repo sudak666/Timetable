@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,6 +27,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.contentDescription
@@ -39,6 +41,7 @@ import com.gifwarno.rozklad.core.designsystem.component.CardTitle
 import com.gifwarno.rozklad.core.designsystem.component.FitText
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.component.outlinedBackground
+import com.gifwarno.rozklad.core.designsystem.component.paper
 import com.gifwarno.rozklad.core.designsystem.component.sticker
 import com.gifwarno.rozklad.core.designsystem.component.stickerSlot
 import com.gifwarno.rozklad.core.designsystem.component.stickerTilt
@@ -47,6 +50,7 @@ import com.gifwarno.rozklad.core.domain.Badge
 import com.gifwarno.rozklad.core.domain.RoadStep
 import com.gifwarno.rozklad.core.domain.Trophies
 import com.gifwarno.rozklad.core.domain.TrophyReward
+import com.gifwarno.rozklad.core.model.Paper
 
 /** Шлях нагород: плитки рівнів з аватарами й кольорами, що відкриваються. */
 @Composable
@@ -67,9 +71,10 @@ fun TrophyRoad(steps: List<RoadStep>, modifier: Modifier = Modifier) {
 @Composable
 private fun RoadTile(step: RoadStep) {
     val c = RozkladTheme.colors
+    val what = (step.reward as? TrophyReward.Sheet)?.let { ": папір «${it.paper.title}»" }.orEmpty()
     val label = when {
-        step.got -> "Рівень ${step.level}, відкрито"
-        else -> "Рівень ${step.level}, відкриється на ${step.xpNeeded} XP"
+        step.got -> "Рівень ${step.level}$what, відкрито"
+        else -> "Рівень ${step.level}$what, відкриється на ${step.xpNeeded} XP"
     }
     // Відкрите — наліпка, ще закрите — пунктирне місце під неї; наступний рівень — картка з чорнильною обвідкою.
     if (!step.next) {
@@ -101,6 +106,7 @@ private fun RoadTileContent(step: RoadStep) {
             when (val r = step.reward) {
                 is TrophyReward.Avatar -> Text(r.emoji, fontSize = 34.sp)
                 is TrophyReward.Accent -> Box(Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(Color(r.color)))
+                is TrophyReward.Sheet -> PaperSwatch(r.paper, Modifier.size(width = 30.dp, height = 38.dp))
             }
         }
         FitText(
@@ -178,6 +184,8 @@ fun LookPicker(
     onAvatar: (String) -> Unit,
     onAccent: (String) -> Unit,
     modifier: Modifier = Modifier,
+    paper: Paper = Paper.GRID,
+    onPaper: (Paper) -> Unit = {},
 ) {
     val c = RozkladTheme.colors
     Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -244,8 +252,51 @@ fun LookPicker(
                 }
             }
         }
+        Text("Папір", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 4.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Trophies.PAPERS.forEach { (p, l) -> PaperChoice(p, open = l <= level, on = p == paper, level = l, onPick = { onPaper(p) }) }
+        }
     }
 }
+
+/** Аркуш на вибір: мініатюра паперу (у поточній темі) і назва; закритий — блідий, з рівнем. */
+@Composable
+private fun PaperChoice(paper: Paper, open: Boolean, on: Boolean, level: Int, onPick: () -> Unit) {
+    GameSurface(
+        modifier = Modifier.semantics {
+            selected = on
+            contentDescription = if (open) "Папір «${paper.title}»" else "Папір «${paper.title}» відкриється на рівні $level"
+        },
+        shape = RoundedCornerShape(14.dp),
+        depth = if (open) 3.dp else 0.dp,
+        outline = if (on) SELECTED_RING else 0.dp,
+        onClick = if (open) onPick else null,
+        onClickLabel = "Вибрати папір",
+    ) {
+        // Постійний відступ під обвідку: обраний аркуш не «стрибає» і обвідку не перекриває мініатюра.
+        Column(Modifier.width(84.dp).padding(SELECTED_RING), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.fillMaxWidth().height(60.dp).alpha(if (open) 1f else LOCKED_ALPHA)) {
+                PaperSwatch(paper, Modifier.matchParentSize(), shape = RoundedCornerShape(11.dp, 11.dp, 4.dp, 4.dp))
+            }
+            FitText(
+                if (open) paper.title else "🔒$level · ${paper.title}",
+                Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
+    }
+}
+
+/** Мініатюра паперу з тонкою рамкою — на шляху нагород і у виборі. */
+@Composable
+private fun PaperSwatch(paper: Paper, modifier: Modifier = Modifier, shape: Shape = RoundedCornerShape(6.dp)) {
+    val c = RozkladTheme.colors
+    Box(modifier.clip(shape).paper(paper, c, boost = if (c.dark) DARK_SWATCH_BOOST else LIGHT_SWATCH_BOOST).border(1.dp, c.line, shape))
+}
+
+/** На дошці візерунок крейдою ледь помітний — у мініатюрах робимо його яскравішим, щоб папери розрізнялись. */
+private const val DARK_SWATCH_BOOST = 3f
+private const val LIGHT_SWATCH_BOOST = 1.4f
 
 private const val LOCKED_ALPHA = 0.45f
 

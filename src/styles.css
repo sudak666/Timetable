@@ -3,16 +3,24 @@
 /* «Щоденник» (як в Android): зошит у клітинку, синє чорнило, червона ручка вчителя, жовтий маркер; уночі — дошка й крейда. */
 @font-face{font-family:Caveat;font-style:normal;font-weight:700;font-display:swap;src:url('./assets/fonts/caveat-700.woff2') format('woff2')}
 :root{--warn-bg:#fdece8;--warn-fg:#a4301a;--good:#00705a;--bad:#c0392b;--bg:#fbf8f0;--card:#fff;--text:#23262f;--muted:#4c5163;--line:#e6dfcf;--accent:#1f3fa6;--glow:rgba(31,63,166,.18);--brk:#f3eee2;--marker:#ffe14a;--hl:rgba(255,225,74,.6);--pen:#c8321f;--title:var(--accent);--hand:Caveat,"Segoe Print","Comic Sans MS",cursive}
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--warn-bg:#5c1a14;--warn-fg:#ffdad6;--good:#4fd1a5;--bad:#ff8a7a;--bg:#16221d;--card:#20302a;--text:#edebe3;--muted:#b7c2bb;--line:#2b3d36;--glow:rgba(157,187,255,.22);--brk:#1b2a24;--marker:#f2d25c;--hl:rgba(242,210,92,.18);--pen:#ff8a7a;--title:var(--text)}}
-:root[data-theme=dark]{--warn-bg:#5c1a14;--warn-fg:#ffdad6;--good:#4fd1a5;--bad:#ff8a7a;--bg:#16221d;--card:#20302a;--text:#edebe3;--muted:#b7c2bb;--line:#2b3d36;--glow:rgba(157,187,255,.22);--brk:#1b2a24;--marker:#f2d25c;--hl:rgba(242,210,92,.18);--pen:#ff8a7a;--title:var(--text)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--warn-bg:#5c1a14;--warn-fg:#ffdad6;--good:#4fd1a5;--bad:#ff8a7a;--bg:#16221d;--card:#20302a;--text:#edebe3;--muted:#b7c2bb;--line:#2b3d36;--glow:rgba(157,187,255,.22);--brk:#1b2a24;--marker:#f2d25c;--hl:rgba(242,210,92,.18);--pen:#ff8a7a;--title:var(--text);--pi:#edebe3;--po:#edebe3;--pk:.4;--mar:transparent;--dust:rgba(237,235,227,.05);--kraft:var(--bg)}}
+:root[data-theme=dark]{--warn-bg:#5c1a14;--warn-fg:#ffdad6;--good:#4fd1a5;--bad:#ff8a7a;--bg:#16221d;--card:#20302a;--text:#edebe3;--muted:#b7c2bb;--line:#2b3d36;--glow:rgba(157,187,255,.22);--brk:#1b2a24;--marker:#f2d25c;--hl:rgba(242,210,92,.18);--pen:#ff8a7a;--title:var(--text);--pi:#edebe3;--po:#edebe3;--pk:.4;--mar:transparent;--dust:rgba(237,235,227,.05);--kraft:var(--bg)}
 *{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
 button,a,summary,label,.chip{touch-action:manipulation;user-select:none;-webkit-user-select:none}
 :focus:not(:focus-visible){outline:none}
 body{font-family:"Nunito Variable",Nunito,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px 16px 48px;transition:background .3s;isolation:isolate}
-/* Тло позаду непрозорих карток: сторінка в клітинку з червоними полями; уночі — дошка з розводами крейди. */
-body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(90deg,transparent 9px,rgba(200,50,31,.35) 9px 11px,transparent 11px),linear-gradient(rgba(31,63,166,.09) 1px,transparent 1px) 0 0/18px 18px,linear-gradient(90deg,rgba(31,63,166,.09) 1px,transparent 1px) 0 0/18px 18px,var(--bg)}
-:root[data-theme=dark] body::before{background:radial-gradient(70% 35% at 20% 12%,rgba(237,235,227,.05),transparent 70%),radial-gradient(60% 30% at 85% 60%,rgba(237,235,227,.045),transparent 70%),var(--bg)}
-@media(prefers-color-scheme:dark){:root:not([data-theme=light]) body::before{background:radial-gradient(70% 35% at 20% 12%,rgba(237,235,227,.05),transparent 70%),radial-gradient(60% 30% at 85% 60%,rgba(237,235,227,.045),transparent 70%),var(--bg)}}
+/* Тло позаду непрозорих карток — обраний папір (нагорода за рівні, як в Android): клітинка з червоними полями, лінійка,
+   крапки, міліметрівка, крафт; уночі — той самий візерунок ледь помітною крейдою на дошці з розводами. */
+:root{--pi:#1f3fa6;--po:#d0661c;--pk:1;--mar:rgba(200,50,31,.35);--dust:transparent;--kraft:#e4d2ae}
+:root,.pp{--sheet:var(--bg);--pat:linear-gradient(color-mix(in srgb,var(--pi) calc(9%*var(--pk)),transparent) 1px,transparent 1px) 0 0/18px 18px,linear-gradient(90deg,color-mix(in srgb,var(--pi) calc(9%*var(--pk)),transparent) 1px,transparent 1px) 0 0/18px 18px}
+:root[data-paper=lines],.pp[data-p=lines]{--pat:linear-gradient(transparent 27px,color-mix(in srgb,var(--pi) calc(16%*var(--pk)),transparent) 27px) 0 0/100% 28px}
+:root[data-paper=dots],.pp[data-p=dots]{--mar:transparent;--pat:radial-gradient(circle,color-mix(in srgb,var(--pi) calc(26%*var(--pk)),transparent) 1.2px,transparent 1.5px) 9px 9px/18px 18px}
+:root[data-paper=graph],.pp[data-p=graph]{--mar:transparent;--pat:linear-gradient(color-mix(in srgb,var(--po) calc(30%*var(--pk)),transparent) 1px,transparent 1px) 0 0/30px 30px,linear-gradient(90deg,color-mix(in srgb,var(--po) calc(30%*var(--pk)),transparent) 1px,transparent 1px) 0 0/30px 30px,linear-gradient(color-mix(in srgb,var(--po) calc(13%*var(--pk)),transparent) .6px,transparent .6px) 0 0/6px 6px,linear-gradient(90deg,color-mix(in srgb,var(--po) calc(13%*var(--pk)),transparent) .6px,transparent .6px) 0 0/6px 6px}
+:root[data-paper=kraft],.pp[data-p=kraft]{--mar:transparent;--sheet:var(--kraft);--pat:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' stroke-linecap='round'%3E%3Cpath d='M57 79l4 1M67 79l6-3M40 49l3 1M48 50l6 1M43 44l8 2M28 44l9 0M3 99l7-1M51 47l4 1M21 84l4-3M76 6l4 0M57 115l10 0M1 32l5 2M32 114l4 2M83 16l5 3M108 109l9 0' stroke='%237a5a2e' stroke-opacity='.18'/%3E%3Cpath d='M45 33l7 3M109 7l3 1M110 61l9-5M14 51l5-2M20 84l4-2M4 87l8 5M111 44l8-3M1 5l10 1M60 3l8-2M77 28l6 0M105 33l6 3M85 26l5-1M52 118l7 1M115 91l7-1M95 70l5-1M68 2l9 2M12 42l9-2M65 75l6-3M47 29l5-1' stroke='%23fff' stroke-opacity='.32'/%3E%3C/svg%3E")}
+/* Уночі волокна крафту — ледь помітною крейдою (як в Android), а не білими рисками. */
+:root[data-theme=dark][data-paper=kraft],:root[data-theme=dark] .pp[data-p=kraft]{--pat:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' stroke-linecap='round'%3E%3Cpath d='M57 79l4 1M67 79l6-3M40 49l3 1M48 50l6 1M43 44l8 2M28 44l9 0M3 99l7-1M51 47l4 1M21 84l4-3M76 6l4 0M57 115l10 0M1 32l5 2M32 114l4 2M83 16l5 3M108 109l9 0' stroke='%23edebe3' stroke-opacity='.06'/%3E%3Cpath d='M45 33l7 3M109 7l3 1M110 61l9-5M14 51l5-2M20 84l4-2M4 87l8 5M111 44l8-3M1 5l10 1M60 3l8-2M77 28l6 0M105 33l6 3M85 26l5-1M52 118l7 1M115 91l7-1M95 70l5-1M68 2l9 2M12 42l9-2M65 75l6-3M47 29l5-1' stroke='%23edebe3' stroke-opacity='.035'/%3E%3C/svg%3E")}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light])[data-paper=kraft],:root:not([data-theme=light]) .pp[data-p=kraft]{--pat:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' stroke-linecap='round'%3E%3Cpath d='M57 79l4 1M67 79l6-3M40 49l3 1M48 50l6 1M43 44l8 2M28 44l9 0M3 99l7-1M51 47l4 1M21 84l4-3M76 6l4 0M57 115l10 0M1 32l5 2M32 114l4 2M83 16l5 3M108 109l9 0' stroke='%23edebe3' stroke-opacity='.06'/%3E%3Cpath d='M45 33l7 3M109 7l3 1M110 61l9-5M14 51l5-2M20 84l4-2M4 87l8 5M111 44l8-3M1 5l10 1M60 3l8-2M77 28l6 0M105 33l6 3M85 26l5-1M52 118l7 1M115 91l7-1M95 70l5-1M68 2l9 2M12 42l9-2M65 75l6-3M47 29l5-1' stroke='%23edebe3' stroke-opacity='.035'/%3E%3C/svg%3E")}}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(90deg,transparent 9px,var(--mar) 9px 11px,transparent 11px),radial-gradient(70% 35% at 20% 12%,var(--dust),transparent 70%),radial-gradient(60% 30% at 85% 60%,var(--dust),transparent 70%),var(--pat),var(--sheet)}
 .wrap{max-width:1100px;margin:auto}
 header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:var(--shadow-2)}
 /* Великі заголовки — від руки (Caveat; він дрібніший на вигляд, тож більший кегль). */
@@ -38,7 +46,7 @@ button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .bar i{display:block;height:100%;background:var(--marker);border-radius:3px 9px 4px 8px;transition:width 1s linear}
 .side{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{font-size:13px;padding:4px 10px;border-radius:20px;color:#fff;font-weight:600;cursor:pointer;border:0}
+.chip{font-size:13px;padding:4px 10px 4px 14px;border-radius:3px 9px 9px 3px;color:#fff;font-weight:600;cursor:pointer;border:0;box-shadow:inset 4px 0 rgb(0 0 0/.28)}
 .chip b{font-weight:500;margin-left:4px}
 .dayprog{margin-top:14px;font-size:13px;color:var(--muted)}
 .dayprog .bar{background:var(--line)}.dayprog .bar i{background:var(--accent)}
@@ -53,11 +61,13 @@ button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .badge{font-size:11px;background:var(--accent);color:#fff;padding:3px 8px;border-radius:8px;margin-left:6px}
 .l{display:grid;grid-template-columns:28px 92px 1fr;gap:8px;align-items:center;padding:9px 8px;border-radius:10px;transition:opacity .2s,background .2s}
 .n{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:13px;font-weight:800;color:#fff}
+/* Обкладинка зошита предмета (як NotebookCover в Android): темніший корінець, біла етикетка, номер червоною ручкою. */
+.l .n{--c:var(--sc,#4b5563);width:24px;height:31px;padding:6px 3px 10px 7px;border-radius:2px 4px 4px 2px;background:linear-gradient(#fff,#fff) 7px 6px/14px 15px no-repeat,var(--c);box-shadow:inset 4px 0 rgb(0 0 0/.28),0 1px 3px rgb(0 0 0/.25);color:#c8321f;font:700 17px/1 var(--hand)}
 .t{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
 .s{font-weight:600}
 .b{display:flex;justify-content:center;gap:6px;font-size:11px;color:var(--muted);background:var(--brk);border-radius:8px;padding:3px;margin:3px 0}
 .b.long{color:var(--good);font-weight:700}
-.l.past .s,.l.past .t,.b.past{color:var(--muted)}.l.past .s{font-weight:500}.l.past .n{background:var(--muted)!important}.l.past img.emo{opacity:.55}
+.l.past .s,.l.past .t,.b.past{color:var(--muted)}.l.past .s{font-weight:500}.l.past .n{--c:color-mix(in srgb,var(--sc) 28%,#9ea3ac);color:#5e6270;box-shadow:inset 4px 0 rgb(0 0 0/.2)}.l.past img.emo{opacity:.55}
 .l.cur{background:var(--hl)}.l.cur .t{color:var(--text)}
 .b.cur{background:#00705a;color:#fff}
 .opt{font-size:11px;color:var(--muted);font-weight:400}
@@ -201,6 +211,13 @@ details[open] summary::before{transform:rotate(45deg)}
 .avg button[disabled]{opacity:.35}
 .avg button[disabled]::after{content:attr(data-l);position:absolute;right:4px;bottom:2px;font-size:10px;font-weight:800;color:var(--text)}
 .avg .sw{height:40px;border-radius:12px}
+/* Мініатюри паперу: той самий візерунок, що й на сторінці (спільні правила вище), назва — на смужці картки. */
+.avg .pp{height:64px;padding:0;display:grid;align-content:end;overflow:hidden;background:var(--pat),var(--sheet);box-shadow:inset 0 0 0 1px var(--line);font-size:12px;font-weight:700;color:var(--text)}
+.avg .pp span{background:var(--card);padding:3px 2px}
+.avg .pp.on{color:var(--text);outline:3px solid var(--accent);outline-offset:-3px}
+/* У мініатюрах візерунок яскравіший: на дошці ледь помітна крейда інакше зливається. */
+.pp{--pk:1}
+.pps{grid-template-columns:repeat(3,1fr)}
 .h6,.pop h6{font-size:12px;color:var(--muted);text-transform:uppercase;margin:6px 4px 8px}
 .quiz .q{font-size:17px;font-weight:700;margin:6px 0 10px}
 .quiz .ans{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -232,7 +249,7 @@ details[open] summary::before{transform:rotate(45deg)}
 .road{display:flex;gap:10px;overflow-x:auto;padding:6px 2px 10px;margin-top:10px;scroll-snap-type:x mandatory}
 .road .rs{flex:none;width:92px;scroll-snap-align:center;text-align:center;background:var(--brk);border-radius:16px;padding:10px 6px;position:relative}
 .road .rs .ri{font-size:30px;line-height:1}.road .rs img.emo{width:40px;height:40px}
-.road .rs .rsw{width:34px;height:34px;border-radius:12px;margin:3px auto}
+.road .rs .rsw{width:34px;height:34px;border-radius:12px;margin:3px auto}.road .rs .rsw.pp{width:30px;height:38px;border-radius:6px;background:var(--pat),var(--sheet);box-shadow:inset 0 0 0 1px var(--line)}
 .road .rs b{display:block;font-size:12px;margin-top:4px}
 .road .rs small{font-size:11px;color:var(--muted)}
 .road .rs.got{background:color-mix(in srgb,var(--marker) 45%,#fff);color:#23262f;box-shadow:0 0 0 3px #fff,0 4px 10px rgb(0 0 0/.2);transform:rotate(-2deg)}.road .rs.got:nth-child(even){transform:rotate(2deg)}.road .rs.got small{color:#4c5163}

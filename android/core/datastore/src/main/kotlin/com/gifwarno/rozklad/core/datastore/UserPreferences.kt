@@ -24,6 +24,8 @@ data class UserPreferences(
     /** Дитина, яку зараз дивиться батько (у дитини — завжди вона сама). */
     val selectedChildId: String?,
     val themeMode: ThemeMode,
+    /** Ключ обраного паперу сторінки (Paper.key); null — клітинка. Лише на цьому пристрої. */
+    val paper: String? = null,
 )
 
 /** Налаштування пристрою (не сім'ї): що вибрано, яка тема. Не містить секретів. */
@@ -33,6 +35,7 @@ class UserPreferencesDataSource @Inject constructor(private val store: DataStore
         UserPreferences(
             selectedChildId = p[SELECTED_CHILD],
             themeMode = p[THEME]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.SYSTEM,
+            paper = p[PAPER],
         )
     }
 
@@ -42,6 +45,10 @@ class UserPreferencesDataSource @Inject constructor(private val store: DataStore
 
     suspend fun setThemeMode(mode: ThemeMode) {
         store.edit { it[THEME] = mode.name }
+    }
+
+    suspend fun setPaper(key: String) {
+        store.edit { it[PAPER] = key }
     }
 
     /** Остання відома сім'я користувача — щоб застосунок відкривався офлайн. */
@@ -101,6 +108,7 @@ class UserPreferencesDataSource @Inject constructor(private val store: DataStore
     private companion object {
         val SELECTED_CHILD = stringPreferencesKey("selected_child")
         val THEME = stringPreferencesKey("theme_mode")
+        val PAPER = stringPreferencesKey("paper")
         val MEMBER_USER = stringPreferencesKey("member_user")
         val MEMBER_FAMILY = stringPreferencesKey("member_family")
         val MEMBER_ROLE = stringPreferencesKey("member_role")

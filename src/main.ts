@@ -11,7 +11,7 @@ import { openPalette, type Cmd } from './ui/palette';
 import { set, state, store, subscribe, TABS, type Tab } from './state';
 import { bikeLane } from './ui/bike';
 import { boom } from './ui/confetti';
-import { applyAccent } from './ui/theme';
+import { applyAccent, applyPaper } from './ui/theme';
 import { emo } from './lib/emoji';
 import { quizView } from './views/quiz';
 import { afterSchoolCard, funCards, lessonAlertTick, nowCard, sidePanel, toggleLessonAlerts, weekGrid, weekStats } from './views/schedule';
@@ -22,6 +22,8 @@ const root = document.documentElement;
 const theme = store.get('theme');
 if (theme === 'dark' || theme === 'light') root.dataset.theme = theme;
 applyAccent(store.get('accent'));
+// Папір — одразу з пам'яті; чи він відкритий на рівні, перевіряємо, щойно завантажаться оцінки (api.ts).
+applyPaper(store.get('paper') ?? 'grid');
 // Ігрові стилі «Арена» й «Блоки» прибрано (21.11.2026) — стираємо збережений вибір.
 store.set('style', null);
 try {

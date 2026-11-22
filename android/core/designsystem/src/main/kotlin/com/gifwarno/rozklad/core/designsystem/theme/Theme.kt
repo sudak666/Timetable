@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.gifwarno.rozklad.core.model.Paper
 
 /**
  * Фірмові кольори «Щоденника»: зошит у клітинку, синє чорнило, червона ручка вчителя, жовтий маркер;
@@ -38,6 +39,9 @@ object Brand {
     val ChalkBlue = Color(0xFF9DBBFF)
     val ChalkRed = Color(0xFFFF8A7A)
     val ChalkYellow = Color(0xFFF2D25C)
+
+    /** Крафтовий папір (обкладинка-чернетка): сірий текст 5,3:1, чорнило 6,1:1. */
+    val Kraft = Color(0xFFE4D2AE)
 }
 
 private val LightColors = lightColorScheme(
@@ -136,6 +140,8 @@ data class RozkladColors(
     val gold: Color,
     val goldEnd: Color,
     val dark: Boolean,
+    /** Папір сторінки (нагорода за рівні); уночі той самий візерунок — крейдою на дошці. */
+    val paper: Paper = Paper.GRID,
 )
 
 private val LightExtra = RozkladColors(
@@ -207,6 +213,8 @@ fun RozkladTheme(
     dynamicColor: Boolean = false,
     /** Обраний людиною колір (відкривається з рівнями); null — фірмове чорнило. */
     accent: Color? = null,
+    /** Папір сторінки (відкривається з рівнями). */
+    paper: Paper = Paper.GRID,
     content: @Composable () -> Unit,
 ) {
     val colors: ColorScheme = when {
@@ -220,7 +228,10 @@ fun RozkladTheme(
         else -> LightColors
     }
     // Свій колір людини (відкривається з рівнями) замінює чорнило; маркер «зараз» лишається жовтим.
-    val extra = (if (darkTheme) BoardExtra else LightExtra).let { base -> accent?.let { base.copy(accent = it) } ?: base }
+    val extra = (if (darkTheme) BoardExtra else LightExtra).let { base -> accent?.let { base.copy(accent = it) } ?: base }.let {
+        // Крафт удень міняє й колір сторінки (смуги під шапкою й над вкладками — теж); уночі дошка лишається дошкою.
+        it.copy(paper = paper, page = if (!darkTheme && paper == Paper.KRAFT) Brand.Kraft else it.page)
+    }
     // У темній темі текст акцентного кольору має бути світлішим, щоб читався на темних картках.
     val scheme = accent?.let { colors.copy(primary = if (darkTheme) lerp(it, Color.White, DARK_PRIMARY_LIFT) else it) } ?: colors
     CompositionLocalProvider(LocalRozkladColors provides extra) {

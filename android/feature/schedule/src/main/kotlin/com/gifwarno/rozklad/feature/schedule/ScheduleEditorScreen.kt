@@ -51,8 +51,7 @@ import com.gifwarno.rozklad.core.designsystem.component.GameSegmented
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.component.GameTopBar
 import com.gifwarno.rozklad.core.designsystem.component.LoadingState
-import com.gifwarno.rozklad.core.designsystem.component.NumberTile
-import com.gifwarno.rozklad.core.designsystem.component.Pill
+import com.gifwarno.rozklad.core.designsystem.component.NotebookCover
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.domain.Timetable
 import com.gifwarno.rozklad.core.model.SchoolSchedule
@@ -280,7 +279,7 @@ private fun LessonEditRow(
     val info = Timetable.subject(subject)
     Column(Modifier.padding(vertical = 6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            NumberTile(index + 1, Color(info.color))
+            NotebookCover(index + 1, Color(info.color))
             Column(Modifier.weight(1f).padding(start = 10.dp)) {
                 FitText("${info.emoji} $subject", style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.ExtraBold))
                 val meta = listOfNotNull(time, if (optional) "факультатив" else null).joinToString(" · ")

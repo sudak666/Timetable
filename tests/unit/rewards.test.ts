@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_RATES, autoRewards, bestTenRun, currentRun, gradeValue, PASS, levelOf, parseSettings, totals, type Challenge, type Grade, type Ledger } from '../../src/features/rewards';
+import { DEFAULT_RATES, PAPERS, autoRewards, bestTenRun, currentRun, gradeValue, PASS, levelOf, paperFor, parseSettings, totals, type Challenge, type Grade, type Ledger } from '../../src/features/rewards';
 
 let n = 0;
 const g = (grade: number, date: string, subject = 'Математика', status: Grade['status'] = 'approved', amount: number | null = null): Grade =>
@@ -83,5 +83,18 @@ describe('зараховано', () => {
     expect(autoRewards(a, [], s)).toHaveLength(1);
     expect(currentRun(a, s)).toBe(0);
     expect(bestTenRun(a)).toBe(3);
+  });
+});
+
+describe('папір', () => {
+  it('рівні — як в Android (Trophies.PAPERS)', () => {
+    expect(PAPERS.map(([k, , l]) => `${k}:${l}`)).toEqual(['grid:1', 'lines:2', 'dots:4', 'graph:6', 'kraft:9']);
+  });
+  it('лише відкритий на рівні, інакше клітинка', () => {
+    expect(paperFor('lines', 2)).toBe('lines');
+    expect(paperFor('kraft', 8)).toBe('grid');
+    expect(paperFor('kraft', 99)).toBe('kraft');
+    expect(paperFor(null, 99)).toBe('grid');
+    expect(paperFor('невідомо', 99)).toBe('grid');
   });
 });

@@ -3,9 +3,9 @@ import { PostgrestClient } from '@supabase/postgrest-js';
 import type { RealtimeChannel, RealtimeClient } from '@supabase/realtime-js';
 import type { TimetableRow } from './data/schedule';
 import { enqueue, isOp, isRetryableStatus, overlay, type Op } from './features/outbox';
-import { parseSettings, type Challenge, type Grade, type Homework, type Ledger, type Member, type Role } from './features/rewards';
+import { levelOf, paperFor, parseSettings, xpOf, type Challenge, type Grade, type Homework, type Ledger, type Member, type Role } from './features/rewards';
 import { set, state, store } from './state';
-import { applyAccent } from './ui/theme';
+import { applyAccent, applyPaper } from './ui/theme';
 import { toast } from './ui/toast';
 
 const URL = 'https://vkwkyhjjjmcpmiakxohw.supabase.co';
@@ -117,6 +117,8 @@ export async function loadFamily(): Promise<void> {
   const theme = state.members.find((x) => x.user_id === state.me?.id)?.theme || null;
   store.set('accent', theme);
   applyAccent(theme);
+  const lv = state.role === 'parent' ? 99 : levelOf(xpOf(state.grades.filter((x) => x.child_id === state.me?.id && x.status === 'approved')));
+  applyPaper(paperFor(store.get('paper'), lv));
 }
 
 /* ---------------- офлайн: знімок даних + черга змін ---------------- */

@@ -2,6 +2,7 @@ package com.gifwarno.rozklad.core.domain
 
 import com.gifwarno.rozklad.core.model.Grade
 import com.gifwarno.rozklad.core.model.GradeStatus
+import com.gifwarno.rozklad.core.model.Paper
 import java.time.Instant
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
@@ -17,8 +18,11 @@ class TrophiesTest {
     @Test
     fun `шлях — рівні з нагородами як у вебі`() {
         val road = Trophies.road(level = 6)
-        assertEquals(listOf(2, 3, 4, 5, 6, 7, 8, 10, 12, 15), road.map { it.level })
-        assertEquals(TrophyReward.Avatar("🐙"), road.first().reward)
+        assertEquals(listOf(2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15), road.map { it.level })
+        // Папір іде першим: на 2-му рівні — «Лінійка», на 3-му (без паперу) — аватар.
+        assertEquals(TrophyReward.Sheet(Paper.LINES), road.first().reward)
+        assertEquals(TrophyReward.Avatar("🦁"), road.first { it.level == 3 }.reward)
+        assertEquals(TrophyReward.Sheet(Paper.KRAFT), road.first { it.level == 9 }.reward)
         assertTrue(road.first { it.level == 6 }.got)
         assertTrue(road.first { it.level == 7 }.next)
         assertFalse(road.first { it.level == 8 }.next)
@@ -37,6 +41,14 @@ class TrophiesTest {
         assertEquals(true, b["Заробив 1000 ₴"])
         // На цьому тижні лише одна оцінка — замало для «тижня без мінусів».
         assertEquals(false, b["Тиждень без мінусів"])
+    }
+
+    @Test
+    fun `папір — лише відкритий на рівні, інакше клітинка`() {
+        assertEquals(Paper.LINES, Trophies.paperFor(Paper.LINES, level = 2))
+        assertEquals(Paper.GRID, Trophies.paperFor(Paper.KRAFT, level = 8))
+        assertEquals(Paper.KRAFT, Trophies.paperFor(Paper.KRAFT, level = Trophies.PARENT_LEVEL))
+        assertEquals(Paper.GRID, Paper.fromKey("невідомо"))
     }
 
     @Test

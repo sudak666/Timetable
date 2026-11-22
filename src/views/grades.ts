@@ -6,7 +6,7 @@ import { deleteAccount, enter, errText, loadFamily, mutate, sb, signOut } from '
 import { DELETE_CONFIRM_WORD, deletionWarnings, isDeleteConfirmed } from '../features/account';
 import { subjEmoji } from '../data/schedule';
 import {
-  AVATARS, THEMES, XP_PER_LEVEL, autoRewards, bestTenRun, byTime, challengeHits, currentRun, PASS, gradeColor, gradeLabel, gradeValue, isScored, rateOf, levelOf, totals, xpOf,
+  AVATARS, PAPERS, THEMES, XP_PER_LEVEL, paperFor, autoRewards, bestTenRun, byTime, challengeHits, currentRun, PASS, gradeColor, gradeLabel, gradeValue, isScored, rateOf, levelOf, totals, xpOf,
   type Grade, type Homework,
 } from '../features/rewards';
 import { emo } from '../lib/emoji';
@@ -17,6 +17,7 @@ import { alert, confirm, prompt } from '../ui/dialog';
 import { toast } from '../ui/toast';
 import { dateLabel, pickDate, pickSubject, subjLabel } from '../ui/pickers';
 import { closePop, openPop } from '../ui/popover';
+import { applyPaper } from '../ui/theme';
 import { installApp, togglePush } from '../pwa';
 
 export { editScheduleButton, needsSchedule, noSchedule, scheduleEditor } from './editor';
@@ -80,20 +81,27 @@ export function laneLabel(): unknown {
   return emo('⚡ Електробайк мрії');
 }
 
-/* ---------------- аватар / колір / стиль ---------------- */
+/* ---------------- аватар / колір / папір ---------------- */
 function avatarPop(e: Event) {
   const lv = state.role === 'parent' ? 99 : levelOf(xpOf(state.grades.filter((g) => g.child_id === state.me?.id && g.status === 'approved')));
   const upd = async (patch: { avatar?: string; theme?: string }) => {
     closePop();
     await run(sb.from('school_members').update(patch).eq('family_id', state.family!.id).eq('user_id', state.me!.id));
   };
+  const pickPaper = (k: string) => {
+    store.set('paper', k);
+    applyPaper(k);
+    closePop();
+  };
   openPop(e.currentTarget as HTMLElement, () => {
-    const cur = me();
+    const cur = me(), paper = paperFor(store.get('paper'), lv);
     return html`<h3 class="h6">Аватар${state.role === 'child' ? ` · рівень ${lv}` : ''}</h3>
       <div class="avg">${AVATARS.map(([a, l]) => html`<button type="button" ?disabled=${l > lv} aria-pressed=${cur?.avatar === a} aria-label=${l > lv ? `Відкриється на рівні ${l}` : 'Вибрати аватар'} data-l=${'🔒' + l} class=${classMap({ on: cur?.avatar === a })} @click=${() => upd({ avatar: a })}>${emo(a)}</button>`)}</div>
       <h3 class="h6">Колір сайту</h3>
-      <div class="avg">${THEMES.map(([c, l]) => html`<button type="button" class=${classMap({ sw: true, on: cur?.theme === c })} ?disabled=${l > lv} aria-pressed=${cur?.theme === c} aria-label=${l > lv ? `Колір відкриється на рівні ${l}` : `Колір ${c}`} data-l=${'🔒' + l} style=${styleMap({ background: c })} @click=${() => upd({ theme: c })}></button>`)}</div>`;
-  }, 'Аватар, колір і стиль');
+      <div class="avg">${THEMES.map(([c, l]) => html`<button type="button" class=${classMap({ sw: true, on: cur?.theme === c })} ?disabled=${l > lv} aria-pressed=${cur?.theme === c} aria-label=${l > lv ? `Колір відкриється на рівні ${l}` : `Колір ${c}`} data-l=${'🔒' + l} style=${styleMap({ background: c })} @click=${() => upd({ theme: c })}></button>`)}</div>
+      <h3 class="h6">Папір</h3>
+      <div class="avg pps">${PAPERS.map(([k, t, l]) => html`<button type="button" class=${classMap({ pp: true, on: paper === k })} data-p=${k} ?disabled=${l > lv} aria-pressed=${paper === k} aria-label=${l > lv ? `Папір «${t}» відкриється на рівні ${l}` : `Папір «${t}»`} data-l=${'🔒' + l} @click=${() => pickPaper(k)}><span>${t}</span></button>`)}</div>`;
+  }, 'Аватар, колір і папір');
 }
 
 /* ---------------- вхід / сім'я ---------------- */
@@ -199,6 +207,8 @@ function progress(d: D): TemplateResult {
 
 function road(lv: number): TemplateResult {
   const byLv = new Map<number, TemplateResult>();
+  // Як в Android: на рівні спершу папір, потім аватар, потім колір.
+  for (const [k, t, l] of PAPERS) if (!byLv.has(l)) byLv.set(l, html`<div class="rsw pp" data-p=${k} role="img" aria-label=${`Папір «${t}»`}></div>`);
   for (const [a, l] of AVATARS) if (!byLv.has(l)) byLv.set(l, html`<div class="ri">${emo(a)}</div>`);
   for (const [c, l] of THEMES) if (!byLv.has(l)) byLv.set(l, html`<div class="rsw" style=${styleMap({ background: c })}></div>`);
   const levels = [...byLv.keys()].filter((l) => l > 1).sort((a, b) => a - b), next = levels.find((l) => l > lv);
