@@ -2,14 +2,16 @@ import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { FcmAuth, fcmAlertMessage, parseServiceAccount, sendFcm, sendFcmMessage, type Push } from "./fcm.ts";
 import { ALERTS_URL, alertText, parseStatuses, transitions, type AlertEvent, type AlertLocation, type AlertState } from "./alerts.ts";
+import { bagFor, eveningMessage, type TimetableJson } from "./bag.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 let cfg: Record<string, string> | null = null;
-async function secrets() {
+async function secrets(): Promise<Record<string, string>> {
   if (!cfg) {
     const { data } = await sb.from("school_secrets").select("k,v");
-    cfg = Object.fromEntries((data ?? []).map((r) => [r.k, r.v]));
-    webpush.setVapidDetails("mailto:noreply@timetable.app", cfg.vapid_public, cfg.vapid_private);
+    const c: Record<string, string> = Object.fromEntries((data ?? []).map((r) => [r.k, r.v]));
+    webpush.setVapidDetails("mailto:noreply@timetable.app", c.vapid_public, c.vapid_private);
+    cfg = c;
   }
   return cfg;
 }
@@ -55,15 +57,43 @@ async function name(fid: string, uid: string) {
   return data?.name || "Дитина";
 }
 
-/** Щовечора: дитині — невиконана домашка на завтра (дата за Києвом). */
-async function remindHomework() {
+/** Усі рядки запиту сторінками по 1000 (стільки PostgREST віддає за раз). */
+async function all<T>(page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await page(from, from + 999);
+    if (error) throw new Error(error.message);
+    out.push(...(data ?? []));
+    if (!data || data.length < 1000) return out;
+  }
+}
+
+/**
+ * Щовечора (18:00 за Києвом, cron → school_hw_remind): дитині — одне сповіщення «Збери рюкзак на завтра»:
+ * уроки, речі на заняття й невиконана домашка (bag.ts). Без розкладу — як раніше, лише домашка.
+ */
+async function remindEvening() {
   const kyiv = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Kyiv" }).format(d);
   const tomorrow = kyiv(new Date(Date.now() + 864e5));
-  const { data } = await sb.from("school_homework").select("child_id,subject").eq("due", tomorrow).eq("done", false);
-  const by = new Map<string, string[]>();
-  for (const h of data ?? []) by.set(h.child_id, [...(by.get(h.child_id) ?? []), h.subject]);
-  await Promise.all([...by].map(([kid, subj]) =>
-    send([kid], `📝 На завтра ${subj.length} ${subj.length < 5 ? "завдання" : "завдань"}`, [...new Set(subj)].join(", "), "hw" + tomorrow, "#hw", "homework")));
+  const [hw, tt] = await Promise.all([
+    all<{ child_id: string; subject: string }>((a, b) =>
+      sb.from("school_homework").select("child_id,subject").eq("due", tomorrow).eq("done", false).order("id").range(a, b)),
+    all<TimetableJson>((a, b) => sb.from("school_timetables").select("child_id,week,holidays,activities").order("child_id").range(a, b)),
+  ]);
+  const homework = new Map<string, string[]>();
+  for (const h of hw) homework.set(h.child_id, [...(homework.get(h.child_id) ?? []), h.subject]);
+  const timetable = new Map(tt.map((t) => [t.child_id, t]));
+  const kids = new Set([...homework.keys(), ...timetable.keys()]);
+  await Promise.all([...kids].map(async (kid) => {
+    const t = timetable.get(kid);
+    const m = eveningMessage(t ? bagFor(t, tomorrow) : { subjects: [], things: [] }, homework.get(kid) ?? []);
+    if (!m) return;
+    try {
+      await send([kid], m.title, m.body, m.kind + tomorrow, m.kind === "bag" ? "#today" : "#hw", "homework");
+    } catch (e) {
+      console.error("evening", kid, e);
+    }
+  }));
 }
 
 /**
@@ -126,7 +156,7 @@ Deno.serve(async (req) => {
   if (req.headers.get("x-hook-secret") !== c.hook_secret) return new Response("forbidden", { status: 403 });
   const { table, type, record: r, old_record: o } = await req.json();
   if (type === "CRON" && table === "hw_remind") {
-    await remindHomework();
+    await remindEvening();
     return new Response("ok");
   }
   if (type === "CRON" && table === "alerts") {
