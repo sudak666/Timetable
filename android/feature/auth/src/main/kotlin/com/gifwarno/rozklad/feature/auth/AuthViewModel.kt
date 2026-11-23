@@ -30,6 +30,7 @@ data class AuthUiState(
     companion object {
         const val MIN_PASSWORD = 6
         const val MIN_NEW_PASSWORD = 8
+        const val MAX_PASSWORD = 128
         private val EMAIL = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
     }
 }
@@ -60,7 +61,7 @@ class AuthViewModel @Inject constructor(private val session: SessionRepository) 
 
     fun onEmail(v: String) = _state.update { it.copy(email = cleanEmail(v), message = null) }
 
-    fun onPassword(v: String) = _state.update { it.copy(password = v.take(MAX_PASSWORD), message = null) }
+    fun onPassword(v: String) = _state.update { it.copy(password = v.take(AuthUiState.MAX_PASSWORD), message = null) }
 
     fun toggleMode() = _state.update { it.copy(isSignUp = !it.isSignUp, message = null) }
 
@@ -113,10 +114,6 @@ class AuthViewModel @Inject constructor(private val session: SessionRepository) 
                     .onSuccess { _state.update { it.copy(busy = false) } }
             }
         }
-    }
-
-    private companion object {
-        const val MAX_PASSWORD = 128
     }
 }
 

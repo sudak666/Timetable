@@ -17,8 +17,12 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.maxLengthTrim
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedSecureTextField
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SegmentedButton
@@ -27,10 +31,13 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
@@ -43,7 +50,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -128,17 +134,19 @@ internal fun AuthScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
             modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.EmailAddress },
         )
-        OutlinedTextField(
-            value = state.password,
-            onValueChange = onPassword,
+        // Не rememberSaveable (і не rememberTextFieldState): збережений стан система пише на диск, а паролю там не місце.
+        // Після повороту екрана пароль повертається з ViewModel.
+        val password = remember { TextFieldState(state.password) }
+        LaunchedEffect(password) { snapshotFlow { password.text.toString() }.collect(onPassword) }
+        OutlinedSecureTextField(
+            state = password,
             label = { Text("Пароль") },
             supportingText = if (state.isSignUp) ({ Text("Щонайменше ${AuthUiState.MIN_NEW_PASSWORD} символів") }) else null,
-            singleLine = true,
             shape = ButtonShape,
             colors = fieldColors(),
-            visualTransformation = PasswordVisualTransformation(),
+            inputTransformation = InputTransformation.maxLengthTrim(AuthUiState.MAX_PASSWORD),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { onSubmit() }),
+            onKeyboardAction = { onSubmit() },
             modifier = Modifier.fillMaxWidth().semantics {
                 contentType = if (state.isSignUp) ContentType.NewPassword else ContentType.Password
             },

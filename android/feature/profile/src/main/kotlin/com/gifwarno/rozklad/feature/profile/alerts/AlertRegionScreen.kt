@@ -81,14 +81,13 @@ internal fun AlertRegionScreen(state: AlertRegionUiState, actions: RegionActions
                 if (state.saving) LinearProgressIndicator(Modifier.fillMaxWidth())
                 state.error?.let { msg ->
                     ListItem(
-                        headlineContent = { Text(msg, color = MaterialTheme.colorScheme.error) },
                         trailingContent = if (state.step is RegionStep.Loading) {
                             { TextButton(onClick = actions.retry) { Text("Ще раз") } }
                         } else {
                             null
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    )
+                    ) { Text(msg, color = MaterialTheme.colorScheme.error) }
                 }
                 when (val step = state.step) {
                     RegionStep.Loading -> if (state.error == null) LoadingState()
@@ -115,7 +114,6 @@ private fun OblastList(items: List<AlertLocation>, onOpen: (AlertLocation) -> Un
         }
         items(items, key = { it.uid }) { loc ->
             ListItem(
-                headlineContent = { Text(loc.name, fontWeight = FontWeight.Bold) },
                 supportingContent = if (loc.kind == AlertLocationKind.CITY) {
                     { Text("Тривоги оголошують окремо від області") }
                 } else {
@@ -124,7 +122,7 @@ private fun OblastList(items: List<AlertLocation>, onOpen: (AlertLocation) -> Un
                 trailingContent = { Text("›", style = MaterialTheme.typography.titleLarge, color = RozkladTheme.colors.muted) },
                 colors = rowColors,
                 modifier = Modifier.clickable(onClickLabel = "Відкрити райони й громади", role = Role.Button) { onOpen(loc) },
-            )
+            ) { Text(loc.name, fontWeight = FontWeight.Bold) }
         }
     }
 }
@@ -170,21 +168,19 @@ private fun OblastContents(step: RegionStep.InOblast, query: String, actions: Re
         items(items, key = { it.location.uid }) { item ->
             when (item) {
                 is RegionItem.Raion -> ListItem(
-                    headlineContent = { Text(item.location.name, fontWeight = FontWeight.ExtraBold) },
                     supportingContent = { Text("Увесь район") },
                     colors = rowColors,
                     modifier = Modifier.clickable(onClickLabel = "Обрати це місце", role = Role.Button) {
                         actions.choose(item.location.uid)
                     },
-                )
+                ) { Text(item.location.name, fontWeight = FontWeight.ExtraBold) }
 
                 is RegionItem.Hromada -> ListItem(
-                    headlineContent = { Text(shortName(item.location.name)) },
                     colors = rowColors,
                     modifier = Modifier.padding(start = 16.dp).clickable(onClickLabel = "Обрати це місце", role = Role.Button) {
                         actions.choose(item.location.uid)
                     },
-                )
+                ) { Text(shortName(item.location.name)) }
             }
         }
     }

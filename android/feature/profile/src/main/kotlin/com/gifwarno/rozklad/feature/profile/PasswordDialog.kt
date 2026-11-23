@@ -3,18 +3,17 @@ package com.gifwarno.rozklad.feature.profile
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.maxLengthTrim
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedSecureTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.gifwarno.rozklad.core.designsystem.component.GameDialog
 
@@ -45,8 +44,10 @@ internal fun passwordProblem(p1: String, p2: String): String? = when {
 @Composable
 internal fun PasswordDialog(state: PasswordState, onSave: (String) -> Unit, onDismiss: () -> Unit) {
     // Не rememberSaveable: збережений стан система пише на диск, а паролю там не місце.
-    var p1 by remember { mutableStateOf("") }
-    var p2 by remember { mutableStateOf("") }
+    val f1 = remember { TextFieldState() }
+    val f2 = remember { TextFieldState() }
+    val p1 = f1.text.toString()
+    val p2 = f2.text.toString()
     val problem = passwordProblem(p1, p2)
     val saving = state == PasswordState.Saving
     GameDialog(
@@ -58,23 +59,20 @@ internal fun PasswordDialog(state: PasswordState, onSave: (String) -> Unit, onDi
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     val field = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next)
-                    OutlinedTextField(
-                        value = p1,
-                        onValueChange = { p1 = it.take(MAX_PASSWORD) },
+                    val limit = InputTransformation.maxLengthTrim(MAX_PASSWORD)
+                    OutlinedSecureTextField(
+                        state = f1,
                         label = { Text("Новий пароль") },
                         supportingText = { Text("Від $MIN_PASSWORD символів") },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
+                        inputTransformation = limit,
                         keyboardOptions = field,
                     )
-                    OutlinedTextField(
-                        value = p2,
-                        onValueChange = { p2 = it.take(MAX_PASSWORD) },
+                    OutlinedSecureTextField(
+                        state = f2,
                         label = { Text("Ще раз") },
                         isError = !problem.isNullOrEmpty() && p2.isNotEmpty(),
                         supportingText = problem?.takeIf { it.isNotEmpty() && p2.isNotEmpty() }?.let { { Text(it) } },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
+                        inputTransformation = limit,
                         keyboardOptions = field.copy(imeAction = ImeAction.Done),
                     )
                     (state as? PasswordState.Failed)?.let { Text(it.message, color = MaterialTheme.colorScheme.error) }

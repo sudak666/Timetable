@@ -259,12 +259,11 @@ internal fun SubjectPickerDialog(onDismiss: () -> Unit, onPick: (String) -> Unit
                     items(Timetable.SUBJECTS, key = { it.name }) { s ->
                         ListItem(
                             leadingContent = { SubjectBadge(s.name) },
-                            headlineContent = { Text(s.name) },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             modifier = Modifier.clip(ButtonShape).clickable(onClickLabel = "Обрати предмет", role = Role.Button) {
                                 onPick(s.name)
                             },
-                        )
+                        ) { Text(s.name) }
                     }
                 }
             }
