@@ -6,6 +6,8 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){--warn-bg:#5c1a14;--warn-fg:#ffdad6;--good:#4fd1a5;--bad:#ff8a7a;--bg:#16221d;--card:#20302a;--text:#edebe3;--muted:#b7c2bb;--line:#2b3d36;--glow:rgba(157,187,255,.22);--brk:#1b2a24;--marker:#f2d25c;--hl:rgba(242,210,92,.18);--pen:#ff8a7a;--title:var(--text);--pi:#edebe3;--po:#edebe3;--pk:.4;--mar:transparent;--dust:rgba(237,235,227,.05);--kraft:var(--bg)}}
 :root[data-theme=dark]{--warn-bg:#5c1a14;--warn-fg:#ffdad6;--good:#4fd1a5;--bad:#ff8a7a;--bg:#16221d;--card:#20302a;--text:#edebe3;--muted:#b7c2bb;--line:#2b3d36;--glow:rgba(157,187,255,.22);--brk:#1b2a24;--marker:#f2d25c;--hl:rgba(242,210,92,.18);--pen:#ff8a7a;--title:var(--text);--pi:#edebe3;--po:#edebe3;--pk:.4;--mar:transparent;--dust:rgba(237,235,227,.05);--kraft:var(--bg)}
 *{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+/* Скидання margin вище забирало в модальних <dialog> margin:auto, яким браузер ставить їх по центру — вікна липли до лівого верхнього кута. */
+dialog{margin:auto}
 button,a,summary,label,.chip{touch-action:manipulation;user-select:none;-webkit-user-select:none}
 :focus:not(:focus-visible){outline:none}
 body{font-family:"Nunito Variable",Nunito,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px 16px 48px;transition:background .3s;isolation:isolate}
