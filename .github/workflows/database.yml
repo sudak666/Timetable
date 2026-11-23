@@ -45,6 +45,14 @@ jobs:
           done
       - name: Тести RLS
         run: |
-          psql "$DB" -v ON_ERROR_STOP=1 -X -f supabase/tests/rls.test.sql | tee "$RUNNER_TEMP/tap.txt"
-          echo "--- пройдено: $(grep -c '^ok ' "$RUNNER_TEMP/tap.txt"), впало: $(grep -c '^not ok ' "$RUNNER_TEMP/tap.txt" || true)"
-          ! grep -q '^not ok ' "$RUNNER_TEMP/tap.txt"
+          # pipefail: інакше код виходу — від tee, і помилка psql посеред тестів давала б «зелений» CI.
+          set -o pipefail
+          psql "$DB" -v ON_ERROR_STOP=1 -X -f supabase/tests/rls.test.sql 2>&1 | tee "$RUNNER_TEMP/tap.txt"
+          ok=$(grep -c '^ok ' "$RUNNER_TEMP/tap.txt" || true)
+          bad=$(grep -c '^not ok ' "$RUNNER_TEMP/tap.txt" || true)
+          echo "--- пройдено: $ok, впало: $bad"
+          # Тести дійшли до кінця: pgTAP друкує план «1..N», і N збігається з кількістю результатів.
+          plan=$(grep -E '^1\.\.[0-9]+$' "$RUNNER_TEMP/tap.txt" | cut -d. -f3)
+          test -n "$plan" || { echo "::error::Тести не дійшли до кінця (немає плану 1..N)"; exit 1; }
+          test "$plan" -eq $((ok + bad)) || { echo "::error::План $plan, а результатів $((ok + bad))"; exit 1; }
+          test "$bad" -eq 0

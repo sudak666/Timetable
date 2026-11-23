@@ -161,9 +161,11 @@ select throws_like(format($$ update public.school_members set role = 'parent' wh
   'permission denied%', 'дитина не робить себе батьками');
 select throws_like(format($$ update public.school_members set family_id = %L where user_id = %L $$, :'fam_b', :'c1'),
   'permission denied%', 'дитина не переходить у чужу сім''ю');
-with u as (update school_members set name = 'Тарасик', avatar = 'fox', goal_title = 'Велосипед', goal_amount = 6000
+with u as (update school_members set name = 'Тарасик', avatar = '🦊', goal_title = 'Велосипед', goal_amount = 6000
            where user_id = :'c1' returning 1)
   select is(count(*)::int, 1, 'дитина змінює своє ім''я, аватар і ціль') from u;
+select throws_like(format($$ update public.school_members set avatar = '<img src=x>' where user_id = %L $$, :'c1'),
+  '%school_members_avatar_chk%', 'аватар — лише з білого списку');
 with u as (update school_members set name = 'Злам' where user_id = :'p1' returning 1)
   select is(count(*)::int, 0, 'дитина не змінює профіль батьків') from u;
 with u as (delete from school_members where user_id = :'p1' returning 1)
