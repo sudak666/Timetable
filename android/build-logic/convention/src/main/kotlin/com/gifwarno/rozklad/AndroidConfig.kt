@@ -15,6 +15,9 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 /** Спільні параметри для всіх модулів — змінюються в одному місці. */
 object Sdk {
     const val COMPILE = 37
+
+    /** Мінорний рівень API (37.1) — його вимагає Compose 1.13+. */
+    const val COMPILE_MINOR = 1
     const val TARGET = 36
     const val MIN = 26
     val JAVA = JavaVersion.VERSION_17
@@ -23,7 +26,7 @@ object Sdk {
 
 internal fun Project.configureAndroidApplication(ext: ApplicationExtension) {
     with(ext) {
-        compileSdk = Sdk.COMPILE
+        compileSdk { version = release(Sdk.COMPILE) { minorApiLevel = Sdk.COMPILE_MINOR } }
         defaultConfig {
             minSdk = Sdk.MIN
             targetSdk = Sdk.TARGET
@@ -41,7 +44,7 @@ internal fun Project.configureAndroidApplication(ext: ApplicationExtension) {
 
 internal fun Project.configureAndroidLibrary(ext: LibraryExtension) {
     with(ext) {
-        compileSdk = Sdk.COMPILE
+        compileSdk { version = release(Sdk.COMPILE) { minorApiLevel = Sdk.COMPILE_MINOR } }
         defaultConfig {
             minSdk = Sdk.MIN
             testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
