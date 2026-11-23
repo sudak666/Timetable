@@ -20,10 +20,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SelectableDates
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -40,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gifwarno.rozklad.core.designsystem.component.GameSegmented
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
+import com.gifwarno.rozklad.core.designsystem.component.rememberFullSheetState
 import com.gifwarno.rozklad.core.designsystem.theme.Nunito
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.domain.Rewards
@@ -62,7 +61,7 @@ internal fun AddGradeSheet(today: LocalDate, onDismiss: () -> Unit, onAdd: (Stri
     val c = RozkladTheme.colors
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberBottomSheetState(SheetValue.Hidden, setOf(SheetValue.PartiallyExpanded)),
+        sheetState = rememberFullSheetState(),
     ) {
         Column(
             Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 16.dp).navigationBarsPadding(),

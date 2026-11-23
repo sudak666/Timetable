@@ -30,11 +30,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -69,6 +67,7 @@ import com.gifwarno.rozklad.core.designsystem.component.LocalChromePadding
 import com.gifwarno.rozklad.core.designsystem.component.Pill
 import com.gifwarno.rozklad.core.designsystem.component.TitleText
 import com.gifwarno.rozklad.core.designsystem.component.outlinedBackground
+import com.gifwarno.rozklad.core.designsystem.component.rememberFullSheetState
 import com.gifwarno.rozklad.core.designsystem.theme.GameTitleStyle
 import com.gifwarno.rozklad.core.designsystem.theme.Nunito
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
@@ -512,7 +511,7 @@ private fun CodeRow(label: String, code: String) {
 private fun LookSheet(state: ProfileUiState.Ready, onDismiss: () -> Unit, onLook: (String?, String?) -> Unit, onPaper: (Paper) -> Unit) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberBottomSheetState(SheetValue.Hidden, setOf(SheetValue.PartiallyExpanded)),
+        sheetState = rememberFullSheetState(),
     ) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 24.dp).navigationBarsPadding()) {
             Text("Аватар, колір і папір", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 12.dp))

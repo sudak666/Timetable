@@ -12,3 +12,6 @@ captures/
 *.keystore
 keystore.properties
 google-services.json
+
+# Звіти про падіння JVM (наприклад, коли бракує пам'яті під час тестів)
+hs_err_pid*.log
