@@ -24,10 +24,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -53,6 +51,7 @@ import com.gifwarno.rozklad.core.designsystem.component.GameDialog
 import com.gifwarno.rozklad.core.designsystem.component.GameProgressBar
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.component.Pill
+import com.gifwarno.rozklad.core.designsystem.component.rememberFullSheetState
 import com.gifwarno.rozklad.core.designsystem.theme.Nunito
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.domain.Timetable
@@ -133,7 +132,7 @@ internal fun ChallengeSheet(onDismiss: () -> Unit, onCreate: (ChallengeDraft) ->
     val c = RozkladTheme.colors
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberBottomSheetState(SheetValue.Hidden, setOf(SheetValue.PartiallyExpanded)),
+        sheetState = rememberFullSheetState(),
     ) {
         Column(
             Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 16.dp).navigationBarsPadding(),

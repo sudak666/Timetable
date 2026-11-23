@@ -13,9 +13,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
@@ -26,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.gifwarno.rozklad.core.designsystem.component.ButtonShape
 import com.gifwarno.rozklad.core.designsystem.component.GameButton
 import com.gifwarno.rozklad.core.designsystem.component.GradeTile
+import com.gifwarno.rozklad.core.designsystem.component.rememberFullSheetState
 import com.gifwarno.rozklad.core.model.RewardSettings
 import com.gifwarno.rozklad.core.model.Streak
 import com.gifwarno.rozklad.core.ui.gradeColor
@@ -41,7 +40,7 @@ internal fun RatesSheet(settings: RewardSettings, onDismiss: () -> Unit, onSave:
     }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberBottomSheetState(SheetValue.Hidden, setOf(SheetValue.PartiallyExpanded)),
+        sheetState = rememberFullSheetState(),
     ) {
         Column(
             Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 16.dp).navigationBarsPadding(),
