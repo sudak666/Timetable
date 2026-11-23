@@ -171,12 +171,12 @@ export function lessonAlertTick(): void {
   const club = dueReminder(ACTIVITIES, state.now, CLUB_LEAD);
   if (club && lastClub !== c.weekday + club.t + club.a) {
     lastClub = c.weekday + club.t + club.a;
-    try { new Notification(`${club.e} ${club.t} о ${club.a}`, { body: [club.p && '📍 ' + club.p, club.n && '🎒 ' + club.n].filter(Boolean).join(' · ') || 'Скоро заняття', icon: 'assets/icon-192.png' }); } catch { /* ignore */ }
+    try { new Notification(`${club.e} ${club.t} о ${club.a}`, { body: [club.p && '📍 ' + club.p, club.n && '🎒 ' + club.n].filter(Boolean).join(' · ') || 'Скоро заняття', icon: 'assets/icon-192.png?v=2' }); } catch { /* ignore */ }
   }
   if ((s.kind === 'break' || s.kind === 'before') && s.start - c.min <= 2 && s.start - c.min > 0) {
     const key = c.weekday + '-' + s.idx;
     if (key === lastAlert) return;
     lastAlert = key;
-    try { new Notification('Через 2 хв: ' + s.lessons[s.idx]!.subject, { body: `${s.idx + 1} урок о ${bellStart(s.idx)}`, icon: 'assets/icon-192.png' }); } catch { /* ignore */ }
+    try { new Notification('Через 2 хв: ' + s.lessons[s.idx]!.subject, { body: `${s.idx + 1} урок о ${bellStart(s.idx)}`, icon: 'assets/icon-192.png?v=2' }); } catch { /* ignore */ }
   }
 }

@@ -4,9 +4,10 @@
  * • Решта (theme-init.js, manifest.json, емодзі, іконки) → з кешу одразу, але оновлюється у фоні,
  *   щоб зміна після релізу дійшла з наступним відкриттям (аудит 14.11.2026, Б9).
  */
-const CACHE = 'timetable-v3';
+// v4 (23.11.2026): нова іконка «12» замість рюкзака — старий кеш з іконками видаляється при активації.
+const CACHE = 'timetable-v4';
 const ASSETS = 'timetable-assets-v1';
-const SHELL = ['./', 'manifest.json', 'assets/icon-192.png'];
+const SHELL = ['./', 'manifest.json', 'assets/icon-192.png?v=2'];
 /** Скільки хешованих файлів тримати: кілька релізів, далі найстаріші видаляються. */
 const MAX_ASSETS = 80;
 const HASHED = /\/assets\/[^/]+-[A-Za-z0-9_-]{8}\.[a-z0-9]+$/;
@@ -54,7 +55,7 @@ self.addEventListener('fetch', (e) => {
 self.addEventListener('push', (e) => {
   let d = {};
   try { d = e.data.json(); } catch { d = { title: 'Дванадцятка', body: e.data ? e.data.text() : '' }; }
-  e.waitUntil(self.registration.showNotification(d.title || 'Дванадцятка', { body: d.body || '', tag: d.tag, data: { url: typeof d.url === 'string' && d.url.startsWith('#') ? d.url : '#grades' }, icon: 'assets/icon-192.png', badge: 'assets/icon-192.png' }));
+  e.waitUntil(self.registration.showNotification(d.title || 'Дванадцятка', { body: d.body || '', tag: d.tag, data: { url: typeof d.url === 'string' && d.url.startsWith('#') ? d.url : '#grades' }, icon: 'assets/icon-192.png?v=2', badge: 'assets/icon-192.png?v=2' }));
 });
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
