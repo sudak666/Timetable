@@ -1,0 +1,58 @@
+name: Database
+
+# Тести доступу до даних (RLS) на ТИМЧАСОВІЙ базі Supabase у CI — продакшн не чіпається.
+# Схема: supabase/schema/school_snapshot_*.sql (+ міграції, новіші за знімок), тести: supabase/tests/.
+on:
+  push:
+    branches: [claude/online-schedule-mn9hr1]
+  pull_request:
+
+concurrency:
+  group: database-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DB: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      # Знімок містить усі міграції до цієї включно; новіші файли накочуються поверх.
+      SNAPSHOT_UNTIL: 20261115
+    steps:
+      - uses: actions/checkout@v7
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 3.3.0
+      - name: Тимчасова база (Postgres 17, як у продакшні)
+        run: |
+          mkdir -p "$RUNNER_TEMP/sb" && cd "$RUNNER_TEMP/sb"
+          supabase init < /dev/null
+          sed -i 's/^major_version = .*/major_version = 17/' supabase/config.toml
+          supabase db start
+          psql "$DB" -Atc 'select version()'
+      - name: Схема
+        run: |
+          psql "$DB" -v ON_ERROR_STOP=1 -q -f supabase/tests/setup.sql
+          snap=$(ls supabase/schema/school_snapshot_*.sql | sort | tail -1)
+          echo "Знімок: $snap"
+          psql "$DB" -v ON_ERROR_STOP=1 -q -f "$snap"
+          for f in $(ls supabase/migrations/*.sql | sort); do
+            if [ "$(basename "$f" | cut -c1-8)" -gt "$SNAPSHOT_UNTIL" ]; then
+              echo "Міграція: $f"
+              psql "$DB" -v ON_ERROR_STOP=1 -q -f "$f"
+            fi
+          done
+      - name: Тести RLS
+        run: |
+          # pipefail: інакше код виходу — від tee, і помилка psql посеред тестів давала б «зелений» CI.
+          set -o pipefail
+          psql "$DB" -v ON_ERROR_STOP=1 -X -f supabase/tests/rls.test.sql 2>&1 | tee "$RUNNER_TEMP/tap.txt"
+          ok=$(grep -c '^ok ' "$RUNNER_TEMP/tap.txt" || true)
+          bad=$(grep -c '^not ok ' "$RUNNER_TEMP/tap.txt" || true)
+          echo "--- пройдено: $ok, впало: $bad"
+          # Тести дійшли до кінця: pgTAP друкує план «1..N», і N збігається з кількістю результатів.
+          plan=$(grep -E '^1\.\.[0-9]+$' "$RUNNER_TEMP/tap.txt" | cut -d. -f3)
+          test -n "$plan" || { echo "::error::Тести не дійшли до кінця (немає плану 1..N)"; exit 1; }
+          test "$plan" -eq $((ok + bad)) || { echo "::error::План $plan, а результатів $((ok + bad))"; exit 1; }
+          test "$bad" -eq 0
