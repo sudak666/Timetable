@@ -1,4 +1,5 @@
 import type { TimetableRow } from './data/schedule';
+import type { AirAlert } from './features/alerts';
 import type { Draft } from './features/timetable';
 import type { Challenge, Grade, Homework, Ledger, Member, Rates, Role, Streak } from './features/rewards';
 import { DEFAULT_RATES, DEFAULT_STREAK } from './features/rewards';
@@ -7,7 +8,8 @@ export type AuthView = 'loading' | 'auth' | 'join' | 'main' | 'offline';
 export type Tab = 'today' | 'grades' | 'hw' | 'me';
 export const TABS: Tab[] = ['today', 'grades', 'hw', 'me'];
 
-export interface Family { id: string; name: string; invite_code: string }
+/** alert_uid — місце, яке сім'я обрала для повітряних тривог (null — не обрано). */
+export interface Family { id: string; name: string; invite_code: string; alert_uid?: number | null }
 
 export type EditorTab = 'lessons' | 'bells' | 'holidays' | 'clubs';
 /** Відкритий редактор розкладу: base — збережений стан (для «є зміни?»), draft — чернетка. */
@@ -54,6 +56,8 @@ export interface State {
   stale: boolean;
   /** Редактор розкладу (null — закритий). */
   editor: EditorState | null;
+  /** Обране місце для тривог і його стан (null — не обрано). */
+  air: AirAlert | null;
 }
 
 type Listener = () => void;
@@ -92,6 +96,7 @@ export const state: State = {
   present: [],
   stale: false,
   editor: null,
+  air: null,
 };
 
 /** Мутує стан і планує один рендер на кадр (батчинг). */

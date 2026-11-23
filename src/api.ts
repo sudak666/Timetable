@@ -2,6 +2,7 @@ import { AuthClient } from '@supabase/auth-js';
 import { PostgrestClient } from '@supabase/postgrest-js';
 import type { RealtimeChannel, RealtimeClient } from '@supabase/realtime-js';
 import type { TimetableRow } from './data/schedule';
+import { alertCode, type AirAlert, type AlertLoc } from './features/alerts';
 import { enqueue, isOp, isRetryableStatus, overlay, type Op } from './features/outbox';
 import { levelOf, paperFor, parseSettings, xpOf, type Challenge, type Grade, type Homework, type Ledger, type Member, type Role } from './features/rewards';
 import { set, state, store } from './state';
@@ -92,7 +93,7 @@ export async function loadFamily(): Promise<void> {
   const fid = state.family?.id;
   if (!fid) return;
   const [f, m, g, l, c, h, t] = await Promise.all([
-    sb.from('school_families').select('id,name,invite_code,rates').eq('id', fid).single(),
+    sb.from('school_families').select('id,name,invite_code,rates,alert_uid').eq('id', fid).single(),
     sb.from('school_members').select('user_id,role,name,goal_title,goal_amount,avatar,theme').eq('family_id', fid),
     // Оцінки й журнал — усі, без обрізання: з них рахується баланс «до виплати».
     fetchAll((a, b) => sb.from('school_grades').select('id,child_id,subject,grade,date,status,amount,created_at').eq('family_id', fid).order('date', { ascending: false }).order('id').range(a, b)),
@@ -103,8 +104,12 @@ export async function loadFamily(): Promise<void> {
   ]);
   const firstErr = [f, m, g, l, c, h].find((r) => r.error)?.error;
   if (firstErr) throw firstErr;
+  // Тривога не критична: не вдалося — лишаємо попередній стан (з позначкою «станом на»).
+  const alertUid = (f.data?.alert_uid as number | null | undefined) ?? null;
+  const air = alertUid === null ? null : await fetchAlert(alertUid).catch(() => (state.air?.uid === alertUid ? state.air : null));
   const snap: Snapshot = {
-    family: f.data ? { id: f.data.id, name: f.data.name, invite_code: f.data.invite_code } : state.family!,
+    family: f.data ? { id: f.data.id, name: f.data.name, invite_code: f.data.invite_code, alert_uid: alertUid } : state.family!,
+    air,
     role: state.role!, rates: f.data?.rates,
     members: (m.data ?? []) as Member[], grades: (g.data ?? []) as Grade[], ledger: (l.data ?? []) as Ledger[],
     challenges: (c.data ?? []) as Challenge[], homework: (h.data ?? []) as Homework[],
@@ -124,7 +129,8 @@ export async function loadFamily(): Promise<void> {
 /* ---------------- офлайн: знімок даних + черга змін ---------------- */
 const SNAP = 'snap:', OUTBOX = 'outbox:';
 interface Snapshot {
-  family: { id: string; name: string; invite_code: string }; role: Role; rates: unknown;
+  family: { id: string; name: string; invite_code: string; alert_uid?: number | null }; role: Role; rates: unknown;
+  air?: AirAlert | null;
   members: Member[]; grades: Grade[]; ledger: Ledger[]; challenges: Challenge[]; homework: Homework[];
   timetables?: TimetableRow[];
 }
@@ -153,6 +159,7 @@ function applySnapshot(x: Snapshot, stale: boolean): void {
     s.timetables = Array.isArray(x.timetables) ? x.timetables : [];
     s.queued = q.length;
     s.stale = stale;
+    s.air = x.air ?? null;
     const kids = s.members.filter((k) => k.role === 'child');
     if (s.role === 'child') s.kid = s.me!.id;
     else if (!kids.some((k) => k.user_id === s.kid)) s.kid = kids[0]?.user_id ?? null;
@@ -240,6 +247,58 @@ export async function enter(): Promise<void> {
     channel.on('postgres_changes', { event: '*', schema: 'public', table: t, filter: `family_id=eq.${fid}` }, scheduleReload);
   channel.on('postgres_changes', { event: '*', schema: 'public', table: 'school_families', filter: `id=eq.${fid}` }, scheduleReload);
   channel.subscribe((status) => { if (status === 'SUBSCRIBED') void ch.track({ at: Date.now() }); });
+  watchAlert();
+}
+
+/* ---------------- повітряні тривоги ---------------- */
+
+/** Місце й поточний стан (дані alerts.in.ua через наш сервер: cron щохвилини оновлює school_alert_state). */
+async function fetchAlert(uid: number): Promise<AirAlert | null> {
+  const [loc, st] = await Promise.all([
+    sb.from('school_alert_locations').select('uid,name,kind').eq('uid', uid).maybeSingle(),
+    sb.from('school_alert_state').select('status,since,checked_at').eq('uid', uid).maybeSingle(),
+  ]);
+  if (loc.error) throw loc.error;
+  if (st.error) throw st.error;
+  if (!loc.data) return null;
+  const x = st.data as { status: unknown; since: string | null; checked_at: string | null } | null;
+  return { uid, name: loc.data.name as string, kind: loc.data.kind as AirAlert['kind'], status: alertCode(x?.status ?? null), since: x?.since ?? null, checkedAt: x?.checked_at ?? null };
+}
+
+/** Легке оновлення лише стану тривоги — без перезавантаження всієї сім'ї. */
+export async function refreshAlert(): Promise<void> {
+  const uid = state.family?.alert_uid;
+  if (!uid || !navigator.onLine) return;
+  const air = await fetchAlert(uid).catch(() => undefined);
+  if (air !== undefined && state.family?.alert_uid === uid) set({ air });
+}
+
+/** Щохвилини, поки вкладка на екрані (як в Android, лише на екрані), і одразу — коли до неї повернулись. */
+let alertTimer: ReturnType<typeof setInterval> | undefined;
+function watchAlert(): void {
+  if (alertTimer) return;
+  alertTimer = setInterval(() => { if (!document.hidden) void refreshAlert(); }, 60_000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) void refreshAlert(); });
+}
+
+/** Довідник місць: oblast === null — області й окремі міста; інакше — райони й громади області. */
+export async function alertLocations(oblast: number | null): Promise<AlertLoc[]> {
+  const base = sb.from('school_alert_locations').select('uid,name,kind,oblast_uid,raion_uid');
+  const { data, error } = await (oblast === null ? base.in('kind', ['oblast', 'city']) : base.eq('oblast_uid', oblast)).order('uid').limit(PAGE);
+  if (error) throw error;
+  return (data ?? []) as AlertLoc[];
+}
+
+/** Обрати (null — прибрати) місце для тривог. Лише батьки: RLS мовчки пропустить чужу зміну, тож перевіряємо рядок. */
+export async function setAlertRegion(uid: number | null): Promise<string | null> {
+  const fid = state.family?.id;
+  if (!fid) return 'Немає сім’ї';
+  const { data, error } = await sb.from('school_families').update({ alert_uid: uid }).eq('id', fid).select('id');
+  if (error) return errText(error);
+  if (!data?.length) return 'Змінити місце можуть лише батьки';
+  const air = uid === null ? null : await fetchAlert(uid).catch(() => null);
+  set((x) => { if (x.family) x.family = { ...x.family, alert_uid: uid }; x.air = air; });
+  return null;
 }
 
 /** Push-підписка цього браузера (null — немає або браузер не підтримує). */
@@ -280,7 +339,7 @@ export async function signOut(): Promise<void> {
   // scope 'local': якщо користувача вже немає на сервері (видалено), сесія однаково очищається.
   await sb.auth.signOut({ scope: 'local' });
   if (state.me) { store.set(SNAP + state.me.id, null); store.set(OUTBOX + state.me.id, null); }
-  set({ view: 'auth', me: null, family: null, role: null, present: [], queued: 0, stale: false, pushOn: false, members: [], grades: [], ledger: [], challenges: [], homework: [], timetables: [], kid: null });
+  set({ view: 'auth', me: null, family: null, role: null, present: [], queued: 0, stale: false, pushOn: false, members: [], grades: [], ledger: [], challenges: [], homework: [], timetables: [], kid: null, air: null });
 }
 
 /**

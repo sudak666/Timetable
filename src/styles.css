@@ -6,6 +6,8 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){--warn-bg:#5c1a14;--warn-fg:#ffdad6;--good:#4fd1a5;--bad:#ff8a7a;--bg:#16221d;--card:#20302a;--text:#edebe3;--muted:#b7c2bb;--line:#2b3d36;--glow:rgba(157,187,255,.22);--brk:#1b2a24;--marker:#f2d25c;--hl:rgba(242,210,92,.18);--pen:#ff8a7a;--title:var(--text);--pi:#edebe3;--po:#edebe3;--pk:.4;--mar:transparent;--dust:rgba(237,235,227,.05);--kraft:var(--bg)}}
 :root[data-theme=dark]{--warn-bg:#5c1a14;--warn-fg:#ffdad6;--good:#4fd1a5;--bad:#ff8a7a;--bg:#16221d;--card:#20302a;--text:#edebe3;--muted:#b7c2bb;--line:#2b3d36;--glow:rgba(157,187,255,.22);--brk:#1b2a24;--marker:#f2d25c;--hl:rgba(242,210,92,.18);--pen:#ff8a7a;--title:var(--text);--pi:#edebe3;--po:#edebe3;--pk:.4;--mar:transparent;--dust:rgba(237,235,227,.05);--kraft:var(--bg)}
 *{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+/* Скидання margin вище забирало в модальних <dialog> margin:auto, яким браузер ставить їх по центру — вікна липли до лівого верхнього кута. */
+dialog{margin:auto}
 button,a,summary,label,.chip{touch-action:manipulation;user-select:none;-webkit-user-select:none}
 :focus:not(:focus-visible){outline:none}
 body{font-family:"Nunito Variable",Nunito,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px 16px 48px;transition:background .3s;isolation:isolate}
@@ -436,3 +438,18 @@ kbd{font:600 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;padding:4px 6px;
 .no-sched p{max-width:42ch;color:var(--muted);margin:0 0 8px}
 .me-acts{display:flex;flex-wrap:wrap;gap:8px}
 .linkish{background:none;border:0;padding:4px 0;color:inherit;font:inherit;font-weight:700;text-decoration:underline;cursor:pointer}
+/* Повітряні тривоги: плашка над вкладками (як в Android) і вибір місця */
+.air{margin:0 0 12px;padding:10px 14px;border-radius:14px;background:var(--brk);color:var(--text);border:2px dashed var(--line);font-size:14px}
+.air.on{background:var(--warn-bg);color:var(--warn-fg);border:2px solid currentColor}
+.air-t{font-weight:800;font-size:15px}.air-d{margin-top:2px}
+.air-place{font-weight:700;margin-bottom:4px}
+.md.rg{width:min(520px,100%);max-height:min(88vh,760px);flex-direction:column;gap:10px}
+.md.rg[open]{display:flex}
+.rg-h{display:flex;align-items:center;gap:8px}.rg-h p{margin:0}.rg-h .ic{width:40px;height:40px;font-size:22px;flex:none}
+.md.rg input{margin:0}
+.rg-list{list-style:none;margin:0;padding:0;overflow:auto;min-height:0;flex:1;display:grid;gap:2px;align-content:start}
+.rg-o{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;border:0;background:none;padding:10px 12px;border-radius:12px;font-weight:700;min-height:44px}
+.rg-o:hover,.rg-o:focus-visible{background:var(--brk)}
+.rg-o span{display:grid;gap:2px}.rg-o small{font-size:13px;font-weight:400;color:var(--muted)}
+.rg-o b{font-size:20px;color:var(--muted)}
+.rg-o.all{background:var(--brk)}.rg-o.raion{font-weight:800}.rg-o.hrom{font-weight:500;padding-left:28px}

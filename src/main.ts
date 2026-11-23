@@ -13,6 +13,7 @@ import { bikeLane } from './ui/bike';
 import { boom } from './ui/confetti';
 import { applyAccent, applyPaper } from './ui/theme';
 import { emo } from './lib/emoji';
+import { alertBar } from './views/airbar';
 import { quizView } from './views/quiz';
 import { afterSchoolCard, funCards, lessonAlertTick, nowCard, sidePanel, toggleLessonAlerts, weekGrid, weekStats } from './views/schedule';
 import { clockOf, nextLessonDate, statusAt } from './lib/time';
@@ -140,6 +141,7 @@ const app = () => {
         <button type="button" class="ic" aria-label="Команди" aria-keyshortcuts="Control+K Meta+K" title="Команди (Ctrl+K)" @click=${palette}>${searchIc}</button>
       </div>
     </header>
+    ${alertBar()}
     ${state.online ? state.queued ? html`<p class="offline sync" role="status">${emo('🔄')} Синхронізація: ${state.queued} змін…</p>` : ''
       : html`<p class="offline" role="status">${emo('📡')} Немає інтернету — показано збережене. Оцінки й домашка ${state.queued ? html`(<b>${state.queued}</b> у черзі) ` : ''}відправляться, щойно зʼявиться звʼязок.</p>`}
     <nav class="bnav" aria-label="Розділи">${NAV.map((n) => {

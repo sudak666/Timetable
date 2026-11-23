@@ -374,3 +374,112 @@ test('домашку від батьків дитина не видаляє — 
   await expect(page.locator('#hwl li', { hasText: 'Від тата' }).getByRole('button', { name: 'Видалити завдання' })).toHaveCount(0);
   await expect(page.locator('#hwl li', { hasText: 'Своя' }).getByRole('button', { name: 'Видалити завдання' })).toHaveCount(1);
 });
+
+/* ---------------- повітряні тривоги ---------------- */
+
+const KYIV = { uid: 31, name: 'м. Київ', kind: 'city', oblast_uid: null, raion_uid: null };
+const KYIV_OBL = { uid: 14, name: 'Київська область', kind: 'oblast', oblast_uid: null, raion_uid: null };
+const IN_OBL = [
+  { uid: 100, name: 'Бучанський район', kind: 'raion', oblast_uid: 14, raion_uid: null },
+  { uid: 111, name: 'Боярська територіальна громада', kind: 'hromada', oblast_uid: 14, raion_uid: 100 },
+  { uid: 112, name: 'Бучанська територіальна громада', kind: 'hromada', oblast_uid: 14, raion_uid: 100 },
+];
+
+/** Тривоги поверх mockFamily: місце сім'ї, довідник і стан; PATCH school_families змінює місце. */
+async function mockAlerts(page: Page, start: { uid: number | null; status: 'A' | 'P' | 'N' | null }) {
+  const air = { ...start }, patches: unknown[] = [];
+  const json = (b: unknown) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(b) });
+  await page.route(`https://${REF}.supabase.co/rest/v1/school_*`, async (r) => {
+    const u = new URL(r.request().url()), p = u.pathname, q = u.searchParams;
+    if (p.endsWith('/school_families')) {
+      if (r.request().method() === 'PATCH') {
+        const body = r.request().postDataJSON() as { alert_uid: number | null };
+        patches.push(body);
+        air.uid = body.alert_uid;
+        air.status = null;
+        return r.fulfill(json([{ id: 'f1' }]));
+      }
+      return r.fulfill(json({ id: 'f1', name: 'Сімʼя Тест', invite_code: 'ABC123', rates: {}, alert_uid: air.uid }));
+    }
+    if (p.endsWith('/school_alert_locations')) {
+      const all = [KYIV, KYIV_OBL, ...IN_OBL];
+      if (q.get('kind')) return r.fulfill(json([KYIV_OBL, KYIV]));
+      if (q.get('oblast_uid') === 'eq.14') return r.fulfill(json(IN_OBL));
+      const uid = Number(q.get('uid')?.slice(3));
+      return r.fulfill(json(all.filter((l) => l.uid === uid)));
+    }
+    if (p.endsWith('/school_alert_state')) {
+      return r.fulfill(json(air.status && Number(q.get('uid')?.slice(3)) === air.uid
+        ? [{ status: air.status, since: today + 'T09:05:00', checked_at: today + 'T09:39:00' }] : []));
+    }
+    return r.fallback();
+  });
+  return { air, patches };
+}
+
+test('тривоги: плашка, батьки обирають громаду пошуком і прибирають місце', async ({ page }) => {
+  await mockFamily(page, 'parent');
+  const m = await mockAlerts(page, { uid: 31, status: 'A' });
+  await page.goto('/');
+  const bar = page.locator('.air');
+  await expect(bar).toHaveClass(/on/);
+  await expect(bar.getByRole('status')).toHaveText(/Повітряна тривога · м\. Київ/);
+  await expect(bar).toContainText('з 9:05 · станом на 9:39. Пройдіть в укриття.');
+
+  await page.goto('/#me');
+  const card = page.getByRole('region', { name: 'Повітряні тривоги' });
+  await expect(card).toContainText('м. Київ');
+  await card.getByRole('button', { name: /Змінити місце/ }).click();
+  const dlg = page.getByRole('dialog', { name: 'Місце для тривог' });
+  await expect(dlg.getByRole('button', { name: /^м\. Київ Тривоги оголошують окремо/ })).toBeVisible();
+  // Окреме місто — першим, далі області.
+  await expect(dlg.locator('.rg-o').first()).toContainText('м. Київ');
+  for (const scheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+    const r = await new AxeBuilder({ page }).include('dialog').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
+    expect(r.violations.map((v) => `${scheme} ${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
+  }
+  await dlg.getByRole('button', { name: 'Київська область', exact: true }).click();
+  const area = page.getByRole('dialog', { name: 'Київська область' });
+  await expect(area.getByRole('button', { name: /Уся область/ })).toBeVisible();
+  {
+    const r = await new AxeBuilder({ page }).include('dialog').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
+    expect(r.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
+  }
+  await area.getByRole('searchbox', { name: 'Пошук громади чи району' }).fill('боярськ');
+  await expect(area.locator('.rg-o.hrom')).toHaveCount(1);
+  await expect(area.getByRole('button', { name: /^Бучанський район Увесь район/ })).toBeVisible();
+  await area.getByRole('button', { name: 'Боярська громада', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  expect(m.patches).toEqual([{ alert_uid: 111 }]);
+  await expect(card).toContainText('Боярська територіальна громада');
+  await expect(page.locator('.air')).toHaveCount(0);
+
+  await card.getByRole('button', { name: 'Прибрати місце' }).click();
+  await page.getByRole('button', { name: 'Прибрати', exact: true }).click();
+  await expect(card).toContainText('Місце не обрано');
+  expect(m.patches).toEqual([{ alert_uid: 111 }, { alert_uid: null }]);
+});
+
+test('тривоги: дитина бачить «частково» й місце, але не змінює', async ({ page }) => {
+  await mockFamily(page, 'child');
+  await mockAlerts(page, { uid: 31, status: 'P' });
+  await page.goto('/#me');
+  const bar = page.locator('.air');
+  await expect(bar).not.toHaveClass(/on/);
+  await expect(bar).toContainText('Тривога в частині: м. Київ');
+  await expect(bar).not.toContainText('укриття');
+  const card = page.getByRole('region', { name: 'Повітряні тривоги' });
+  await expect(card).toContainText('м. Київ');
+  await expect(card.getByRole('button')).toHaveCount(0);
+});
+
+test('тривоги: стан оновлюється щохвилини без перезавантаження', async ({ page }) => {
+  await mockFamily(page, 'parent');
+  const m = await mockAlerts(page, { uid: 31, status: 'A' });
+  await page.goto('/');
+  await expect(page.locator('.air.on')).toBeVisible();
+  m.air.status = 'N';
+  await page.clock.runFor(61_000);
+  await expect(page.locator('.air')).toHaveCount(0);
+});
