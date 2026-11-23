@@ -151,10 +151,12 @@ private fun MainShell(
     // Підсвічуємо вкладку, навіть коли поверх неї відкрито редактор.
     val current = backStack.lastOrNull { key -> TopLevelDestination.entries.any { it.key == key } }
 
-    // Натиснули сповіщення → відкриваємо потрібну вкладку поверх «Сьогодні».
+    // Натиснули сповіщення → відкриваємо потрібну вкладку поверх «Сьогодні»
+    // («Збери рюкзак на завтра», #today, — саме «Сьогодні», де картка «Рюкзак»).
     LaunchedEffect(deepLink) {
         val target = when {
             deepLink == null -> null
+            deepLink.startsWith("#today") -> TodayKey
             deepLink.startsWith("#hw") -> HomeworkKey
             deepLink.startsWith("#grades") -> GradesKey
             deepLink.startsWith("#me") -> ProfileKey
@@ -162,7 +164,7 @@ private fun MainShell(
         }
         if (target != null) {
             while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
-            backStack.add(target)
+            if (target != TodayKey) backStack.add(target)
         }
         if (deepLink != null) actions.onDeepLinkHandled()
     }
