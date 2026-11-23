@@ -2,7 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit-html';
 import { classMap } from 'lit-html/directives/class-map.js';
 import { live } from 'lit-html/directives/live.js';
 import { styleMap } from 'lit-html/directives/style-map.js';
-import { deleteAccount, enter, errText, loadFamily, mutate, sb, signOut } from '../api';
+import { alertLocations, deleteAccount, enter, errText, loadFamily, mutate, sb, setAlertRegion, signOut } from '../api';
 import { DELETE_CONFIRM_WORD, deletionWarnings, isDeleteConfirmed } from '../features/account';
 import { subjEmoji } from '../data/schedule';
 import {
@@ -19,6 +19,7 @@ import { dateLabel, pickDate, pickSubject, subjLabel } from '../ui/pickers';
 import { closePop, openPop } from '../ui/popover';
 import { applyPaper } from '../ui/theme';
 import { installApp, togglePush } from '../pwa';
+import { alertCard, pickRegion } from './air';
 
 export { editScheduleButton, needsSchedule, noSchedule, scheduleEditor } from './editor';
 
@@ -486,6 +487,7 @@ export function tabProfile(): TemplateResult {
       ${kidTabs()}${progress(d)}
     </section>
     ${parentTools(d, 'settings')}
+    ${alertCard(chooseRegion, clearRegion)}
     <section class="side card" aria-label="Налаштування застосунку"><div class="acts">
       <button type="button" @click=${togglePush}>${emo(state.pushOn ? '🔕 Вимкнути сповіщення' : '🔔 Сповіщення на телефон')}</button>
       ${state.canInstall ? html`<button type="button" @click=${installApp}>${emo('📱 Встановити застосунок')}</button>` : nothing}
@@ -498,6 +500,21 @@ export function tabProfile(): TemplateResult {
 }
 
 const NAME_MAX = 40;
+
+/** Місце для тривог — лише батьки (так само обмежує RLS). */
+async function chooseRegion(): Promise<void> {
+  const uid = await pickRegion(alertLocations);
+  if (uid === undefined) return;
+  const err = await setAlertRegion(uid);
+  if (err) toast('Місце не збережено: ' + err, 'err');
+  else toast(state.air?.status ? 'Місце збережено' : 'Місце збережено. Стан тривоги з’явиться протягом хвилини.');
+}
+
+async function clearRegion(): Promise<void> {
+  if (!(await confirm('Прибрати місце для тривог? Плашка зникне для всієї сім’ї.', 'Прибрати'))) return;
+  const err = await setAlertRegion(null);
+  toast(err ? 'Не вдалося: ' + err : 'Місце прибрано', err ? 'err' : undefined);
+}
 
 /** Своє ім'я в сім'ї (RLS: лише свій рядок). */
 async function renameMe(): Promise<void> {
