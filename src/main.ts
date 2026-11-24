@@ -4,6 +4,8 @@ import { html, nothing, render, type TemplateResult } from 'lit-html';
 import { iso } from './lib/time';
 import { PASS } from './features/rewards';
 import { formatRoute, parseRoute } from './lib/route';
+import { linkError } from './lib/authlink';
+import { alert } from './ui/dialog';
 import { parseQuickGrade } from './lib/command';
 import { addDays } from './lib/time';
 import { EMPTY_TIMETABLE, WEEK, applyTimetable, scheduleSubjects, subjectList } from './data/schedule';
@@ -152,6 +154,13 @@ const app = () => {
     <main id="main-content" tabindex="-1" class="page" data-tab=${state.tab}>${page()}</main>
   </div>`;
 };
+
+/* ---- посилання з листа не спрацювало (вже використане, застаріле): пояснюємо й прибираємо помилку з адреси ---- */
+const authError = linkError(location.href);
+if (authError) {
+  history.replaceState(null, '', location.pathname);
+  void alert(authError);
+}
 
 /* ---- маршрутизація через hash: працює кнопка «назад», можна ділитися посиланням на вкладку ---- */
 const isAuthHash = () => /access_token|error_description/.test(location.hash); // OAuth-редирект Supabase
