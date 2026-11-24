@@ -362,7 +362,7 @@ export function watchAuth(): void {
     // Подія може прийти ще до підписки (чанк api вантажиться пізніше), тож дублюємо прапорцем з адреси.
     if (session && !recoveryAsked && (ev === 'PASSWORD_RECOVERY' || recovering)) {
       recoveryAsked = true;
-      setTimeout(() => void import('./views/password').then((m) => m.finishRecovery()), 0);
+      setTimeout(() => void import('./views/password').then((m) => m.finishRecovery(session.user.email)), 0);
     }
     const id = session?.user.id ?? null;
     if (id === cur) return;

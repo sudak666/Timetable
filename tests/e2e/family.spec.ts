@@ -244,7 +244,10 @@ test('«Змінити пароль» у профілі: двічі, перев�
   await page.goto('/#me');
   const change = page.getByRole('button', { name: /Змінити пароль/ });
   const enter = async (v: string) => { await page.getByRole('dialog').locator('input[type=password]').fill(v); await page.getByRole('button', { name: 'Готово' }).click(); };
-  await change.click(); await enter('short');
+  await change.click();
+  // Пароль зберігається в менеджері паролів саме для пошти цього акаунта.
+  await expect(page.getByRole('dialog').locator('input[autocomplete="username"]')).toHaveValue('p1@test.ua');
+  await enter('short');
   await expect(page.locator('.toast', { hasText: 'від 8 символів' })).toBeVisible();
   await change.click(); await enter('password1');
   await expect(page.locator('.toast', { hasText: 'витікав' })).toBeVisible();
@@ -272,6 +275,9 @@ test('посилання з листа, коли вже увійшли на ць
   const dialog = page.getByRole('dialog');
   await expect(dialog).toContainText('Задай новий пароль');
   await expect(page).not.toHaveURL(/access_token/);
+  // Менеджер паролів має зберегти пароль саме для цього акаунта, а не вгадувати серед збережених.
+  await expect(dialog.locator('input[autocomplete="username"]')).toHaveValue('p1@test.ua');
+  await expect(dialog.locator('input[autocomplete="new-password"]')).toBeFocused();
   // Дотик біля краю вікна (його внутрішнє поле) і повз вікно не губить введення пароля.
   await dialog.click({ position: { x: 6, y: 6 } });
   await page.mouse.click(3, 3);
