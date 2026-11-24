@@ -266,6 +266,37 @@ test('посилання з листа відкриває «Задай нови�
   await expect(page).not.toHaveURL(/access_token/);
 });
 
+test('посилання з листа, коли вже увійшли на цьому пристрої, теж просить новий пароль', async ({ page }) => {
+  await mockFamily(page, 'parent');
+  await page.goto('/#access_token=x.eyJzdWIiOiJ4In0.x&expires_at=1790000000&expires_in=3600&refresh_token=r&token_type=bearer&type=recovery');
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('Задай новий пароль');
+  await expect(page).not.toHaveURL(/access_token/);
+  // Дотик біля краю вікна (його внутрішнє поле) і повз вікно не губить введення пароля.
+  await dialog.click({ position: { x: 6, y: 6 } });
+  await page.mouse.click(3, 3);
+  await expect(dialog).toBeVisible();
+  // Скасували — підказка, де задати пароль потім, а не тиша.
+  await dialog.getByRole('button', { name: 'Скасувати' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText('Пароль не змінено')).toBeVisible();
+});
+
+test('використане посилання з листа — пояснення замість мовчання, адреса чиста', async ({ page }) => {
+  await mockFamily(page, 'parent');
+  const err = 'error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired';
+  await page.goto(`/?${err}#${err}&sb=`);
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('вже використане або застаріло');
+  await expect(page).not.toHaveURL(/error/);
+  // Дотик до краю самого вікна його не закриває, а повз вікно — закриває (у ньому немає поля введення).
+  await dialog.click({ position: { x: 6, y: 6 } });
+  await expect(dialog).toBeVisible();
+  await page.mouse.click(3, 3);
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole('navigation').first()).toBeVisible();
+});
+
 test('редактор розкладу: заповнити, перевірка помилок, збереження на сервер', async ({ page }) => {
   await mockFamily(page, 'parent', false, { timetable: false });
   await page.goto('/');

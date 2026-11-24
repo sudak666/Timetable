@@ -2,6 +2,7 @@ import { html, nothing, render, type TemplateResult } from 'lit-html';
 import { regionItems, shortName, topLevel, type AlertLoc } from '../features/alerts';
 import { emo } from '../lib/emoji';
 import { state } from '../state';
+import { isBackdropClick } from '../ui/backdrop';
 
 const SOURCE = 'Дані alerts.in.ua з затримкою до хвилини. Не замінює офіційні застосунки та сирени.';
 
@@ -63,7 +64,7 @@ export function pickRegion(load: (oblast: number | null) => Promise<AlertLoc[]>)
       ${list()}
       <div class="row"><button type="button" @click=${() => close(undefined)}>Скасувати</button></div>`, d);
     d.addEventListener('cancel', (e) => { e.preventDefault(); close(undefined); });
-    d.addEventListener('click', (e) => { if (e.target === d) close(undefined); });
+    d.addEventListener('click', (e) => { if (isBackdropClick(d, e)) close(undefined); });
     document.body.append(d);
     d.showModal();
     void open(null);

@@ -1,6 +1,7 @@
 import { html, render } from 'lit-html';
 import { emo } from '../lib/emoji';
 import { fuzzyScore } from '../lib/command';
+import { isBackdropClick } from './backdrop';
 
 export interface Cmd { id: string; label: string; hint?: string; keys?: string; run: () => unknown }
 
@@ -43,7 +44,7 @@ export function openPalette(base: () => Cmd[], dynamic: (q: string) => Cmd[] = (
       : html`<li class="msg" role="presentation">Нічого не знайдено</li>`}</ul>`, d);
 
   d.addEventListener('cancel', (e) => { e.preventDefault(); close(); });
-  d.addEventListener('click', (e) => { if (e.target === d) close(); });
+  d.addEventListener('click', (e) => { if (isBackdropClick(d, e)) close(); });
   filter();
   draw();
   document.body.append(d);
