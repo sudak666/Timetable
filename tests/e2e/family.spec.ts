@@ -282,6 +282,16 @@ test('посилання з листа, коли вже увійшли на ць
   await expect(page.getByText('Пароль не змінено')).toBeVisible();
 });
 
+test('посилання з листа, запрошеного в Android-застосунку (?code=), — пояснення, адреса чиста', async ({ page }) => {
+  await mockFamily(page, 'parent');
+  await page.goto('/?code=0b1c2d3e-4f50-6172-8394-a5b6c7d8e9f0');
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('просили в застосунку');
+  await expect(page).not.toHaveURL(/code=/);
+  await dialog.getByRole('button', { name: 'Зрозуміло' }).click();
+  await expect(dialog).toBeHidden();
+});
+
 test('використане посилання з листа — пояснення замість мовчання, адреса чиста', async ({ page }) => {
   await mockFamily(page, 'parent');
   const err = 'error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired';
