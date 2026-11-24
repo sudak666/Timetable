@@ -21,8 +21,8 @@ android {
     defaultConfig {
         // Публічний ID у Google Play — після першої публікації змінити неможливо.
         applicationId = "ua.dvanadtsiatka"
-        versionCode = 20
-        versionName = "0.2.18"
+        versionCode = 21
+        versionName = "0.2.19"
         androidResources.localeFilters += listOf("uk")
     }
 
