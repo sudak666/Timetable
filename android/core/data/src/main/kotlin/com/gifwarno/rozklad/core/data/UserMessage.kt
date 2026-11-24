@@ -16,6 +16,10 @@ object UserMessage {
 
             Regex("already registered|user already exists", RegexOption.IGNORE_CASE).containsMatchIn(m) -> "Такий акаунт уже існує — увійди"
 
+            // Supabase обмежує частоту листів («Забули пароль?», підтвердження) — як на сайті.
+            Regex("rate limit|only request this after", RegexOption.IGNORE_CASE).containsMatchIn(m) ->
+                "Лист уже надсилали щойно — зачекай хвилину й перевір пошту 📬"
+
             // Вимоги Supabase до пароля (мінімальна довжина, «слабкий» чи злитий пароль) — зрозумілою мовою.
             PASSWORD_LENGTH.find(m) != null -> "Пароль має бути від ${PASSWORD_LENGTH.find(m)!!.groupValues[1]} символів"
 

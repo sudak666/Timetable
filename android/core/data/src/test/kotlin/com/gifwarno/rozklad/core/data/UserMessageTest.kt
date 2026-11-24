@@ -14,6 +14,13 @@ class UserMessageTest {
     }
 
     @Test
+    fun `частий запит листа — зачекати, а не технічний текст`() {
+        val wait = "Лист уже надсилали щойно — зачекай хвилину й перевір пошту 📬"
+        assertEquals(wait, UserMessage.of(IllegalStateException("For security purposes, you can only request this after 42 seconds.")))
+        assertEquals(wait, UserMessage.of(IllegalStateException("email rate limit exceeded")))
+    }
+
+    @Test
     fun `злитий пароль — наше повідомлення як є`() {
         assertEquals(
             "Цей пароль уже витікав в інтернеті — придумай інший",

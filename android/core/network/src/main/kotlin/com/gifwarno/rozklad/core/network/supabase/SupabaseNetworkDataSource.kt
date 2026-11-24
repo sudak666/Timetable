@@ -1,5 +1,6 @@
 package com.gifwarno.rozklad.core.network.supabase
 
+import com.gifwarno.rozklad.core.network.BuildConfig
 import com.gifwarno.rozklad.core.network.LeakedPasswordException
 import com.gifwarno.rozklad.core.network.LeakedPasswords
 import com.gifwarno.rozklad.core.network.RozkladNetworkDataSource
@@ -31,6 +32,11 @@ import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
 import io.ktor.client.plugins.HttpRequestTimeoutException
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.content.TextContent
+import io.ktor.http.isSuccess
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -86,8 +92,12 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
         return user != null && client.auth.currentSessionOrNull() == null
     }
 
+    /** Лист «Забули пароль?» без PKCE — чому, див. [Recover]. Збій мережі — HttpRequestException («Немає інтернету»). */
     override suspend fun resetPassword(email: String) {
-        client.auth.resetPasswordForEmail(email, redirectUrl = EMAIL_CONFIRM_REDIRECT)
+        val res = client.httpClient.post(Recover.url(BuildConfig.SUPABASE_URL, EMAIL_CONFIRM_REDIRECT)) {
+            setBody(TextContent(Recover.body(email), ContentType.Application.Json))
+        }
+        if (!res.status.isSuccess()) throw IllegalStateException(Recover.error(res.status.value, res.bodyAsText()))
     }
 
     override suspend fun changePassword(password: String) {
@@ -436,7 +446,10 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
         /** UPDATE не зачепив жодного рядка: запис видалили на іншому пристрої або бракує прав. */
         const val NOT_APPLIED = "запис уже видалено або змінити його можуть лише батьки"
 
-        /** Підтвердження пошти відкривається у веб-версії — після нього можна увійти в застосунку. */
+        /**
+         * Посилання з листів відкриваються у веб-версії: підтвердження пошти (далі вхід у застосунку)
+         * і «Забули пароль?» (сайт просить новий пароль, з ним входять у застосунку).
+         */
         const val EMAIL_CONFIRM_REDIRECT = "https://sudak666.github.io/Timetable/"
     }
 }

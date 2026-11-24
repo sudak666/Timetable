@@ -80,7 +80,8 @@ class AuthViewModel @Inject constructor(private val session: SessionRepository) 
                     _state.update {
                         it.copy(
                             busy = false,
-                            message = "Якщо акаунт ${s.email.trim()} існує, ми надіслали лист. Відкрий посилання — і задай новий пароль 📬",
+                            message = "Якщо акаунт ${s.email.trim()} існує, ми надіслали лист. " +
+                                "Відкрий посилання, задай новий пароль — і увійди з ним тут 📬",
                             messageIsError = false,
                         )
                     }

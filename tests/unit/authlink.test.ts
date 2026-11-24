@@ -13,6 +13,11 @@ describe('помилка входу в адресі', () => {
   it('інша помилка (наприклад, скасували вхід через Google) — загальний текст', () => {
     expect(linkError(`${SITE}?error=access_denied&error_description=User+cancelled`)).toMatch(/Не вдалося увійти/);
   });
+  it('?code= з листа, запрошеного в Android-застосунку (PKCE), — пояснення, що робити', () => {
+    const m = linkError(`${SITE}?code=0b1c2d3e-4f50-6172-8394-a5b6c7d8e9f0`);
+    expect(m).toMatch(/просили в застосунку/);
+    expect(m).toMatch(/Забули пароль\?/);
+  });
   it('звичайні адреси й успішний вхід — без повідомлення', () => {
     expect(linkError(SITE)).toBeNull();
     expect(linkError(`${SITE}#grades?kid=1`)).toBeNull();
