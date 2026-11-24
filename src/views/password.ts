@@ -49,5 +49,7 @@ export async function changePassword(title = `Новий пароль (від ${
 /** Перехід із листа відновлення: сесія вже є — одразу просимо новий пароль. */
 export async function finishRecovery(): Promise<void> {
   history.replaceState(null, '', location.pathname + location.search);
-  await changePassword(`Задай новий пароль (від ${MIN_PASSWORD} символів)`);
+  const done = await changePassword(`Задай новий пароль (від ${MIN_PASSWORD} символів)`);
+  // Закрили вікно чи помилились — без підказки здавалося, що посилання з листа просто нічого не зробило.
+  if (!done) toast('Пароль не змінено. Задати його можна в «Профіль» → «Змінити пароль» 🔑', 'err', 8000);
 }

@@ -1,5 +1,6 @@
 import { html, render } from 'lit-html';
 import { emo } from '../lib/emoji';
+import { isBackdropClick } from './backdrop';
 
 interface Opts { input?: 'text' | 'number' | 'password'; value?: string | number; ok?: string; cancel?: string }
 
@@ -38,7 +39,9 @@ export function modal(text: string, o: Opts = {}): Promise<string | boolean | nu
       d,
     );
     d.addEventListener('cancel', (e) => { e.preventDefault(); close(cancelVal); });
-    d.addEventListener('click', (e) => { if (e.target === d) close(cancelVal); });
+    // Вікно з полем введення дотиком повз нього не закриваємо: випадковий дотик (напр., щоб сховати
+    // клавіатуру) не має губити введене. Для них є «Скасувати» і «назад».
+    d.addEventListener('click', (e) => { if (!o.input && isBackdropClick(d, e)) close(cancelVal); });
     document.body.append(d);
     d.showModal();
     const inp = d.querySelector('input');
