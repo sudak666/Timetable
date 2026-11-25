@@ -73,6 +73,7 @@ import com.gifwarno.rozklad.core.designsystem.theme.Nunito
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.domain.Trophies
 import com.gifwarno.rozklad.core.model.Paper
+import com.gifwarno.rozklad.core.model.Prices
 import com.gifwarno.rozklad.core.model.Role
 import com.gifwarno.rozklad.core.model.Streak
 import com.gifwarno.rozklad.core.ui.Format
@@ -164,7 +165,7 @@ internal fun ProfileScreen(
     alerts: AlertsSectionActions? = null,
     onLook: (avatar: String?, accent: String?) -> Unit = { _, _ -> },
     onPaper: (Paper) -> Unit = {},
-    onSaveRates: (Map<Int, Int>, Streak) -> Unit = { _, _ -> },
+    onSaveRates: (Map<Int, Int>, Streak, Prices) -> Unit = { _, _, _ -> },
     onRename: (name: String, family: String?) -> Unit = { _, _ -> },
     password: PasswordActions? = null,
     family: FamilyActions? = null,
@@ -274,21 +275,25 @@ internal fun ProfileScreen(
             }
         }
 
-        if (state.isParent) {
-            GameCard("Курс оцінок і серія") {
-                val s = state.settings
-                // Нерозривні пробіли: «12 → +300 ₴» не розривається між рядками.
-                Text(
-                    listOf(12, 10, 7, 1).joinToString(" · ") { g -> "$g → " + Format.money(s.rates[g] ?: 0).replace(' ', ' ') },
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    "🔥 Серія: ${s.streak.len} оцінок поспіль ≥ ${s.streak.min} → +${s.streak.bonus}\u00A0₴",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                GameButton("Змінити курс", { ratesSheet = true }, Modifier.fillMaxWidth(), leading = "✏️")
-            }
+        // Курс бачить і дитина — щоб знати, скільки дає кожна оцінка (побажання 25.11); змінюють лише батьки.
+        GameCard(if (state.isParent) "Курс оцінок і серія" else "Скільки дають оцінки") {
+            val s = state.settings
+            // Нерозривні пробіли: «12 → +300 ₴» не розривається між рядками.
+            Text(
+                (12 downTo 1).joinToString(" · ") { g -> "$g → " + Format.money(s.rates[g] ?: 0).replace(' ', ' ') },
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                "🔥 Серія: ${s.streak.len} оцінок поспіль ≥ ${s.streak.min} → +${s.streak.bonus} ₴",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                "⭐ Зірка за поведінку → +${s.prices.star} ₴ · 🧠 Правильна відповідь у вікторині → +${s.prices.quiz} ₴",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (state.isParent) GameButton("Змінити курс", { ratesSheet = true }, Modifier.fillMaxWidth(), leading = "✏️")
         }
 
         GameCard("Сім’я") {
@@ -393,8 +398,8 @@ internal fun ProfileScreen(
         RatesSheet(
             settings = state.settings,
             onDismiss = { ratesSheet = false },
-            onSave = { r, st ->
-                onSaveRates(r, st)
+            onSave = { r, st, pr ->
+                onSaveRates(r, st, pr)
                 ratesSheet = false
             },
         )

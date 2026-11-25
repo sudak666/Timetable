@@ -51,7 +51,17 @@ data class NetworkLedger(
     val note: String? = null,
     val date: String,
     @SerialName("created_at") val createdAt: String,
+    /** 'star' / 'quiz' / null — див. LedgerSource. */
+    val src: String? = null,
 )
+
+/** Питання вікторини з RPC school_quiz_round (без правильної відповіді). */
+@Serializable
+data class NetworkQuizQuestion(val id: Int, val q: String, val options: List<String>)
+
+/** Відповідь RPC school_quiz_answer. */
+@Serializable
+data class NetworkQuizAnswer(val correct: Boolean, val right: String, val paid: Int = 0, val left: Int = 0)
 
 @Serializable
 data class NetworkChallenge(

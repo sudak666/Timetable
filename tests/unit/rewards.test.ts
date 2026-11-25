@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_RATES, PAPERS, autoRewards, bestTenRun, currentRun, gradeValue, PASS, levelOf, paperFor, parseSettings, totals, type Challenge, type Grade, type Ledger } from '../../src/features/rewards';
+import { DEFAULT_RATES, PAPERS, autoRewards, bestTenRun, currentRun, gradeValue, PASS, levelOf, paperFor, parseSettings, starsOn, totals, type Challenge, type Grade, type Ledger } from '../../src/features/rewards';
 
 let n = 0;
 const g = (grade: number, date: string, subject = 'Математика', status: Grade['status'] = 'approved', amount: number | null = null): Grade =>
@@ -22,6 +22,30 @@ describe('parseSettings', () => {
   });
   it('повертає дефолти для null', () => {
     expect(parseSettings(null).streak).toEqual({ len: 5, min: 7, bonus: 50 });
+    expect(parseSettings(null).prices).toEqual({ star: 50, quiz: 20 });
+  });
+  it('ціни зірки й вікторини: з курсу, затиснуті 0…1000, сміття → дефолт', () => {
+    expect(parseSettings({ star_price: 30, quiz_price: '15' }).prices).toEqual({ star: 30, quiz: 15 });
+    expect(parseSettings({ star_price: -5, quiz_price: 99999 }).prices).toEqual({ star: 0, quiz: 1000 });
+    expect(parseSettings({ star_price: 'багато', quiz_price: null }).prices).toEqual({ star: 50, quiz: 20 });
+  });
+  it('ціни не потрапляють у курс оцінок', () => {
+    expect(Object.keys(parseSettings({ star_price: 30, quiz_price: 15 }).rates)).toHaveLength(12);
+  });
+});
+
+describe('зірки за поведінку', () => {
+  const l = (id: string, child: string, date: string, src: 'star' | 'quiz' | null, t = 'T10:00'): Ledger =>
+    ({ id, child_id: child, kind: 'bonus', amount: 50, note: '', date, created_at: date + t, src });
+  it('лише зірки цієї дитини за цей день, найновіша — остання', () => {
+    const ledger = [l('a', 'k1', '2026-11-25', 'star', 'T12:00'), l('b', 'k1', '2026-11-25', 'star', 'T09:00'), l('c', 'k1', '2026-11-24', 'star'),
+      l('d', 'k2', '2026-11-25', 'star'), l('e', 'k1', '2026-11-25', 'quiz'), l('f', 'k1', '2026-11-25', null)];
+    expect(starsOn(ledger, 'k1', '2026-11-25').map((x) => x.id)).toEqual(['b', 'a']);
+  });
+  it('зірки й вікторина рахуються в гаманці як бонус (і старими версіями теж)', () => {
+    const t = totals([], [l('a', 'k1', '2026-11-25', 'star'), l('b', 'k1', '2026-11-25', 'quiz')], [], DEFAULT_RATES, '2026-11-25', '2026-11-24');
+    expect(t.today).toBe(100);
+    expect(t.balance).toBe(100);
   });
 });
 

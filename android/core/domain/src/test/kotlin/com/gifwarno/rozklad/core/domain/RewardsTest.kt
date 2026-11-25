@@ -6,6 +6,8 @@ import com.gifwarno.rozklad.core.model.Grade
 import com.gifwarno.rozklad.core.model.GradeStatus
 import com.gifwarno.rozklad.core.model.LedgerEntry
 import com.gifwarno.rozklad.core.model.LedgerKind
+import com.gifwarno.rozklad.core.model.LedgerSource
+import com.gifwarno.rozklad.core.model.Prices
 import com.gifwarno.rozklad.core.model.Streak
 import java.time.Instant
 import java.time.LocalDate
@@ -136,5 +138,33 @@ class RewardsTest {
         assertEquals(2, Rewards.pendingBadge(grades, userId = "mom", isParent = true))
         assertEquals(1, Rewards.pendingBadge(grades, userId = "k", isParent = false))
         assertEquals(0, Rewards.pendingBadge(emptyList(), userId = "mom", isParent = true))
+    }
+
+    @Test
+    fun `ціни зірки й вікторини — з курсу, затиснуті 0…1000, сміття → дефолт`() {
+        assertEquals(Prices(50, 20), Rewards.parseSettings(emptyMap()).prices)
+        assertEquals(Prices(30, 15), Rewards.parseSettings(mapOf("star_price" to "30", "quiz_price" to "15")).prices)
+        assertEquals(Prices(0, 1000), Rewards.parseSettings(mapOf("star_price" to "-5", "quiz_price" to "99999")).prices)
+        assertEquals(Prices(50, 20), Rewards.parseSettings(mapOf("star_price" to "багато", "quiz_price" to null)).prices)
+        // Ціни не потрапляють у курс оцінок.
+        assertEquals(12, Rewards.parseSettings(mapOf("star_price" to "30")).rates.size)
+    }
+
+    @Test
+    fun `зірки за день — лише цієї дитини, найновіша остання; у гаманці це бонус`() {
+        fun l(id: String, child: String, date: String, src: LedgerSource?, t: String = "10:00") =
+            LedgerEntry(id, child, LedgerKind.BONUS, 50, "", LocalDate.parse(date), Instant.parse("${date}T$t:00Z"), src)
+        val ledger = listOf(
+            l("a", "k1", "2026-11-25", LedgerSource.STAR, "12:00"),
+            l("b", "k1", "2026-11-25", LedgerSource.STAR, "09:00"),
+            l("c", "k1", "2026-11-24", LedgerSource.STAR),
+            l("d", "k2", "2026-11-25", LedgerSource.STAR),
+            l("e", "k1", "2026-11-25", LedgerSource.QUIZ),
+            l("f", "k1", "2026-11-25", null),
+        )
+        assertEquals(listOf("b", "a"), Rewards.starsOn(ledger, "k1", LocalDate.parse("2026-11-25")).map { it.id })
+        val day = LocalDate.parse("2026-11-25")
+        val t = Rewards.totals(emptyList(), ledger.filter { it.childId == "k1" && it.date == day }, emptyList(), DEFAULT_RATES, day, day)
+        assertEquals(200, t.today)
     }
 }

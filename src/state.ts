@@ -1,8 +1,8 @@
 import type { TimetableRow } from './data/schedule';
 import type { AirAlert } from './features/alerts';
 import type { Draft } from './features/timetable';
-import type { Challenge, Grade, Homework, Ledger, Member, Rates, Role, Streak } from './features/rewards';
-import { DEFAULT_RATES, DEFAULT_STREAK } from './features/rewards';
+import type { Challenge, Grade, Homework, Ledger, Member, Prices, Rates, Role, Streak } from './features/rewards';
+import { DEFAULT_PRICES, DEFAULT_RATES, DEFAULT_STREAK } from './features/rewards';
 
 export type AuthView = 'loading' | 'auth' | 'join' | 'main' | 'offline';
 export type Tab = 'today' | 'grades' | 'hw' | 'me';
@@ -23,7 +23,6 @@ export interface State {
   day: number | null;
   highlight: string | null;
   lessonAlerts: boolean;
-  stars: number;
   factIdx: number;
 
   view: AuthView;
@@ -42,6 +41,7 @@ export interface State {
   timetables: TimetableRow[];
   rates: Rates;
   streak: Streak;
+  prices: Prices;
 
   form: { subject: string; date: string; hwSubject: string; hwDate: string; chSubject: string };
   pushOn: boolean;
@@ -70,7 +70,6 @@ export const state: State = {
   day: null,
   highlight: null,
   lessonAlerts: false,
-  stars: 0,
   factIdx: Math.floor(Date.now() / 864e5),
   view: 'loading',
   authMsg: null,
@@ -87,6 +86,7 @@ export const state: State = {
   timetables: [],
   rates: { ...DEFAULT_RATES },
   streak: { ...DEFAULT_STREAK },
+  prices: { ...DEFAULT_PRICES },
   form: { subject: 'Математика', date: '', hwSubject: 'Математика', hwDate: '', chSubject: '' },
   pushOn: false,
   pushMsg: null,

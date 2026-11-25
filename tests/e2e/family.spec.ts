@@ -23,6 +23,13 @@ const TIMETABLE = {
   ],
 };
 
+/** Питання з сервера: [id, питання, перемішані варіанти, правильна відповідь]. */
+const QUIZ: [number, string, string[], string][] = [
+  [1, 'Скільки буде 7 × 8?', ['54', '56', '64', '48'], '56'],
+  [2, 'Столиця Австралії?', ['Сідней', 'Перт', 'Канберра', 'Мельбурн'], 'Канберра'],
+  [3, 'Яка планета найбільша?', ['Земля', 'Юпітер', 'Сатурн', 'Нептун'], 'Юпітер'],
+];
+
 async function mockFamily(page: Page, role: 'parent' | 'child', noKids = false, { timetable = true, family = true } = {}) {
   const meId = role === 'parent' ? 'p1' : 'k1';
   const user = { id: meId, aud: 'authenticated', role: 'authenticated', email: `${meId}@test.ua`, user_metadata: {}, app_metadata: {} };
@@ -52,6 +59,12 @@ async function mockFamily(page: Page, role: 'parent' | 'child', noKids = false, 
     if (p.endsWith('/school_challenges')) return r.fulfill(json([{ id: 'c1', child_id: 'k1', title: '2 дванадцятки', subject: null, min_grade: 12, need: 2, reward: 100, start_date: today, end_date: '2026-09-28' }]));
     if (p.endsWith('/school_homework')) return r.fulfill(json([{ id: 'h1', child_id: 'k1', subject: 'Інформатика', due: today, text: 'Презентація', done: false }]));
     if (p.includes('/rpc/school_parent_code')) return r.fulfill(json('PARENT01'));
+    if (p.includes('/rpc/school_quiz_round')) return r.fulfill(json(QUIZ.map(([id, q, options]) => ({ id, q, options }))));
+    if (p.includes('/rpc/school_quiz_answer')) {
+      const b = r.request().postDataJSON() as { p_id: number; p_answer: string };
+      const right = QUIZ.find(([id]) => id === b.p_id)![3], correct = b.p_answer === right;
+      return r.fulfill(json({ correct, right, paid: correct && role === 'child' ? 20 : 0, first: true, left: role === 'child' ? 2 : 0 }));
+    }
     return r.fulfill(json([]));
   });
   await page.clock.install({ time: new Date(today + 'T09:40:00') });
@@ -87,6 +100,76 @@ for (const role of ['child', 'parent'] as const) {
     }
   });
 }
+
+test('вікторина: відповідь перевіряє сервер, дитина бачить гроші', async ({ page }) => {
+  await mockFamily(page, 'child');
+  await page.goto('/');
+  const quiz = page.locator('.quiz');
+  await expect(quiz).toContainText('Правильна відповідь — +20 ₴');
+  await expect(quiz).toContainText('Скільки буде 7 × 8?');
+  const sent = page.waitForRequest('**/rpc/school_quiz_answer');
+  await quiz.getByRole('button', { name: '56', exact: true }).click();
+  expect((await sent).postDataJSON()).toEqual({ p_id: 1, p_answer: '56' });
+  await expect(quiz.locator('.ans button.ok')).toHaveText('56');
+  await page.clock.runFor(1000);
+  await expect(quiz).toContainText('Столиця Австралії?');
+  await quiz.getByRole('button', { name: 'Сідней' }).click();
+  await expect(quiz.locator('.ans button.no')).toHaveText('Сідней');
+  await expect(quiz.locator('.ans button.ok')).toHaveText('Канберра');
+  await page.clock.runFor(1000);
+  await quiz.getByRole('button', { name: 'Юпітер' }).click();
+  await page.clock.runFor(1000);
+  await expect(quiz).toContainText('2/3');
+  await expect(quiz).toContainText('+40 ₴ у гаманець');
+});
+
+test('вікторина без інтернету — пояснення й «Спробувати ще раз»', async ({ page }) => {
+  await mockFamily(page, 'child');
+  await page.route('**/rpc/school_quiz_round', (r) => r.abort('internetdisconnected'));
+  await page.goto('/');
+  const quiz = page.locator('.quiz');
+  await expect(quiz).toContainText('не вдалося завантажити питання');
+  await page.unroute('**/rpc/school_quiz_round');
+  await quiz.getByRole('button', { name: 'Спробувати ще раз' }).click();
+  await expect(quiz).toContainText('Скільки буде 7 × 8?');
+});
+
+test('зірки за поведінку ставлять батьки — це бонус у гаманці', async ({ page }) => {
+  await mockFamily(page, 'parent');
+  await page.goto('/');
+  const card = page.locator('.fun');
+  await expect(card).toContainText('Зірки за поведінку сьогодні');
+  const post = page.waitForRequest((r) => r.url().includes('/school_ledger') && r.method() === 'POST');
+  await card.getByRole('button', { name: /\+50 ₴/ }).click();
+  expect((await post).postDataJSON()).toMatchObject({ family_id: 'f1', child_id: 'k1', kind: 'bonus', amount: 50, src: 'star', note: '⭐ За поведінку' });
+});
+
+test('дитина зірку собі не ставить — лише бачить, скільки вона дає', async ({ page }) => {
+  await mockFamily(page, 'child');
+  await page.goto('/');
+  const card = page.locator('.fun');
+  await expect(card).toContainText('Зірки ставлять батьки за добру поведінку — кожна +50 ₴');
+  await expect(card.getByRole('button', { name: /\+50 ₴/ })).toHaveCount(0);
+  await expect(card.getByRole('button', { name: /зірка/i })).toHaveCount(0);
+});
+
+test('батьки бачать і змінюють ціну зірки й вікторини в курсі', async ({ page }) => {
+  await mockFamily(page, 'parent');
+  await page.goto('/#me');
+  await expect(page.getByLabel('Зірка за поведінку, гривень')).toHaveValue('50');
+  await expect(page.getByLabel('Правильна відповідь у вікторині, гривень')).toHaveValue('20');
+  await page.getByLabel('Зірка за поведінку, гривень').fill('30');
+  const patch = page.waitForRequest((r) => r.url().includes('/school_families') && r.method() === 'PATCH');
+  await page.getByRole('button', { name: 'Зберегти курс' }).click();
+  expect((await patch).postDataJSON()).toMatchObject({ rates: { star_price: 30, quiz_price: 20, 12: 300 } });
+});
+
+test('на кнопках оцінок видно, скільки вони дають', async ({ page }) => {
+  await mockFamily(page, 'child');
+  await page.goto('/#grades');
+  await expect(page.getByRole('button', { name: 'Оцінка 12 +300 ₴' })).toContainText('+300 ₴');
+  await expect(page.getByRole('button', { name: 'Оцінка 1 -300 ₴' })).toContainText('-300 ₴');
+});
 
 test('батьки без дітей бачать картку запрошення з кодом', async ({ page }) => {
   await mockFamily(page, 'parent', true);

@@ -6,7 +6,7 @@ import { alertLocations, deleteAccount, enter, errText, loadFamily, mutate, sb, 
 import { DELETE_CONFIRM_WORD, deletionWarnings, isDeleteConfirmed } from '../features/account';
 import { subjEmoji } from '../data/schedule';
 import {
-  AVATARS, PAPERS, THEMES, XP_PER_LEVEL, paperFor, autoRewards, bestTenRun, byTime, challengeHits, currentRun, PASS, gradeColor, gradeLabel, gradeValue, isScored, rateOf, levelOf, totals, xpOf,
+  AVATARS, MAX_PRICE, PAPERS, QUIZ_PAID_PER_DAY, STARS_PER_DAY, THEMES, XP_PER_LEVEL, paperFor, autoRewards, bestTenRun, byTime, challengeHits, currentRun, PASS, gradeColor, gradeLabel, gradeValue, isScored, rateOf, levelOf, totals, xpOf,
   type Grade, type Homework,
 } from '../features/rewards';
 import { emo } from '../lib/emoji';
@@ -278,7 +278,7 @@ function gradeInput(): TemplateResult {
       <button type="button" class="pick" aria-haspopup="dialog" @click=${(e: Event) => pickDate(e, f.date, (v) => set((st) => { st.form.date = v; }), [['Вчора', iso(addDays(new Date(), -1))], ['Сьогодні', iso(new Date())]])}><span class="sr-only">Дата оцінки: </span>${dateLabel(f.date)}</button>
     </div>
     <div class="gbtn" role="group" aria-label="Поставити оцінку" style=${styleMap({ opacity: state.kid ? '1' : '.4' })}>${[...Array.from({ length: 12 }, (_, i) => 12 - i), PASS].map((g) =>
-      html`<button type="button" ?disabled=${!state.kid} style=${styleMap({ background: gradeColor(g) })} aria-label=${g === PASS ? `${gradeLabel(g)} — зараховано, ${uah(rateOf(g, state.rates))}` : `Оцінка ${g}, ${uah(rateOf(g, state.rates))}`} @click=${(e: MouseEvent) => addGrade(g, e)}>${gradeLabel(g)}</button>`)}</div>`;
+      html`<button type="button" ?disabled=${!state.kid} style=${styleMap({ background: gradeColor(g) })} aria-label=${g === PASS ? `${gradeLabel(g)} ${uah(rateOf(g, state.rates))} — зараховано` : `Оцінка ${g} ${uah(rateOf(g, state.rates))}`} @click=${(e: MouseEvent) => addGrade(g, e)}>${gradeLabel(g)} <small class="gm">${uah(rateOf(g, state.rates))}</small></button>`)}</div>`;
 }
 
 function homework(d: D): TemplateResult {
@@ -355,7 +355,9 @@ function parentTools(d: D, part: 'money' | 'settings'): TemplateResult | typeof 
     }), () => { (document.getElementById('cTitle') as HTMLInputElement).value = ''; boom(); });
   };
   const saveRates = async () => {
-    const r: Record<string, number> = { streak_len: parseInt(val('stLen')) || 5, streak_min: parseInt(val('stMin')) || 7, streak_bonus: Math.max(0, parseInt(val('stBon')) || 0) };
+    const price = (id: string, d0: number) => { const n = parseInt(val(id)); return Math.min(MAX_PRICE, Math.max(0, Number.isNaN(n) ? d0 : n)); };
+    const r: Record<string, number> = { streak_len: parseInt(val('stLen')) || 5, streak_min: parseInt(val('stMin')) || 7, streak_bonus: Math.max(0, parseInt(val('stBon')) || 0),
+      star_price: price('prStar', state.prices.star), quiz_price: price('prQuiz', state.prices.quiz) };
     document.querySelectorAll<HTMLInputElement>('[data-rate]').forEach((i) => { r[i.dataset.rate!] = parseInt(i.value) || 0; });
     if (await run(sb.from('school_families').update({ rates: r }).eq('id', state.family!.id))) toast('Збережено ✓ Новий курс діє для нових підтверджень.');
   };
@@ -363,6 +365,8 @@ function parentTools(d: D, part: 'money' | 'settings'): TemplateResult | typeof 
   if (part === 'settings') return html`<section class="side card" aria-labelledby="set-h"><h2 class="h4" id="set-h">Курс оцінок і запрошення</h2>
       <div class="rgrid">${Array.from({ length: 12 }, (_, i) => 12 - i).map((g) => html`<label><span class="n" style=${styleMap({ background: gradeColor(g) })}>${g}</span><span class="sr-only">Оцінка ${g}, гривень</span><input type="number" data-rate=${g} .value=${live(String(state.rates[g] ?? 0))}></label>`)}</div>
       <div class="srow">${emo('🔥')} Серія: кожні <input type="number" id="stLen" min="2" max="30" aria-label="Кількість оцінок" .value=${live(String(state.streak.len))}> оцінок поспіль ≥ <input type="number" id="stMin" min="1" max="12" aria-label="Мінімальна оцінка" .value=${live(String(state.streak.min))}> дають бонус <input type="number" id="stBon" min="0" class="w84" aria-label="Бонус у гривнях" .value=${live(String(state.streak.bonus))}> ₴</div>
+      <div class="srow">${emo('⭐')} Зірка за поведінку <input type="number" id="prStar" min="0" max=${MAX_PRICE} class="w84" aria-label="Зірка за поведінку, гривень" .value=${live(String(state.prices.star))}> ₴ (до ${STARS_PER_DAY} на день)</div>
+      <div class="srow">${emo('🧠')} Правильна відповідь у вікторині <input type="number" id="prQuiz" min="0" max=${MAX_PRICE} class="w84" aria-label="Правильна відповідь у вікторині, гривень" .value=${live(String(state.prices.quiz))}> ₴ (до ${QUIZ_PAID_PER_DAY} на день)</div>
       <button type="button" @click=${saveRates}>Зберегти курс</button>
       <p class="gap">Код для дитини: <button type="button" class="code" title="Скопіювати" @click=${() => copy(state.family!.invite_code)}>${state.family!.invite_code}</button>
         · для другого з батьків: <button type="button" class="code" title="Скопіювати" @click=${() => copy(state.parentCode)}>${state.parentCode}</button></p>
@@ -397,8 +401,8 @@ function history(d: D): TemplateResult {
       : html`<li class="gi"><span class="g" style=${styleMap({ '--lv': gradeColor(x.grade) })}>${gradeLabel(x.grade)}</span><span>${emo(subjEmoji(x.subject))} ${x.subject}<small>${fmtDay(x.date)} · ${emo('✅')} підтверджено</small></span><b class=${tone(gradeValue(x, state.rates))}>${uah(gradeValue(x, state.rates))}</b>
           ${par ? html`<button type="button" class="x" aria-label="Скасувати підтвердження" @click=${() => unapprove(x)}>↺</button>` : html`<span></span>`}</li>` })),
     ...d.L.map((x): Row => {
-      const b = x.kind === 'bonus';
-      return { key: x.id, date: x.date, created_at: x.created_at, t: html`<li class="gi"><span class=${classMap({ g: true, gb: b, gp: !b })}>${emo(b ? (x.amount >= 0 ? '🎁' : '⚠️') : '💸')}</span><span>${x.note || (b ? 'Бонус' : 'Виплачено')}<small>${fmtDay(x.date)}</small></span><b class=${b ? tone(x.amount) : ''}>${b ? uah(x.amount) : '−' + x.amount + ' ₴'}</b>
+      const b = x.kind === 'bonus', icon = x.src === 'star' ? '⭐' : x.src === 'quiz' ? '🧠' : b ? (x.amount >= 0 ? '🎁' : '⚠️') : '💸';
+      return { key: x.id, date: x.date, created_at: x.created_at, t: html`<li class="gi"><span class=${classMap({ g: true, gb: b, gp: !b })}>${emo(icon)}</span><span>${x.note || (b ? 'Бонус' : 'Виплачено')}<small>${fmtDay(x.date)}</small></span><b class=${b ? tone(x.amount) : ''}>${b ? uah(x.amount) : '−' + x.amount + ' ₴'}</b>
         ${par ? html`<button type="button" class="x" aria-label="Видалити" @click=${() => del('school_ledger', x.id)}>✕</button>` : html`<span></span>`}</li>` };
     }),
     ...d.auto.map((x): Row => ({ key: x.id, date: x.date, created_at: x.created_at, t: html`<li class="gi"><span class="g gv">${emo(x.icon)}</span><span>${x.note}<small>${fmtDay(x.date)} · нараховано автоматично</small></span><b class="pos">${uah(x.amount)}</b><span></span></li>` })),

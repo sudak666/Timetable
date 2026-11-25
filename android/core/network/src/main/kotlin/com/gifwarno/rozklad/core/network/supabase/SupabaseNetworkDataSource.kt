@@ -15,6 +15,8 @@ import com.gifwarno.rozklad.core.network.model.NetworkHomework
 import com.gifwarno.rozklad.core.network.model.NetworkLedger
 import com.gifwarno.rozklad.core.network.model.NetworkMember
 import com.gifwarno.rozklad.core.network.model.NetworkMembership
+import com.gifwarno.rozklad.core.network.model.NetworkQuizAnswer
+import com.gifwarno.rozklad.core.network.model.NetworkQuizQuestion
 import com.gifwarno.rozklad.core.network.model.NetworkSnapshot
 import com.gifwarno.rozklad.core.network.model.NetworkTimetable
 import com.gifwarno.rozklad.core.network.model.NetworkUser
@@ -238,7 +240,7 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
         val ledger = async {
             allPages { from, to ->
                 client.from("school_ledger").select(
-                    Columns.list("id", "child_id", "kind", "amount", "note", "date", "created_at"),
+                    Columns.list("id", "child_id", "kind", "amount", "note", "date", "created_at", "src"),
                 ) {
                     filter { eq("family_id", familyId) }
                     order("date", Order.DESCENDING)
@@ -328,6 +330,20 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
     }
 
     override suspend fun alert(uid: Int): NetworkAlert? = authed { alertOf(uid) }
+
+    override suspend fun quizRound(n: Int): List<NetworkQuizQuestion> = authed {
+        client.postgrest.rpc("school_quiz_round", buildJsonObject { put("n", n) }).decodeList<NetworkQuizQuestion>()
+    }
+
+    override suspend fun quizAnswer(id: Int, answer: String): NetworkQuizAnswer = authed {
+        client.postgrest.rpc(
+            "school_quiz_answer",
+            buildJsonObject {
+                put("p_id", id)
+                put("p_answer", answer)
+            },
+        ).decodeAs<NetworkQuizAnswer>()
+    }
 
     private suspend fun alertOf(uid: Int): NetworkAlert? = coroutineScope {
         val location = async {

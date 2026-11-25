@@ -3,15 +3,23 @@
 export type Role = 'parent' | 'child';
 export interface Member { user_id: string; role: Role; name: string; goal_title: string; goal_amount: number; avatar: string; theme: string }
 export interface Grade { id: string; child_id: string; subject: string; grade: number; date: string; status: 'pending' | 'approved'; amount: number | null; created_at: string }
-export interface Ledger { id: string; child_id: string; kind: 'bonus' | 'payout'; amount: number; note: string; date: string; created_at: string }
+/** src: 'star' — зірка за поведінку від батьків, 'quiz' — гроші за вікторину (нараховує сервер). Гроші — як звичайний бонус. */
+export interface Ledger { id: string; child_id: string; kind: 'bonus' | 'payout'; amount: number; note: string; date: string; created_at: string; src?: 'star' | 'quiz' | null }
 export interface Challenge { id: string; child_id: string; title: string; subject: string | null; min_grade: number; need: number; reward: number; start_date: string; end_date: string }
 /** created_by ставить сервер; null/немає — старі записи (вважаються дитячими). */
 export interface Homework { id: string; child_id: string; subject: string; due: string; text: string; done: boolean; created_by?: string | null }
 export interface Streak { len: number; min: number; bonus: number }
 export type Rates = Record<number, number>;
+/** Ціни зірки за поведінку й правильної відповіді у вікторині (ключі star_price / quiz_price у school_families.rates). */
+export interface Prices { star: number; quiz: number }
 
 export const DEFAULT_RATES: Rates = { 12: 300, 11: 250, 10: 200, 9: 150, 8: 100, 7: 70, 6: 0, 5: -70, 4: -100, 3: -150, 2: -200, 1: -300 };
 export const DEFAULT_STREAK: Streak = { len: 5, min: 7, bonus: 50 };
+export const DEFAULT_PRICES: Prices = { star: 50, quiz: 20 };
+/** Скільки зірок батьки можуть поставити за день і скільки відповідей вікторини оплачується (те саме — на сервері). */
+export const STARS_PER_DAY = 5;
+export const QUIZ_PAID_PER_DAY = 3;
+export const MAX_PRICE = 1000;
 export const XP_PER_LEVEL = 50;
 
 export interface AutoReward { id: string; date: string; created_at: string; amount: number; note: string; icon: string }
@@ -29,7 +37,7 @@ export const gradeLabel = (g: number): string => (g === PASS ? 'Зар.' : Strin
 /** Сума за оцінку: зафіксована при підтвердженні, інакше — поточний курс. */
 export const gradeValue = (g: Pick<Grade, 'amount' | 'grade'>, rates: Rates): number => g.amount ?? rateOf(g.grade, rates);
 
-export function parseSettings(raw: unknown): { rates: Rates; streak: Streak } {
+export function parseSettings(raw: unknown): { rates: Rates; streak: Streak; prices: Prices } {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   const rates: Rates = { ...DEFAULT_RATES };
   for (const [k, v] of Object.entries(o)) if (/^\d+$/.test(k) && Number.isFinite(Number(v))) rates[Number(k)] = Math.trunc(Number(v));
@@ -41,8 +49,16 @@ export function parseSettings(raw: unknown): { rates: Rates; streak: Streak } {
       min: Math.min(12, Math.max(1, num(o.streak_min, DEFAULT_STREAK.min))),
       bonus: Math.max(0, num(o.streak_bonus, DEFAULT_STREAK.bonus)),
     },
+    prices: {
+      star: Math.min(MAX_PRICE, Math.max(0, Math.trunc(num(o.star_price, DEFAULT_PRICES.star)))),
+      quiz: Math.min(MAX_PRICE, Math.max(0, Math.trunc(num(o.quiz_price, DEFAULT_PRICES.quiz)))),
+    },
   };
 }
+
+/** Зірки за поведінку дитини за день (найновіша — остання). */
+export const starsOn = (ledger: Ledger[], kid: string | null, date: string): Ledger[] =>
+  ledger.filter((l) => l.src === 'star' && l.child_id === kid && l.date === date).sort(byTime);
 
 export const challengeHits = (c: Challenge, approvedSorted: Grade[]): Grade[] =>
   approvedSorted.filter((g) => isScored(g) && g.date >= c.start_date && g.date <= c.end_date && g.grade >= c.min_grade && (!c.subject || g.subject === c.subject));

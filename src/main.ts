@@ -29,10 +29,8 @@ applyAccent(store.get('accent'));
 applyPaper(store.get('paper') ?? 'grid');
 // Ігрові стилі «Арена» й «Блоки» прибрано (21.11.2026) — стираємо збережений вибір.
 store.set('style', null);
-try {
-  const o = JSON.parse(store.get('stars') ?? '{}') as { d?: string; n?: number };
-  if (o.d === iso(new Date())) state.stars = Math.min(10, Number(o.n) || 0);
-} catch { /* ignore */ }
+// Зірочки «собі самому» прибрано (25.11.2026): тепер зірки ставлять батьки, і вони в гаманці.
+store.set('stars', null);
 state.lessonAlerts = store.get('notif') === '1' && typeof Notification !== 'undefined' && Notification.permission === 'granted';
 state.form.date = iso(new Date());
 state.form.hwDate = nextLessonDate(state.form.hwSubject, new Date());

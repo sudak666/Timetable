@@ -41,6 +41,9 @@ data class Grade(
 
 enum class LedgerKind { BONUS, PAYOUT }
 
+/** Звідки бонус: зірка за поведінку від батьків або гроші за вікторину (нараховує сервер); null — звичайний. */
+enum class LedgerSource { STAR, QUIZ }
+
 data class LedgerEntry(
     val id: String,
     val childId: String,
@@ -49,6 +52,7 @@ data class LedgerEntry(
     val note: String,
     val date: LocalDate,
     val createdAt: Instant,
+    val source: LedgerSource? = null,
 )
 
 data class Challenge(
@@ -76,8 +80,17 @@ data class Homework(
 
 data class Streak(val len: Int, val min: Int, val bonus: Int)
 
-/** Курс «оцінка → гривні» та правила серій. */
-data class RewardSettings(val rates: Map<Int, Int>, val streak: Streak)
+/** Ціни зірки за поведінку й правильної відповіді у вікторині (ключі star_price / quiz_price у school_families.rates). */
+data class Prices(val star: Int = 50, val quiz: Int = 20)
+
+/** Курс «оцінка → гривні», правила серій і ціни зірки й вікторини. */
+data class RewardSettings(val rates: Map<Int, Int>, val streak: Streak, val prices: Prices = Prices())
+
+/** Питання вікторини з сервера: правильної відповіді клієнт не знає, варіанти вже перемішані. */
+data class QuizQuestion(val id: Int, val question: String, val options: List<String>)
+
+/** Відповідь сервера: [paid] — скільки нараховано (0 — без грошей), [left] — скільки оплачених відповідей лишилось на сьогодні. */
+data class QuizAnswer(val correct: Boolean, val right: String, val paid: Int, val left: Int)
 
 /** Усе, що бачить сім'я, — локальна копія з Room (працює офлайн). */
 data class FamilyData(

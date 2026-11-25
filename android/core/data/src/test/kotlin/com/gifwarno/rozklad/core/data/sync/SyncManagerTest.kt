@@ -218,5 +218,9 @@ private class ScriptedNetwork : RozkladNetworkDataSource {
 
     override suspend fun alert(uid: Int): NetworkAlert? = unused()
 
+    override suspend fun quizRound(n: Int): List<com.gifwarno.rozklad.core.network.model.NetworkQuizQuestion> = unused()
+
+    override suspend fun quizAnswer(id: Int, answer: String): com.gifwarno.rozklad.core.network.model.NetworkQuizAnswer = unused()
+
     private fun unused(): Nothing = error("Не використовується в тестах черги")
 }

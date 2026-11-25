@@ -5,6 +5,10 @@ import com.gifwarno.rozklad.core.model.AlertStatus
 import com.gifwarno.rozklad.core.model.FamilyData
 import com.gifwarno.rozklad.core.model.Grade
 import com.gifwarno.rozklad.core.model.LedgerKind
+import com.gifwarno.rozklad.core.model.LedgerSource
+import com.gifwarno.rozklad.core.model.Prices
+import com.gifwarno.rozklad.core.model.QuizAnswer
+import com.gifwarno.rozklad.core.model.QuizQuestion
 import com.gifwarno.rozklad.core.model.SchoolSchedule
 import com.gifwarno.rozklad.core.model.Streak
 import com.gifwarno.rozklad.core.model.SyncStatus
@@ -38,7 +42,8 @@ interface FamilyRepository {
 
     suspend fun deleteHomework(familyId: String, homeworkId: String)
 
-    suspend fun addLedger(familyId: String, childId: String, kind: LedgerKind, amount: Int, note: String)
+    /** [source] — зірка за поведінку (лише батьки; сервер не дасть дитині) або null для звичайного запису. */
+    suspend fun addLedger(familyId: String, childId: String, kind: LedgerKind, amount: Int, note: String, source: LedgerSource? = null)
 
     /** Челендж для дитини: [need] оцінок ≥ [minGrade] (з [subject] або будь-якого) за [days] днів → [reward] ₴. */
     suspend fun addChallenge(
@@ -60,8 +65,8 @@ interface FamilyRepository {
     /** Ціль дитини: на що збирає і скільки коштує. */
     suspend fun setGoal(familyId: String, childId: String, title: String, amount: Int)
 
-    /** Курс оцінок і правила серії сім'ї (school_families.rates) — діє для нових підтверджень. */
-    suspend fun saveRates(familyId: String, rates: Map<Int, Int>, streak: Streak)
+    /** Курс оцінок, правила серії й ціни зірки та вікторини (school_families.rates) — діє для нових нарахувань. */
+    suspend fun saveRates(familyId: String, rates: Map<Int, Int>, streak: Streak, prices: Prices)
 
     /** Свій аватар і/або колір (null — не змінювати). Сервер пускає лише свій рядок (або батьків). */
     suspend fun setMyLook(familyId: String, userId: String, avatar: String?, theme: String?)
@@ -96,6 +101,12 @@ interface FamilyRepository {
 
     /** Стан тривоги з push-повідомлення — без мережі. */
     suspend fun applyAlertPush(uid: Int, status: AlertStatus, since: Instant?)
+
+    /** Раунд вікторини з сервера (потрібна мережа): питання без правильних відповідей. */
+    suspend fun quizRound(): Result<List<QuizQuestion>>
+
+    /** Відповідь на питання: перевіряє й оплачує сервер (потрібна мережа). Гроші з'являються в гаманці після оновлення. */
+    suspend fun quizAnswer(familyId: String, id: Int, answer: String): Result<QuizAnswer>
 }
 
 /** Найдовше ім'я чи назва сім'ї — як у вебі (maxlength=40). */

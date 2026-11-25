@@ -1,6 +1,5 @@
 package com.gifwarno.rozklad.feature.today
 
-import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,87 +12,96 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.edit
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gifwarno.rozklad.core.designsystem.component.CardTitle
 import com.gifwarno.rozklad.core.designsystem.component.GameButton
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
-import java.time.LocalDate
+import com.gifwarno.rozklad.core.domain.Rewards
+import com.gifwarno.rozklad.core.ui.Format
 import kotlin.random.Random
-import kotlinx.coroutines.delay
 
-/** Вікторина на перерві: 3 питання, правильна відповідь — зірочка й салют. */
+/** Вікторина з сервера: стан — у [QuizViewModel] (питання й правильні відповіді знає лише сервер). */
 @Composable
-internal fun QuizCard(onCorrect: () -> Unit, modifier: Modifier = Modifier) {
+internal fun QuizRoute(onCorrect: () -> Unit, modifier: Modifier = Modifier, viewModel: QuizViewModel = hiltViewModel()) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val note by viewModel.priceNote.collectAsStateWithLifecycle()
+    // Салют — коли сервер підтвердив правильну відповідь.
+    val q = state as? QuizUiState.Question
+    LaunchedEffect(q?.right, q?.number) { if (q?.right != null && q.picked == q.right) onCorrect() }
+    QuizCard(state, note?.text, viewModel::answer, viewModel::start, modifier)
+}
+
+/** Вікторина на перерві: 3 питання, правильна відповідь — салют і гроші дитині (до 3 на день). */
+@Composable
+internal fun QuizCard(state: QuizUiState, note: String?, onAnswer: (String) -> Unit, onRestart: () -> Unit, modifier: Modifier = Modifier) {
     val c = RozkladTheme.colors
-    var seed by rememberSaveable { mutableLongStateOf(Random.nextLong()) }
-    val round = remember(seed) { quizRound(seed) }
-    var index by rememberSaveable(seed) { mutableIntStateOf(0) }
-    var right by rememberSaveable(seed) { mutableIntStateOf(0) }
-    var picked by rememberSaveable(seed) { mutableStateOf<String?>(null) }
-    LaunchedEffect(picked) {
-        if (picked != null) {
-            delay(NEXT_DELAY_MS)
-            index++
-            picked = null
-        }
-    }
     FunCard("Вікторина", modifier) {
-        if (index >= round.size) {
-            val verdict = when (right) {
-                QUIZ_SIZE -> "🏆 Ідеально!"
-                0 -> "💪 Наступного разу вийде!"
-                else -> "👍 Непогано!"
+        when (state) {
+            QuizUiState.Loading -> Text("Завантажую питання…", style = MaterialTheme.typography.bodyLarge, color = c.muted)
+
+            QuizUiState.Error -> {
+                Text("📡 Вікторина працює з інтернетом — не вдалося завантажити питання", style = MaterialTheme.typography.bodyLarge)
+                GameButton("Спробувати ще раз", onRestart, leading = "🔄")
             }
-            Text("$verdict $right/$QUIZ_SIZE — +$right ⭐", style = MaterialTheme.typography.titleMedium)
-            GameButton("Ще раз", { seed = Random.nextLong() }, leading = "🔄")
-            return@FunCard
-        }
-        val q = round[index]
-        Text("Питання ${index + 1} з ${round.size}", style = MaterialTheme.typography.labelMedium, color = c.muted)
-        Text(q.question, style = MaterialTheme.typography.titleMedium)
-        q.options.chunked(2).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                row.forEach { o ->
-                    val color = when {
-                        picked != null && o == q.right -> c.positive
-                        picked == o -> c.negative
-                        else -> c.soft
-                    }
-                    GameButton(
-                        o,
-                        onClick = {
-                            if (picked == null) {
-                                picked = o
-                                if (o == q.right) {
-                                    right++
-                                    onCorrect()
-                                }
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                        color = color,
-                        contentColor = when (color) {
-                            c.positive -> c.onPositive
-                            c.negative -> c.onNegative
-                            else -> MaterialTheme.colorScheme.onSurface
-                        },
+
+            is QuizUiState.Done -> {
+                val verdict = when (state.correct) {
+                    state.total -> "🏆 Ідеально!"
+                    0 -> "💪 Наступного разу вийде!"
+                    else -> "👍 Непогано!"
+                }
+                val money = if (state.earned > 0) " — +${state.earned}\u00A0₴ у гаманець 💰" else ""
+                Text("$verdict ${state.correct}/${state.total}$money", style = MaterialTheme.typography.titleMedium)
+                note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = c.muted) }
+                GameButton("Ще раз", onRestart, leading = "🔄")
+            }
+
+            is QuizUiState.Question -> {
+                note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = c.muted) }
+                Text("Питання ${state.number} з ${state.total}", style = MaterialTheme.typography.labelMedium, color = c.muted)
+                Text(state.question.question, style = MaterialTheme.typography.titleMedium)
+                if (state.sendFailed) {
+                    Text(
+                        "Немає зв’язку — відповідь не зараховано. Спробуй ще раз 🙏",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = c.negative,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                     )
+                }
+                state.question.options.chunked(2).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        row.forEach { o ->
+                            val color = when {
+                                state.right != null && o == state.right -> c.positive
+                                state.right != null && o == state.picked -> c.negative
+                                else -> c.soft
+                            }
+                            GameButton(
+                                o,
+                                onClick = { onAnswer(o) },
+                                modifier = Modifier.weight(1f),
+                                enabled = state.picked == null,
+                                color = color,
+                                contentColor = when (color) {
+                                    c.positive -> c.onPositive
+                                    c.negative -> c.onNegative
+                                    else -> MaterialTheme.colorScheme.onSurface
+                                },
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -117,28 +125,65 @@ internal fun FactCard(modifier: Modifier = Modifier) {
     }
 }
 
-/** «До вихідних» і зірочки за сьогодні (зберігаються на цьому телефоні, як у вебі — у браузері). */
+/** «До вихідних» і зірки за поведінку: ставлять лише батьки, кожна — гроші в гаманці дитини. */
 @Composable
-internal fun WeekendStarsCard(weekend: String, stars: Int, onStar: () -> Unit, modifier: Modifier = Modifier) {
+internal fun WeekendStarsCard(
+    weekend: String,
+    stars: StarsStrip,
+    onGive: () -> Unit,
+    onTake: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val c = RozkladTheme.colors
     FunCard("До вихідних", modifier) {
         Text(weekend, style = MaterialTheme.typography.bodyLarge)
-        Text("Мої зірочки за сьогодні", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 6.dp))
-        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-            if (stars > 0) {
+        Text("Зірки за поведінку сьогодні", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 6.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (stars.count > 0) {
                 Text(
-                    "⭐".repeat(stars),
-                    fontSize = 22.sp,
-                    modifier = Modifier.weight(1f).semantics { contentDescription = "Зірочок: $stars" },
+                    "⭐".repeat(stars.count) + "  " + Format.money(stars.sum),
+                    fontSize = 20.sp,
+                    modifier = Modifier.weight(1f).semantics { contentDescription = "Зірок: ${stars.count}, ${Format.money(stars.sum)}" },
                 )
             } else {
                 Text(
-                    "Ще жодної — постав собі за добру справу",
+                    if (stars.canGive) {
+                        "Постав ${stars.childName.ifBlank { "дитині" }} зірку за добру справу — +${stars.price}\u00A0₴"
+                    } else {
+                        "Зірки ставлять батьки за добру поведінку — кожна +${stars.price}\u00A0₴"
+                    },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme.colors.muted,
+                    color = c.muted,
                     modifier = Modifier.weight(1f).padding(end = 8.dp),
                 )
             }
-            GameButton("зірка", onStar, enabled = stars < MAX_STARS, leading = "＋")
+        }
+        if (stars.canGive) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                stars.lastId?.let { id ->
+                    GameButton(
+                        "Прибрати",
+                        { onTake(id) },
+                        color = c.soft,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        leading = "−",
+                    )
+                }
+                GameButton(
+                    "+${stars.price}\u00A0₴",
+                    onGive,
+                    modifier = Modifier.weight(1f),
+                    enabled = !stars.full && stars.price > 0,
+                    leading = "⭐",
+                )
+            }
+            if (stars.full) {
+                Text(
+                    "На сьогодні вже ${Rewards.STARS_PER_DAY} зірок — максимум",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = c.muted,
+                )
+            }
         }
     }
 }
@@ -152,25 +197,3 @@ private fun FunCard(title: String, modifier: Modifier = Modifier, content: @Comp
         }
     }
 }
-
-/** Зірочки дня на цьому пристрої: нова дата — знову з нуля. */
-@Composable
-internal fun rememberStars(date: LocalDate): Pair<Int, () -> Unit> {
-    val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences(STARS_PREFS, Context.MODE_PRIVATE) }
-    val today = date.toString()
-    var stars by remember(today) { mutableIntStateOf(if (prefs.getString(KEY_DAY, null) == today) prefs.getInt(KEY_COUNT, 0) else 0) }
-    val add = {
-        stars = (stars + 1).coerceAtMost(MAX_STARS)
-        prefs.edit {
-            putString(KEY_DAY, today)
-            putInt(KEY_COUNT, stars)
-        }
-    }
-    return stars to add
-}
-
-private const val NEXT_DELAY_MS = 900L
-private const val STARS_PREFS = "fun"
-private const val KEY_DAY = "stars_day"
-private const val KEY_COUNT = "stars"
