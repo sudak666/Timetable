@@ -1,6 +1,8 @@
 package com.gifwarno.rozklad
 
+import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Bundle
 import android.view.animation.AccelerateInterpolator
@@ -22,6 +24,7 @@ import com.gifwarno.rozklad.core.model.SessionState
 import com.gifwarno.rozklad.ui.AppActions
 import com.gifwarno.rozklad.ui.RozkladApp
 import dagger.hilt.android.AndroidEntryPoint
+import java.util.Locale
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -29,6 +32,16 @@ class MainActivity : ComponentActivity() {
 
     /** Куди перейти після натискання на сповіщення («#grades», «#hw»). */
     private val deepLink = mutableStateOf<String?>(null)
+
+    /**
+     * Застосунок лише українською (localeFilters = uk), але календар Material, назви місяців і системні підписи
+     * Compose беруть мову з налаштувань телефона: на телефоні з російською мовою календар оцінки був російською
+     * (зауваження 25.11). Тому для екранів застосунку мова — завжди українська.
+     */
+    override fun attachBaseContext(newBase: Context) {
+        val config = Configuration(newBase.resources.configuration).apply { setLocale(UKRAINIAN) }
+        super.attachBaseContext(newBase.createConfigurationContext(config))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
@@ -138,3 +151,5 @@ class MainActivity : ComponentActivity() {
         const val SPLASH_EXIT_SCALE = 1.35f
     }
 }
+
+private val UKRAINIAN: Locale = Locale.forLanguageTag("uk-UA")

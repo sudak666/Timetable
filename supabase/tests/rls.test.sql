@@ -251,6 +251,63 @@ select is((select count(*)::int from school_ledger where family_id = :'fam_a'), 
 with u as (delete from school_ledger where family_id = :'fam_a' returning 1)
   select is(count(*)::int, 0, 'чужі батьки не видаляють записи гаманця') from u;
 
+-- ───────────────────────────── зірки за поведінку й вікторина ─────────────────────────────
+
+:as_c1
+select throws_like(format($$ insert into public.school_ledger (family_id, child_id, kind, amount, src) values (%L, %L, 'bonus', 50, 'star') $$, :'fam_a', :'c1'),
+  '%row-level security%', 'дитина не ставить собі зірку');
+:as_p1
+select lives_ok(format($$ insert into public.school_ledger (family_id, child_id, kind, amount, note, src) values (%L, %L, 'bonus', 50, '⭐ За поведінку', 'star') $$, :'fam_a', :'c1'),
+  'батьки ставлять зірку за поведінку');
+select throws_like(format($$ insert into public.school_ledger (family_id, child_id, kind, amount, src) values (%L, %L, 'bonus', 20, 'quiz') $$, :'fam_a', :'c1'),
+  '%row-level security%', 'гроші за вікторину не нарахувати вручну');
+:as_admin
+select throws_like(format($$ insert into public.school_ledger (family_id, child_id, kind, amount, src) values (%L, %L, 'bonus', 20, 'інше') $$, :'fam_a', :'c1'),
+  '%school_ledger_src_check%', 'невідоме джерело запису — ні');
+
+:as_c1
+select throws_like($$ select count(*) from public.school_quiz $$, '%permission denied%', 'правильних відповідей дитина не бачить');
+select throws_like($$ select count(*) from public.school_quiz_answers $$, '%permission denied%', 'журнал відповідей напряму недоступний');
+select is((select count(*)::int from public.school_quiz_round(3)), 3, 'раунд — 3 питання');
+select is((select count(*)::int from public.school_quiz_round(3) r where cardinality(r.options) = 4), 3, 'у кожного питання 4 варіанти');
+-- 1: «7 × 8» → 56; 2: «Столиця Австралії» → Канберра; 3–5 — далі за банком.
+select is((public.school_quiz_answer(1::smallint, '56') ->> 'paid')::int, 20, 'правильна відповідь — +20 ₴ (ціна за замовчуванням)');
+select is((public.school_quiz_answer(1::smallint, '56') ->> 'paid')::int, 0, 'повторна відповідь на те саме питання — без грошей');
+select is((public.school_quiz_answer(2::smallint, 'Сідней') ->> 'correct')::boolean, false, 'неправильну відповідь сервер помічає');
+select is(public.school_quiz_answer(2::smallint, 'Сідней') ->> 'right', 'Канберра', 'і показує правильну');
+select is((public.school_quiz_answer(2::smallint, 'Канберра') ->> 'paid')::int, 0, 'після помилки правильна відповідь уже не оплачується');
+select is((public.school_quiz_answer(3::smallint, 'Тарас Шевченко') ->> 'paid')::int, 20, 'друга оплачена відповідь');
+select is((public.school_quiz_answer(4::smallint, 'Юпітер') ->> 'left')::int, 0, 'третя оплачена — ліміт вичерпано');
+select is((public.school_quiz_answer(5::smallint, 'вода') ->> 'paid')::int, 0, 'понад 3 на день — без грошей');
+select is((select coalesce(sum(amount), 0)::int from public.school_ledger where child_id = :'c1' and src = 'quiz'), 60, 'у гаманці рівно 3 × 20 ₴ за вікторину');
+select throws_like($$ select public.school_quiz_answer(999::smallint, 'x') $$, '%unknown question%', 'неіснуюче питання — помилка');
+
+:as_p1
+select is((public.school_quiz_answer(6::smallint, 'went') ->> 'paid')::int, 0, 'батьки грають без грошей');
+:as_x
+select is((public.school_quiz_answer(6::smallint, 'went') ->> 'paid')::int, 0, 'без сім''ї — без грошей');
+:as_anon
+select throws_like($$ select public.school_quiz_round(3) $$, '%permission denied%', 'анонім не грає');
+select throws_like($$ select public.school_quiz_answer(1::smallint, '56') $$, '%permission denied%', 'анонім не відповідає');
+
+:as_admin
+update public.school_families set rates = rates || '{"quiz_price": 35}'::jsonb where id = :'fam_a';
+delete from public.school_quiz_answers where user_id = :'c1';
+:as_c1
+select is((public.school_quiz_answer(7::smallint, '90') ->> 'paid')::int, 35, 'ціну вікторини задають батьки в курсі');
+:as_admin
+update public.school_families set rates = rates || '{"quiz_price": "багато"}'::jsonb where id = :'fam_a';
+:as_c1
+select is((public.school_quiz_answer(8::smallint, 'Дніпро') ->> 'paid')::int, 20, 'зіпсована ціна — за замовчуванням 20 ₴');
+:as_admin
+update public.school_families set rates = rates - 'quiz_price' where id = :'fam_a';
+insert into public.school_quiz_answers (user_id, day, quiz_id, correct) values (:'c1', current_date - 3, 9, true);
+:as_c1
+select lives_ok($$ select public.school_quiz_answer(10::smallint, 'Леся Українка') $$, 'відповідь дитини');
+:as_admin
+select is((select count(*)::int from public.school_quiz_answers where user_id = :'c1' and day < (now() at time zone 'Europe/Kyiv')::date), 0,
+  'старі записи вікторини стираються');
+
 -- ───────────────────────────── челенджі ─────────────────────────────
 
 :as_c1

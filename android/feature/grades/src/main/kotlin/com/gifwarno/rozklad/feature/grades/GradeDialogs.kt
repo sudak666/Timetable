@@ -29,10 +29,12 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,6 +46,7 @@ import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.domain.Rewards
 import com.gifwarno.rozklad.core.domain.Timetable
 import com.gifwarno.rozklad.core.model.Grade
+import com.gifwarno.rozklad.core.ui.Format
 import com.gifwarno.rozklad.core.ui.gradeColor
 import java.time.Instant
 import java.time.LocalDate
@@ -51,10 +54,15 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
-/** Предмет → дата → натиснув оцінку = збережено. Три дотики, як у вебі. */
+/** Предмет → дата → натиснув оцінку = збережено. Три дотики, як у вебі. Під цифрою — скільки дає оцінка за курсом [rates]. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun AddGradeSheet(today: LocalDate, onDismiss: () -> Unit, onAdd: (String, Int, LocalDate) -> Unit) {
+internal fun AddGradeSheet(
+    today: LocalDate,
+    onDismiss: () -> Unit,
+    onAdd: (String, Int, LocalDate) -> Unit,
+    rates: Map<Int, Int> = Rewards.DEFAULT_RATES,
+) {
     var subject by rememberSaveable { mutableStateOf(Timetable.SUBJECTS.first().name) }
     var daysAgo by rememberSaveable { mutableLongStateOf(0L) }
     var picking by rememberSaveable { mutableStateOf(false) }
@@ -120,14 +128,29 @@ internal fun AddGradeSheet(today: LocalDate, onDismiss: () -> Unit, onAdd: (Stri
                             onClick = { onAdd(subject, v, today.minusDays(daysAgo)) },
                             onClickLabel = "Поставити ${Rewards.gradeLabel(v)}",
                         ) {
-                            Text(
-                                Rewards.gradeLabel(v),
-                                Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                                fontFamily = Nunito,
-                                fontSize = if (v == Grade.PASS) 15.sp else 22.sp,
-                                textAlign = TextAlign.Center,
-                                maxLines = 1,
-                            )
+                            Column(
+                                Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Text(
+                                    Rewards.gradeLabel(v),
+                                    fontFamily = Nunito,
+                                    fontSize = if (v == Grade.PASS) 15.sp else 22.sp,
+                                    lineHeight = 24.sp,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                )
+                                // Скільки дає оцінка — видно одразу (побажання дитини 25.11).
+                                Text(
+                                    Format.money(Rewards.rateOf(v, rates)),
+                                    fontSize = 11.sp,
+                                    lineHeight = 13.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                )
+                            }
                         }
                     }
                     // Неповний останній рядок — порожні клітинки, щоб плитки мали однакову ширину.

@@ -5,9 +5,11 @@ import { ACTIVITIES, BELLS, RANGES, SUBJECTS, WEEK, bellEnd, bellStart, isSubjec
 import { afterSchool, clubBag, dueReminder } from '../lib/clubs';
 import { emo, emojiSrc } from '../lib/emoji';
 import { addDays, clockOf, fmtDate, fmtDay, hms, holidayOf, iso, leftText, lessonsOn, mondayOf, nextSchoolDate, statusAt } from '../lib/time';
+import { STARS_PER_DAY, starsOn } from '../features/rewards';
 import { set, state, store } from '../state';
 import { boom } from '../ui/confetti';
-import { alert } from '../ui/dialog';
+import { alert, confirm } from '../ui/dialog';
+import { toast } from '../ui/toast';
 
 const subjColor = (s: string) => (isSubject(s) ? SUBJECTS[s].color : '#4b5563');
 const subjEmoji = (s: string) => (isSubject(s) ? SUBJECTS[s].emoji : '');
@@ -90,11 +92,39 @@ function weekendText(): TemplateResult {
 
 const FACTS = ['Восьминіг має три серця і блакитну кров 🐙', 'Мед ніколи не псується — його знаходили в єгипетських пірамідах 🍯', 'Равлик може спати до 3 років 🐌', 'У космосі сльози не падають — збираються кулькою біля ока 🚀', 'Банани — це ягоди, а полуниця — ні 🍌', 'Серце кита розміром з автомобіль 🐋', 'Блискавка гарячіша за поверхню Сонця ⚡', 'Мураха може підняти вагу в 10–50 разів більшу за себе 🐜', 'Жирафи сплять лише 30 хвилин на добу 🦒', 'На Венері день довший за рік 🪐', 'Коти сплять близько 16 годин на день 🐱', 'Дельфіни дають одне одному імена 🐬', 'Метелики відчувають смак ногами 🦋', 'В Україні понад 70 000 річок 🌊'];
 
-export function addStar(x?: number, y?: number): void {
-  const n = Math.min(10, state.stars + 1);
-  store.set('stars', JSON.stringify({ d: iso(new Date()), n }));
-  set({ stars: n });
-  boom(x, y, 30);
+/** Зірка за поведінку: ставлять лише батьки; це бонус у гаманці (src = 'star'), сервер не дасть дитині поставити собі. */
+async function giveStar(e: MouseEvent): Promise<void> {
+  const kid = state.kid, fam = state.family, price = state.prices.star;
+  if (!kid || !fam || state.role !== 'parent') return;
+  const { x, y } = { x: e.clientX, y: e.clientY };
+  // api.ts — окремим шматком (див. main.ts): головна сторінка розкладу не вантажить код сервера.
+  const { errText, loadFamily, sb } = await import('../api');
+  const { error } = await sb.from('school_ledger').insert({ family_id: fam.id, child_id: kid, kind: 'bonus', amount: price, note: '⭐ За поведінку', date: iso(new Date()), src: 'star' });
+  if (error) return void toast(errText(error), 'err');
+  boom(x, y, 40);
+  void loadFamily();
+}
+
+/** Прибрати останню сьогоднішню зірку (якщо поставили помилково). */
+async function takeStar(id: string): Promise<void> {
+  if (!(await confirm('Прибрати останню зірку? Гроші за неї теж зникнуть.'))) return;
+  const { errText, loadFamily, sb } = await import('../api');
+  const { error } = await sb.from('school_ledger').delete().eq('id', id);
+  if (error) return void toast(errText(error), 'err');
+  void loadFamily();
+}
+
+function starsCard(): TemplateResult {
+  const today = iso(new Date()), stars = starsOn(state.ledger, state.kid, today), par = state.role === 'parent';
+  const sum = stars.reduce((t, l) => t + l.amount, 0), price = state.prices.star, last = stars[stars.length - 1];
+  const kidName = state.members.find((m) => m.user_id === state.kid)?.name ?? 'дитині';
+  return html`<h2 class="h4" style="margin-top:12px">Зірки за поведінку сьогодні</h2>
+    <div class="row"><span class="stars" aria-label=${`Зірок: ${stars.length}`}>${stars.length
+      ? html`${emo('⭐'.repeat(stars.length))} <b class="pos">+${sum} ₴</b>`
+      : html`<small class="muted">${par ? `Постав ${kidName} зірку за добру справу — +${price} ₴` : `Зірки ставлять батьки за добру поведінку — кожна +${price} ₴`}</small>`}</span>
+      ${par && state.kid ? html`<span class="acts2">${last ? html`<button type="button" class="x" aria-label="Прибрати останню зірку" @click=${() => void takeStar(last.id)}>−</button>` : nothing}
+        <button type="button" ?disabled=${stars.length >= STARS_PER_DAY || !price} @click=${(e: MouseEvent) => void giveStar(e)}>${emo('⭐')} +${price} ₴</button></span>` : nothing}</div>
+    ${par && stars.length >= STARS_PER_DAY ? html`<small class="muted">На сьогодні вже ${STARS_PER_DAY} зірок — максимум</small>` : nothing}`;
 }
 
 export function funCards(quiz: TemplateResult): TemplateResult {
@@ -104,9 +134,7 @@ export function funCards(quiz: TemplateResult): TemplateResult {
       <p aria-live="polite">${emo(FACTS[state.factIdx % FACTS.length]!)}</p>
       <div class="row"><span></span><button type="button" @click=${() => set({ factIdx: state.factIdx + 1 })}>Ще факт</button></div></section>
     <section class="side" aria-labelledby="wk-h"><h2 class="h4" id="wk-h">До вихідних</h2><p>${weekendText()}</p>
-      <h2 class="h4" style="margin-top:12px">Мої зірочки за сьогодні</h2>
-      <div class="row"><span class="stars" aria-label=${`Зірочок: ${state.stars}`}>${state.stars ? emo('⭐'.repeat(state.stars)) : html`<small class="muted">Ще жодної — постав собі за добру справу</small>`}</span>
-        <button type="button" @click=${(e: MouseEvent) => addStar(e.clientX, e.clientY)}>+ зірка</button></div></section>
+      ${state.family ? starsCard() : nothing}</section>
   </div>`;
 }
 

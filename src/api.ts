@@ -97,7 +97,7 @@ export async function loadFamily(): Promise<void> {
     sb.from('school_members').select('user_id,role,name,goal_title,goal_amount,avatar,theme').eq('family_id', fid),
     // Оцінки й журнал — усі, без обрізання: з них рахується баланс «до виплати».
     fetchAll((a, b) => sb.from('school_grades').select('id,child_id,subject,grade,date,status,amount,created_at').eq('family_id', fid).order('date', { ascending: false }).order('id').range(a, b)),
-    fetchAll((a, b) => sb.from('school_ledger').select('id,child_id,kind,amount,note,date,created_at').eq('family_id', fid).order('date', { ascending: false }).order('id').range(a, b)),
+    fetchAll((a, b) => sb.from('school_ledger').select('id,child_id,kind,amount,note,date,created_at,src').eq('family_id', fid).order('date', { ascending: false }).order('id').range(a, b)),
     fetchAll((a, b) => sb.from('school_challenges').select('id,child_id,title,subject,min_grade,need,reward,start_date,end_date').eq('family_id', fid).order('id').range(a, b)),
     fetchAll((a, b) => sb.from('school_homework').select('id,child_id,subject,due,text,done,created_by').eq('family_id', fid).order('due').order('id').range(a, b)),
     sb.from('school_timetables').select('child_id,bells,week,holidays,activities,updated_at').eq('family_id', fid),
@@ -145,12 +145,13 @@ const writeQueue = (q: Op[]) => { if (state.me) store.set(OUTBOX + state.me.id, 
 function applySnapshot(x: Snapshot, stale: boolean): void {
   server = { grades: x.grades, homework: x.homework };
   const q = readQueue(), o = overlay(q, x.grades, x.homework);
-  const { rates, streak } = parseSettings(x.rates);
+  const { rates, streak, prices } = parseSettings(x.rates);
   set((s) => {
     s.family = x.family;
     s.role = x.role;
     s.rates = rates;
     s.streak = streak;
+    s.prices = prices;
     s.members = x.members;
     s.grades = o.grades;
     s.ledger = x.ledger;

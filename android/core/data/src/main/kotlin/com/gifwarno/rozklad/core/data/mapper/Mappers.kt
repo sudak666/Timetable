@@ -23,6 +23,7 @@ import com.gifwarno.rozklad.core.model.Holiday
 import com.gifwarno.rozklad.core.model.Homework
 import com.gifwarno.rozklad.core.model.LedgerEntry
 import com.gifwarno.rozklad.core.model.LedgerKind
+import com.gifwarno.rozklad.core.model.LedgerSource
 import com.gifwarno.rozklad.core.model.Lesson
 import com.gifwarno.rozklad.core.model.Member
 import com.gifwarno.rozklad.core.model.RewardSettings
@@ -115,7 +116,7 @@ internal fun NetworkGrade.asEntity(familyId: String) =
 internal fun NetworkHomework.asEntity(familyId: String) = HomeworkEntity(id, familyId, childId, subject, due, text, done, createdBy)
 
 internal fun NetworkLedger.asEntity(familyId: String) =
-    LedgerEntity(id, familyId, childId, kind, amount, note.orEmpty(), date, parseInstant(createdAt).toEpochMilli())
+    LedgerEntity(id, familyId, childId, kind, amount, note.orEmpty(), date, parseInstant(createdAt).toEpochMilli(), src)
 
 internal fun NetworkChallenge.asEntity(familyId: String) =
     ChallengeEntity(id, familyId, childId, title, subject, minGrade, need, reward, startDate, endDate)
@@ -153,6 +154,11 @@ internal fun LedgerEntity.asModel() = LedgerEntry(
     note = note,
     date = LocalDate.parse(date),
     createdAt = Instant.ofEpochMilli(createdAt),
+    source = when (src) {
+        "star" -> LedgerSource.STAR
+        "quiz" -> LedgerSource.QUIZ
+        else -> null
+    },
 )
 
 internal fun ChallengeEntity.asModel() =

@@ -142,6 +142,13 @@ fun TodayRoute(
                     weekend = s.weekend,
                     onOpenPlayer = onOpenPlayer,
                     onCelebrate = { burst++ },
+                    stars = s.stars,
+                    onGiveStar = {
+                        viewModel.giveStar()
+                        burst++
+                    },
+                    onTakeStar = viewModel::takeStar,
+                    quiz = { onCorrect -> QuizRoute(onCorrect) },
                 )
                 ConfettiBurst(burst, Modifier.matchParentSize())
             }
@@ -162,8 +169,12 @@ internal fun TodayScreen(
     onCelebrate: () -> Unit = {},
     week: WeekSchedule? = null,
     weekend: String = "",
+    stars: StarsStrip = StarsStrip(),
+    onGiveStar: () -> Unit = {},
+    onTakeStar: (String) -> Unit = {},
+    /** Вікторина — окремим слотом: їй потрібна мережа й своя ViewModel (у прев'ю її немає). */
+    quiz: @Composable (onCorrect: () -> Unit) -> Unit = {},
 ) {
-    val (stars, addStar) = rememberStars(date)
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp).withChrome(),
@@ -198,14 +209,9 @@ internal fun TodayScreen(
             item(key = "fun-title") {
                 TitleText("На перерві", GameTitleStyle.copy(fontSize = 20.sp, lineHeight = 26.sp))
             }
-            item(key = "quiz") {
-                QuizCard(onCorrect = {
-                    addStar()
-                    onCelebrate()
-                })
-            }
+            item(key = "quiz") { quiz(onCelebrate) }
             item(key = "fact") { FactCard() }
-            item(key = "weekend") { WeekendStarsCard(weekend, stars, onStar = addStar) }
+            item(key = "weekend") { WeekendStarsCard(weekend, stars, onGive = onGiveStar, onTake = onTakeStar) }
         }
         if (week != null && week.days.isNotEmpty()) {
             item(key = "week-title") {

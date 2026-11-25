@@ -155,8 +155,18 @@ class FakeFamilyRepository(initial: FamilyData?) : FamilyRepository {
 
     val ledgerAdded = mutableListOf<Triple<LedgerKind, Int, String>>()
 
-    override suspend fun addLedger(familyId: String, childId: String, kind: LedgerKind, amount: Int, note: String) {
+    val ledgerSources = mutableListOf<com.gifwarno.rozklad.core.model.LedgerSource?>()
+
+    override suspend fun addLedger(
+        familyId: String,
+        childId: String,
+        kind: LedgerKind,
+        amount: Int,
+        note: String,
+        source: com.gifwarno.rozklad.core.model.LedgerSource?,
+    ) {
         ledgerAdded += Triple(kind, amount, note)
+        ledgerSources += source
     }
 
     val challengesAdded = mutableListOf<String>()
@@ -185,8 +195,16 @@ class FakeFamilyRepository(initial: FamilyData?) : FamilyRepository {
         goal = title to amount
     }
 
-    override suspend fun saveRates(familyId: String, rates: Map<Int, Int>, streak: com.gifwarno.rozklad.core.model.Streak) {
+    var savedPrices: com.gifwarno.rozklad.core.model.Prices? = null
+
+    override suspend fun saveRates(
+        familyId: String,
+        rates: Map<Int, Int>,
+        streak: com.gifwarno.rozklad.core.model.Streak,
+        prices: com.gifwarno.rozklad.core.model.Prices,
+    ) {
         savedRates = rates to streak
+        savedPrices = prices
     }
 
     override suspend fun setMyName(familyId: String, userId: String, name: String) {
@@ -256,5 +274,20 @@ class FakeFamilyRepository(initial: FamilyData?) : FamilyRepository {
     override suspend fun applyAlertPush(uid: Int, status: AlertStatus, since: Instant?) = data.update { d ->
         val a = d?.airAlert
         if (a == null || a.regionUid != uid) d else d.copy(airAlert = a.copy(status = status, since = since))
+    }
+
+    /** Раунд вікторини й відповіді «сервера»: id → правильна відповідь; [quizPaid] — скільки платить за правильну. */
+    var quizResult: Result<List<com.gifwarno.rozklad.core.model.QuizQuestion>>? = null
+    var quizRight: Map<Int, String> = emptyMap()
+    var quizPaid = 20
+    val quizAnswers = mutableListOf<Pair<Int, String>>()
+
+    override suspend fun quizRound() = quizResult ?: Result.success(emptyList())
+
+    override suspend fun quizAnswer(familyId: String, id: Int, answer: String): Result<com.gifwarno.rozklad.core.model.QuizAnswer> {
+        quizAnswers += id to answer
+        val right = quizRight[id] ?: return Result.failure(IllegalStateException("unknown question"))
+        val ok = answer == right
+        return Result.success(com.gifwarno.rozklad.core.model.QuizAnswer(ok, right, if (ok) quizPaid else 0, 2))
     }
 }

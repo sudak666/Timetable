@@ -5,6 +5,8 @@ import com.gifwarno.rozklad.core.model.Grade
 import com.gifwarno.rozklad.core.model.GradeStatus
 import com.gifwarno.rozklad.core.model.LedgerEntry
 import com.gifwarno.rozklad.core.model.LedgerKind
+import com.gifwarno.rozklad.core.model.LedgerSource
+import com.gifwarno.rozklad.core.model.Prices
 import com.gifwarno.rozklad.core.model.RewardSettings
 import com.gifwarno.rozklad.core.model.Streak
 import java.time.Instant
@@ -21,6 +23,13 @@ object Rewards {
     )
     val DEFAULT_STREAK = Streak(len = 5, min = 7, bonus = 50)
     const val XP_PER_LEVEL = 50
+
+    val DEFAULT_PRICES = Prices(star = 50, quiz = 20)
+
+    /** Скільки зірок батьки ставлять за день і скільки відповідей вікторини оплачується (те саме — на сервері). */
+    const val STARS_PER_DAY = 5
+    const val QUIZ_PAID_PER_DAY = 3
+    const val MAX_PRICE = 1000
 
     /** «Зараховано» платиться як 7, але не входить у середній бал, XP, серії та челенджі. */
     const val PASS_AS = 7
@@ -45,10 +54,18 @@ object Rewards {
                 min = num("streak_min", DEFAULT_STREAK.min).coerceIn(1, 12),
                 bonus = maxOf(0, num("streak_bonus", DEFAULT_STREAK.bonus)),
             ),
+            prices = Prices(
+                star = num("star_price", DEFAULT_PRICES.star).coerceIn(0, MAX_PRICE),
+                quiz = num("quiz_price", DEFAULT_PRICES.quiz).coerceIn(0, MAX_PRICE),
+            ),
         )
     }
 
-    val DEFAULT_SETTINGS = RewardSettings(DEFAULT_RATES, DEFAULT_STREAK)
+    /** Зірки за поведінку дитини за день (найновіша — остання). */
+    fun starsOn(ledger: List<LedgerEntry>, childId: String?, date: LocalDate): List<LedgerEntry> =
+        ledger.filter { it.source == LedgerSource.STAR && it.childId == childId && it.date == date }.sortedBy { it.createdAt }
+
+    val DEFAULT_SETTINGS = RewardSettings(DEFAULT_RATES, DEFAULT_STREAK, DEFAULT_PRICES)
 
     fun isScored(g: Grade): Boolean = g.value != Grade.PASS
 

@@ -4,8 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gifwarno.rozklad.core.common.ticks
 import com.gifwarno.rozklad.core.data.repository.ActiveFamily
+import com.gifwarno.rozklad.core.data.repository.FamilyRepository
+import com.gifwarno.rozklad.core.domain.Rewards
 import com.gifwarno.rozklad.core.domain.SchoolCalendar
 import com.gifwarno.rozklad.core.model.FamilyContext
+import com.gifwarno.rozklad.core.model.LedgerKind
+import com.gifwarno.rozklad.core.model.LedgerSource
 import com.gifwarno.rozklad.core.model.Member
 import com.gifwarno.rozklad.core.model.SchoolSchedule
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,6 +22,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
@@ -45,11 +51,32 @@ sealed interface TodayScreenState {
         val week: WeekSchedule? = null,
         /** Текст «до вихідних» (оновлюється разом із таймером). */
         val weekend: String = "",
+        /** Зірки за поведінку вибраної дитини сьогодні. */
+        val stars: StarsStrip = StarsStrip(),
     ) : TodayScreenState
 }
 
+/**
+ * Зірки за поведінку за сьогодні: ставлять лише батьки ([canGive]), кожна — бонус [price] ₴ у гаманці.
+ * [lastId] — остання сьогоднішня зірка (батьки можуть прибрати помилкову).
+ */
+data class StarsStrip(
+    val count: Int = 0,
+    val sum: Int = 0,
+    val price: Int = 0,
+    val canGive: Boolean = false,
+    val childName: String = "",
+    val lastId: String? = null,
+) {
+    val full: Boolean get() = count >= Rewards.STARS_PER_DAY
+}
+
 @HiltViewModel
-class TodayViewModel @Inject constructor(private val active: ActiveFamily, private val clock: Clock) : ViewModel() {
+class TodayViewModel @Inject constructor(
+    private val active: ActiveFamily,
+    private val families: FamilyRepository,
+    private val clock: Clock,
+) : ViewModel() {
     /** Тікає щосекунди лише поки екран видимий (WhileSubscribed) — батарея не страждає. */
     private val ticks = clock.ticks().shareIn(viewModelScope, SharingStarted.WhileSubscribed(), replay = 1)
 
@@ -67,7 +94,8 @@ class TodayViewModel @Inject constructor(private val active: ActiveFamily, priva
     private sealed interface Daily {
         data class Done(val state: TodayScreenState) : Daily
 
-        class Parts(val ctx: FamilyContext, val child: Member, val alertSince: LocalDateTime?, val day: DayParts?) : Daily
+        class Parts(val ctx: FamilyContext, val child: Member, val alertSince: LocalDateTime?, val day: DayParts?, val stars: StarsStrip) :
+            Daily
     }
 
     private class DayParts(
@@ -92,7 +120,7 @@ class TodayViewModel @Inject constructor(private val active: ActiveFamily, priva
                 week = buildWeek(schedule, date),
             )
         }
-        return Daily.Parts(ctx, child, alertSince, day)
+        return Daily.Parts(ctx, child, alertSince, day, buildStars(ctx, child, date))
     }
 
     private fun build(d: Daily, now: LocalDateTime): TodayScreenState {
@@ -113,6 +141,7 @@ class TodayViewModel @Inject constructor(private val active: ActiveFamily, priva
                 quests = day.quests,
                 week = day.week,
                 weekend = weekendText(now, day.cal, day.schedule.week.getOrNull(FRIDAY_INDEX)?.size ?: 0),
+                stars = d.stars,
             )
         }
     }
@@ -121,9 +150,46 @@ class TodayViewModel @Inject constructor(private val active: ActiveFamily, priva
         viewModelScope.launch { active.selectChild(id) }
     }
 
+    /** Зірка за поведінку вибраній дитині — лише батьки, не більше [Rewards.STARS_PER_DAY] за день. */
+    fun giveStar() {
+        viewModelScope.launch {
+            val ctx = active.context.filterNotNull().first()
+            val child = ctx.child ?: return@launch
+            val price = ctx.data.settings.prices.star
+            val today = LocalDate.now(clock)
+            if (!ctx.isParent || price <= 0 ||
+                Rewards.starsOn(ctx.data.ledger, child.userId, today).size >= Rewards.STARS_PER_DAY
+            ) {
+                return@launch
+            }
+            families.addLedger(ctx.familyId, child.userId, LedgerKind.BONUS, price, STAR_NOTE, LedgerSource.STAR)
+        }
+    }
+
+    /** Прибрати помилкову зірку (лише батьки — так дозволяє сервер). */
+    fun takeStar(id: String) {
+        viewModelScope.launch {
+            val ctx = active.context.filterNotNull().first()
+            if (ctx.isParent) families.deleteLedger(ctx.familyId, id)
+        }
+    }
+
+    private fun buildStars(ctx: FamilyContext, child: Member, date: LocalDate): StarsStrip {
+        val stars = Rewards.starsOn(ctx.data.ledger, child.userId, date)
+        return StarsStrip(
+            count = stars.size,
+            sum = stars.sumOf { it.amount },
+            price = ctx.data.settings.prices.star,
+            canGive = ctx.isParent,
+            childName = child.name,
+            lastId = stars.lastOrNull()?.id,
+        )
+    }
+
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L
         const val FRIDAY_INDEX = 4
+        const val STAR_NOTE = "⭐ За поведінку"
 
         fun alertLocal(since: java.time.Instant, zone: ZoneId): LocalDateTime = LocalDateTime.ofInstant(since, zone)
     }

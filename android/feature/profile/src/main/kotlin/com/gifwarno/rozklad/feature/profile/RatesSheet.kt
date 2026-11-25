@@ -25,19 +25,22 @@ import com.gifwarno.rozklad.core.designsystem.component.ButtonShape
 import com.gifwarno.rozklad.core.designsystem.component.GameButton
 import com.gifwarno.rozklad.core.designsystem.component.GradeTile
 import com.gifwarno.rozklad.core.designsystem.component.rememberFullSheetState
+import com.gifwarno.rozklad.core.domain.Rewards
+import com.gifwarno.rozklad.core.model.Prices
 import com.gifwarno.rozklad.core.model.RewardSettings
 import com.gifwarno.rozklad.core.model.Streak
 import com.gifwarno.rozklad.core.ui.gradeColor
 
-/** Курс за оцінки 12…1 (можна мінус — штраф) і правила серії; зберігається для всієї сім'ї. */
+/** Курс за оцінки 12…1 (можна мінус — штраф), правила серії й ціни зірки та вікторини; зберігається для всієї сім'ї. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun RatesSheet(settings: RewardSettings, onDismiss: () -> Unit, onSave: (Map<Int, Int>, Streak) -> Unit) {
+internal fun RatesSheet(settings: RewardSettings, onDismiss: () -> Unit, onSave: (Map<Int, Int>, Streak, Prices) -> Unit) {
     // Текстові поля: дозволяємо тимчасово порожнє чи «-» під час набору.
     val rates = remember { mutableStateListOf(*GRADES.map { (settings.rates[it] ?: 0).toString() }.toTypedArray()) }
     val streak = remember {
         mutableStateListOf(settings.streak.len.toString(), settings.streak.min.toString(), settings.streak.bonus.toString())
     }
+    val prices = remember { mutableStateListOf(settings.prices.star.toString(), settings.prices.quiz.toString()) }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberFullSheetState(),
@@ -69,6 +72,17 @@ internal fun RatesSheet(settings: RewardSettings, onDismiss: () -> Unit, onSave:
                 MoneyField(streak[1], { streak[1] = it }, "Від балу", Modifier.weight(1f), allowMinus = false)
                 MoneyField(streak[2], { streak[2] = it }, "Бонус, ₴", Modifier.weight(1f), allowMinus = false)
             }
+            Text("Зірки й вікторина", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+            Text(
+                "Зірку за поведінку ставлять батьки (до ${Rewards.STARS_PER_DAY} на день). " +
+                    "За вікторину сервер платить дитині за правильні відповіді (до ${Rewards.QUIZ_PAID_PER_DAY} на день).",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MoneyField(prices[0], { prices[0] = it }, "⭐ Зірка, ₴", Modifier.weight(1f), allowMinus = false)
+                MoneyField(prices[1], { prices[1] = it }, "🧠 Відповідь, ₴", Modifier.weight(1f), allowMinus = false)
+            }
             GameButton(
                 "Зберегти курс",
                 onClick = {
@@ -79,7 +93,11 @@ internal fun RatesSheet(settings: RewardSettings, onDismiss: () -> Unit, onSave:
                         min = (streak[1].toIntOrNull() ?: DEFAULT_MIN).coerceIn(1, MAX_GRADE),
                         bonus = (streak[2].toIntOrNull() ?: 0).coerceAtLeast(0),
                     )
-                    onSave(r, st)
+                    val pr = Prices(
+                        star = (prices[0].toIntOrNull() ?: settings.prices.star).coerceIn(0, Rewards.MAX_PRICE),
+                        quiz = (prices[1].toIntOrNull() ?: settings.prices.quiz).coerceIn(0, Rewards.MAX_PRICE),
+                    )
+                    onSave(r, st, pr)
                 },
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 color = androidx.compose.ui.graphics.Color(0xFF00A383),

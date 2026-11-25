@@ -27,12 +27,10 @@ test('вкладка дня показує лише цей день', async ({ p
   await expect(page.locator('.day')).toContainText('ЗБД');
 });
 
-test('вікторина нараховує зірку за правильну відповідь', async ({ page }) => {
+test('вікторина без входу пропонує увійти (питання й відповіді — лише на сервері)', async ({ page }) => {
   await page.goto('/');
-  const answers = page.locator('.quiz .ans button');
-  await expect(answers).toHaveCount(4);
-  await answers.first().click();
-  await expect(answers.first()).toBeDisabled();
+  await expect(page.locator('.quiz')).toContainText('Увійди');
+  await expect(page.locator('.quiz .ans button')).toHaveCount(0);
 });
 
 test('модальне вікно на <dialog> закривається Esc і повертає фокус', async ({ page }) => {

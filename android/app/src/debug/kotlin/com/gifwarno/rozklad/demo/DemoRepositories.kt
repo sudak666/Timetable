@@ -14,6 +14,10 @@ import com.gifwarno.rozklad.core.model.GradeStatus
 import com.gifwarno.rozklad.core.model.Homework
 import com.gifwarno.rozklad.core.model.LedgerEntry
 import com.gifwarno.rozklad.core.model.LedgerKind
+import com.gifwarno.rozklad.core.model.LedgerSource
+import com.gifwarno.rozklad.core.model.Prices
+import com.gifwarno.rozklad.core.model.QuizAnswer
+import com.gifwarno.rozklad.core.model.QuizQuestion
 import com.gifwarno.rozklad.core.model.RewardSettings
 import com.gifwarno.rozklad.core.model.SchoolSchedule
 import com.gifwarno.rozklad.core.model.SessionState
@@ -115,9 +119,10 @@ internal class DemoFamilyRepository(initial: FamilyData, private val clock: Cloc
         )
     }
 
-    override suspend fun addLedger(familyId: String, childId: String, kind: LedgerKind, amount: Int, note: String) = edit { d ->
-        d.copy(ledger = d.ledger + LedgerEntry(id(), childId, kind, amount, note.trim(), today(), clock.instant()))
-    }
+    override suspend fun addLedger(familyId: String, childId: String, kind: LedgerKind, amount: Int, note: String, source: LedgerSource?) =
+        edit { d ->
+            d.copy(ledger = d.ledger + LedgerEntry(id(), childId, kind, amount, note.trim(), today(), clock.instant(), source))
+        }
 
     override suspend fun addChallenge(
         familyId: String,
@@ -163,8 +168,8 @@ internal class DemoFamilyRepository(initial: FamilyData, private val clock: Cloc
         )
     }
 
-    override suspend fun saveRates(familyId: String, rates: Map<Int, Int>, streak: Streak) = edit { d ->
-        d.copy(settings = RewardSettings(rates, streak))
+    override suspend fun saveRates(familyId: String, rates: Map<Int, Int>, streak: Streak, prices: Prices) = edit { d ->
+        d.copy(settings = RewardSettings(rates, streak, prices))
     }
 
     override suspend fun setMyLook(familyId: String, userId: String, avatar: String?, theme: String?) = edit { d ->
@@ -224,5 +229,31 @@ internal class DemoFamilyRepository(initial: FamilyData, private val clock: Cloc
     override suspend fun applyAlertPush(uid: Int, status: AlertStatus, since: Instant?) = edit { d ->
         val a = d.airAlert
         if (a == null || a.regionUid != uid) d else d.copy(airAlert = a.copy(status = status, since = since))
+    }
+
+    // Демо (лише debug-збірка): кілька питань локально, гроші — як на сервері, до 3 на день.
+    private val demoQuiz = listOf(
+        Triple(1, "Скільки буде 7 × 8?", listOf("56", "54", "64", "48")),
+        Triple(2, "Столиця Австралії?", listOf("Канберра", "Сідней", "Мельбурн", "Перт")),
+        Triple(3, "Яка планета найбільша?", listOf("Юпітер", "Сатурн", "Земля", "Нептун")),
+        Triple(4, "Найвища гора України?", listOf("Говерла", "Піп Іван", "Петрос", "Бребенескул")),
+        Triple(5, "Past Simple від «go»?", listOf("went", "goed", "gone", "goes")),
+    )
+    private var demoPaidToday = 0
+
+    override suspend fun quizRound(): Result<List<QuizQuestion>> =
+        Result.success(demoQuiz.shuffled().take(3).map { (id, q, a) -> QuizQuestion(id, q, a.shuffled()) })
+
+    override suspend fun quizAnswer(familyId: String, id: Int, answer: String): Result<QuizAnswer> {
+        val (_, q, a) = demoQuiz.first { it.first == id }
+        val ok = answer == a.first()
+        val child = data.value.members.firstOrNull { it.role == com.gifwarno.rozklad.core.model.Role.CHILD }
+        val price = data.value.settings.prices.quiz
+        val paid = if (ok && demoPaidToday < 3 && child != null && price > 0) price else 0
+        if (paid > 0) {
+            demoPaidToday++
+            addLedger(familyId, child!!.userId, LedgerKind.BONUS, paid, "🧠 Вікторина: $q", LedgerSource.QUIZ)
+        }
+        return Result.success(QuizAnswer(ok, a.first(), paid, 3 - demoPaidToday))
     }
 }

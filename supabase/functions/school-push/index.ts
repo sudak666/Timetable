@@ -3,6 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { FcmAuth, fcmAlertMessage, parseServiceAccount, sendFcm, sendFcmMessage, type Push } from "./fcm.ts";
 import { ALERTS_URL, alertText, parseStatuses, transitions, type AlertEvent, type AlertLocation, type AlertState } from "./alerts.ts";
 import { bagFor, eveningMessage, type TimetableJson } from "./bag.ts";
+import { ledgerPush } from "./ledger.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 let cfg: Record<string, string> | null = null;
@@ -172,7 +173,8 @@ Deno.serve(async (req) => {
   } else if (table === "school_grades" && type === "UPDATE" && o?.status === "pending" && r.status === "approved") {
     await send([r.child_id], `✅ ${r.subject}: ${r.grade === 0 ? "Зар." : r.grade} підтверджено`, `Нараховано ${uah(r.amount ?? 0)}`, "g" + r.id);
   } else if (table === "school_ledger" && type === "INSERT") {
-    await send([r.child_id], r.kind === "payout" ? `💸 Виплачено ${r.amount} ₴` : r.amount >= 0 ? `🎁 Бонус ${uah(r.amount)}` : `⚠️ Штраф ${r.amount} ₴`, r.note || "", "l" + r.id);
+    const m = ledgerPush(r);
+    if (m) await send([r.child_id], m.title, m.body, "l" + r.id);
   } else if (table === "school_challenges" && type === "INSERT") {
     await send([r.child_id], `🏅 Новий челендж: +${r.reward} ₴`, r.title, "c" + r.id);
   } else if (table === "school_members" && type === "INSERT") {

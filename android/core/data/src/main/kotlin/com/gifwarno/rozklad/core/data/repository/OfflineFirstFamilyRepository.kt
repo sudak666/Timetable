@@ -21,6 +21,10 @@ import com.gifwarno.rozklad.core.model.AlertStatus
 import com.gifwarno.rozklad.core.model.FamilyData
 import com.gifwarno.rozklad.core.model.Grade
 import com.gifwarno.rozklad.core.model.LedgerKind
+import com.gifwarno.rozklad.core.model.LedgerSource
+import com.gifwarno.rozklad.core.model.Prices
+import com.gifwarno.rozklad.core.model.QuizAnswer
+import com.gifwarno.rozklad.core.model.QuizQuestion
 import com.gifwarno.rozklad.core.model.SchoolSchedule
 import com.gifwarno.rozklad.core.model.Streak
 import com.gifwarno.rozklad.core.model.SyncStatus
@@ -178,7 +182,7 @@ internal class OfflineFirstFamilyRepository @Inject constructor(
     override suspend fun deleteHomework(familyId: String, homeworkId: String) =
         submit(familyId, NetworkWrite(Tables.HOMEWORK, WriteKind.DELETE, homeworkId, JsonObject(emptyMap())))
 
-    override suspend fun addLedger(familyId: String, childId: String, kind: LedgerKind, amount: Int, note: String) {
+    override suspend fun addLedger(familyId: String, childId: String, kind: LedgerKind, amount: Int, note: String, source: LedgerSource?) {
         val dto = NetworkLedger(
             id = UUID.randomUUID().toString(),
             childId = childId,
@@ -187,6 +191,12 @@ internal class OfflineFirstFamilyRepository @Inject constructor(
             note = note.trim(),
             date = LocalDate.now(clock).toString(),
             createdAt = clock.instant().toString(),
+            src = when (source) {
+                LedgerSource.STAR -> "star"
+
+                // Гроші за вікторину нараховує лише сервер (school_quiz_answer); RLS не пустить їх звідси.
+                LedgerSource.QUIZ, null -> null
+            },
         )
         val body = withFamily(json.encodeToJsonElement(NetworkLedger.serializer(), dto).jsonObject, familyId)
         submit(familyId, NetworkWrite(Tables.LEDGER, WriteKind.INSERT, dto.id, body))
@@ -233,13 +243,15 @@ internal class OfflineFirstFamilyRepository @Inject constructor(
         submit(familyId, NetworkWrite(Tables.MEMBERS, WriteKind.UPDATE, childId, body))
     }
 
-    override suspend fun saveRates(familyId: String, rates: Map<Int, Int>, streak: Streak) {
+    override suspend fun saveRates(familyId: String, rates: Map<Int, Int>, streak: Streak, prices: Prices) {
         // Формат — як у вебі: «1».. «12» → гривні, streak_* — серія.
         val value = buildJsonObject {
             rates.toSortedMap().forEach { (g, v) -> put(g.toString(), v) }
             put("streak_len", streak.len)
             put("streak_min", streak.min)
             put("streak_bonus", streak.bonus)
+            put("star_price", prices.star)
+            put("quiz_price", prices.quiz)
         }
         submit(familyId, NetworkWrite(Tables.FAMILIES, WriteKind.UPDATE, familyId, buildJsonObject { put("rates", value) }))
     }
@@ -294,6 +306,17 @@ internal class OfflineFirstFamilyRepository @Inject constructor(
 
     override fun dismissSyncError() = sync.clearError()
 
+    override suspend fun quizRound(): Result<List<QuizQuestion>> = withContext(io) {
+        runNetwork { network.quizRound(QUIZ_SIZE).map { QuizQuestion(it.id, it.q, it.options) } }
+    }
+
+    override suspend fun quizAnswer(familyId: String, id: Int, answer: String): Result<QuizAnswer> = withContext(io) {
+        runNetwork {
+            val a = network.quizAnswer(id, answer)
+            QuizAnswer(a.correct, a.right, a.paid, a.left)
+        }.onSuccess { if (it.paid > 0) refresh(familyId) }
+    }
+
     override suspend fun alertLocations(oblastUid: Int?): Result<List<AlertLocation>> = withContext(io) {
         runNetwork { network.alertLocations(oblastUid).map { it.asModel() } }
     }
@@ -334,3 +357,6 @@ internal val AlertStatus.code: String
 
 /** Довжина назви цілі — як у вебі. */
 private const val GOAL_TITLE_MAX = 80
+
+/** Питань у раунді вікторини — як у вебі. */
+private const val QUIZ_SIZE = 3

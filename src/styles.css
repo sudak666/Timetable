@@ -115,6 +115,8 @@ button.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,var
 @media(max-width:520px){.gbtn{grid-template-columns:repeat(6,1fr)}}
 .gbtn button{padding:10px 0;font-weight:900;border:0;color:#fff;transition:transform .15s}
 .gbtn button:hover{transform:scale(1.1)}
+/* Скільки дає оцінка — видно одразу на кнопці (побажання дитини 25.11). */
+.gbtn .gm{display:block;font-size:10px;font-weight:800;white-space:nowrap;line-height:1.1;margin-top:2px}
 .gl{max-height:300px;overflow:auto;margin-top:10px}
 .gi{display:grid;grid-template-columns:42px 1fr auto auto;gap:10px;align-items:center;padding:8px;border-radius:10px}
 .gi+.gi{border-top:1px dashed var(--line)}

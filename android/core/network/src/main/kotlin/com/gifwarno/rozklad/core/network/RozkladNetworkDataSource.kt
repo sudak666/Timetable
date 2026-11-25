@@ -4,6 +4,8 @@ import com.gifwarno.rozklad.core.network.model.NetworkAlert
 import com.gifwarno.rozklad.core.network.model.NetworkAlertLocation
 import com.gifwarno.rozklad.core.network.model.NetworkAuthState
 import com.gifwarno.rozklad.core.network.model.NetworkMembership
+import com.gifwarno.rozklad.core.network.model.NetworkQuizAnswer
+import com.gifwarno.rozklad.core.network.model.NetworkQuizQuestion
 import com.gifwarno.rozklad.core.network.model.NetworkSnapshot
 import com.gifwarno.rozklad.core.network.model.NetworkWrite
 import com.gifwarno.rozklad.core.network.model.WriteResult
@@ -81,6 +83,12 @@ interface RozkladNetworkDataSource {
 
     /** Місце і поточний стан тривоги — легкий запит для оновлення плашки. */
     suspend fun alert(uid: Int): NetworkAlert?
+
+    /** [n] питань вікторини, на які сьогодні ще не відповідали (RPC school_quiz_round). */
+    suspend fun quizRound(n: Int): List<NetworkQuizQuestion>
+
+    /** Відповідь перевіряє й оплачує сервер (RPC school_quiz_answer). */
+    suspend fun quizAnswer(id: Int, answer: String): NetworkQuizAnswer
 }
 
 /** Хост адреси повернення після входу через Google: <пакет застосунку>://login-callback. */

@@ -84,11 +84,4 @@ class TodayPlayerTest {
         assertEquals("5 днів 2 год", leftText(5, 2))
         assertEquals("менше години", leftText(0, 0))
     }
-
-    @Test
-    fun `вікторина — три різні питання, правильна відповідь серед варіантів`() {
-        val r = quizRound(42)
-        assertEquals(3, r.map { it.question }.distinct().size)
-        assertTrue(r.all { it.right in it.options && it.options.size == 4 })
-    }
 }

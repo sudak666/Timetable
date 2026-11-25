@@ -74,6 +74,24 @@ class DatabaseTest {
     }
 
     @Test
+    fun `міграція 6 → 7 зберігає гаманець і додає порожнє джерело (не зірка й не вікторина)`() {
+        helper.createDatabase(6).use {
+            it.execSQL(
+                "INSERT INTO ledger (id, familyId, childId, kind, amount, note, date, createdAt) " +
+                    "VALUES ('l1', 'f1', 'k1', 'bonus', 100, 'Молодець', '2026-11-24', 0)",
+            )
+        }
+        helper.runMigrationsAndValidate(7).use { migrated ->
+            migrated.prepare("SELECT amount, note, src FROM ledger WHERE id = 'l1'").use { s ->
+                assertEquals(true, s.step())
+                assertEquals(100L, s.getLong(0))
+                assertEquals("Молодець", s.getText(1))
+                assertEquals(true, s.isNull(2))
+            }
+        }
+    }
+
+    @Test
     fun `нова версія розкладу витісняє попередню з черги, інші зміни лишаються`() = runTest {
         val outbox = db.outboxDao()
         outbox.enqueue(op("school_timetables", "UPSERT", "k1", """{"v":1}"""))

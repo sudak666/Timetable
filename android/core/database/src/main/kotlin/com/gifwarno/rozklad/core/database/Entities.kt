@@ -66,6 +66,8 @@ data class LedgerEntity(
     val note: String,
     val date: String,
     val createdAt: Long,
+    /** 'star' — зірка за поведінку, 'quiz' — вікторина, null — звичайний запис. */
+    val src: String? = null,
 )
 
 @Entity(tableName = "challenges", indices = [Index("familyId", "childId")])

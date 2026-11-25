@@ -12,6 +12,7 @@ import com.gifwarno.rozklad.core.domain.Trophies
 import com.gifwarno.rozklad.core.model.FamilyContext
 import com.gifwarno.rozklad.core.model.Member
 import com.gifwarno.rozklad.core.model.Paper
+import com.gifwarno.rozklad.core.model.Prices
 import com.gifwarno.rozklad.core.model.RewardSettings
 import com.gifwarno.rozklad.core.model.Role
 import com.gifwarno.rozklad.core.model.Streak
@@ -224,11 +225,11 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    /** Курс і серія — лише батьки (так само обмежує сервер). */
-    fun saveRates(rates: Map<Int, Int>, streak: Streak) {
+    /** Курс, серія й ціни зірки та вікторини — лише батьки (так само обмежує сервер). */
+    fun saveRates(rates: Map<Int, Int>, streak: Streak, prices: Prices) {
         viewModelScope.launch {
             val ctx = active.context.filterNotNull().first()
-            if (ctx.isParent) families.saveRates(ctx.familyId, rates, streak)
+            if (ctx.isParent) families.saveRates(ctx.familyId, rates, streak, prices)
         }
     }
 
