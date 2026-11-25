@@ -1,6 +1,5 @@
 import { html, nothing, type TemplateResult } from 'lit-html';
 import { classMap } from 'lit-html/directives/class-map.js';
-import { live } from 'lit-html/directives/live.js';
 import { styleMap } from 'lit-html/directives/style-map.js';
 import { alertLocations, deleteAccount, enter, errText, loadFamily, mutate, sb, setAlertRegion, signOut } from '../api';
 import { DELETE_CONFIRM_WORD, deletionWarnings, isDeleteConfirmed } from '../features/account';
@@ -362,11 +361,13 @@ function parentTools(d: D, part: 'money' | 'settings'): TemplateResult | typeof 
     if (await run(sb.from('school_families').update({ rates: r }).eq('id', state.family!.id))) toast('Збережено ✓ Новий курс діє для нових підтверджень.');
   };
   const copy = (t: string) => navigator.clipboard?.writeText(t).then(() => toast('Скопійовано: ' + t), () => toast('Не вдалося скопіювати', 'err'));
+  // Без live(): сторінка перемальовується щосекунди (годинник), і live() повертав у поле збережене значення —
+  // введений курс скидався, поки батьки друкували. Звичайна прив'язка оновлює поле лише коли змінився сам курс.
   if (part === 'settings') return html`<section class="side card" aria-labelledby="set-h"><h2 class="h4" id="set-h">Курс оцінок і запрошення</h2>
-      <div class="rgrid">${Array.from({ length: 12 }, (_, i) => 12 - i).map((g) => html`<label><span class="n" style=${styleMap({ background: gradeColor(g) })}>${g}</span><span class="sr-only">Оцінка ${g}, гривень</span><input type="number" data-rate=${g} .value=${live(String(state.rates[g] ?? 0))}></label>`)}</div>
-      <div class="srow">${emo('🔥')} Серія: кожні <input type="number" id="stLen" min="2" max="30" aria-label="Кількість оцінок" .value=${live(String(state.streak.len))}> оцінок поспіль ≥ <input type="number" id="stMin" min="1" max="12" aria-label="Мінімальна оцінка" .value=${live(String(state.streak.min))}> дають бонус <input type="number" id="stBon" min="0" class="w84" aria-label="Бонус у гривнях" .value=${live(String(state.streak.bonus))}> ₴</div>
-      <div class="srow">${emo('⭐')} Зірка за поведінку <input type="number" id="prStar" min="0" max=${MAX_PRICE} class="w84" aria-label="Зірка за поведінку, гривень" .value=${live(String(state.prices.star))}> ₴ (до ${STARS_PER_DAY} на день)</div>
-      <div class="srow">${emo('🧠')} Правильна відповідь у вікторині <input type="number" id="prQuiz" min="0" max=${MAX_PRICE} class="w84" aria-label="Правильна відповідь у вікторині, гривень" .value=${live(String(state.prices.quiz))}> ₴ (до ${QUIZ_PAID_PER_DAY} на день)</div>
+      <div class="rgrid">${Array.from({ length: 12 }, (_, i) => 12 - i).map((g) => html`<label><span class="n" style=${styleMap({ background: gradeColor(g) })}>${g}</span><span class="sr-only">Оцінка ${g}, гривень</span><input type="number" data-rate=${g} .value=${String(state.rates[g] ?? 0)}></label>`)}</div>
+      <div class="srow">${emo('🔥')} Серія: кожні <input type="number" id="stLen" min="2" max="30" aria-label="Кількість оцінок" .value=${String(state.streak.len)}> оцінок поспіль ≥ <input type="number" id="stMin" min="1" max="12" aria-label="Мінімальна оцінка" .value=${String(state.streak.min)}> дають бонус <input type="number" id="stBon" min="0" class="w84" aria-label="Бонус у гривнях" .value=${String(state.streak.bonus)}> ₴</div>
+      <div class="srow">${emo('⭐')} Зірка за поведінку <input type="number" id="prStar" min="0" max=${MAX_PRICE} class="w84" aria-label="Зірка за поведінку, гривень" .value=${String(state.prices.star)}> ₴ (до ${STARS_PER_DAY} на день)</div>
+      <div class="srow">${emo('🧠')} Правильна відповідь у вікторині <input type="number" id="prQuiz" min="0" max=${MAX_PRICE} class="w84" aria-label="Правильна відповідь у вікторині, гривень" .value=${String(state.prices.quiz)}> ₴ (до ${QUIZ_PAID_PER_DAY} на день)</div>
       <button type="button" @click=${saveRates}>Зберегти курс</button>
       <p class="gap">Код для дитини: <button type="button" class="code" title="Скопіювати" @click=${() => copy(state.family!.invite_code)}>${state.family!.invite_code}</button>
         · для другого з батьків: <button type="button" class="code" title="Скопіювати" @click=${() => copy(state.parentCode)}>${state.parentCode}</button></p>

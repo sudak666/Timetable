@@ -156,12 +156,19 @@ test('дитина зірку собі не ставить — лише бачи
 test('батьки бачать і змінюють ціну зірки й вікторини в курсі', async ({ page }) => {
   await mockFamily(page, 'parent');
   await page.goto('/#me');
+  // Чекаємо, поки завантажаться дані сім'ї (код для батьків приходить останнім) — інакше вони перезапишуть поле.
+  await expect(page.getByRole('button', { name: 'PARENT01' })).toBeVisible();
   await expect(page.getByLabel('Зірка за поведінку, гривень')).toHaveValue('50');
   await expect(page.getByLabel('Правильна відповідь у вікторині, гривень')).toHaveValue('20');
   await page.getByLabel('Зірка за поведінку, гривень').fill('30');
+  await page.getByLabel('Оцінка 12, гривень').fill('333');
+  // Сторінка перемальовується щосекунди (годинник) — введене не повинно скидатися, поки батьки друкують.
+  await page.waitForTimeout(1500);
+  await expect(page.getByLabel('Оцінка 12, гривень')).toHaveValue('333');
+  await expect(page.getByLabel('Зірка за поведінку, гривень')).toHaveValue('30');
   const patch = page.waitForRequest((r) => r.url().includes('/school_families') && r.method() === 'PATCH');
   await page.getByRole('button', { name: 'Зберегти курс' }).click();
-  expect((await patch).postDataJSON()).toMatchObject({ rates: { star_price: 30, quiz_price: 20, 12: 300 } });
+  expect((await patch).postDataJSON()).toMatchObject({ rates: { star_price: 30, quiz_price: 20, 12: 333, 11: 250 } });
 });
 
 test('на кнопках оцінок видно, скільки вони дають', async ({ page }) => {

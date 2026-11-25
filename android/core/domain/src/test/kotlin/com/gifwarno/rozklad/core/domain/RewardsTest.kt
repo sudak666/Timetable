@@ -151,7 +151,7 @@ class RewardsTest {
     }
 
     @Test
-    fun `зірки за день — лише цієї дитини, найновіша остання; у гаманці це бонус`() {
+    fun `зірки за день — лише цієї дитини, найновіша остання, у гаманці це бонус`() {
         fun l(id: String, child: String, date: String, src: LedgerSource?, t: String = "10:00") =
             LedgerEntry(id, child, LedgerKind.BONUS, 50, "", LocalDate.parse(date), Instant.parse("${date}T$t:00Z"), src)
         val ledger = listOf(
