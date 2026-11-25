@@ -189,7 +189,7 @@ internal fun GradesScreen(
     if (showAdd && today != null) {
         AddGradeSheet(
             today = today,
-            rates = (state as GradesUiState.Ready).rates,
+            rates = state.rates,
             onDismiss = { showAdd = false },
             onAdd = { subject, value, date ->
                 onAddGrade(subject, value, date)
