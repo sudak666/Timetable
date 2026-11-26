@@ -18,6 +18,7 @@ import com.gifwarno.rozklad.core.model.LedgerSource
 import com.gifwarno.rozklad.core.model.Prices
 import com.gifwarno.rozklad.core.model.QuizAnswer
 import com.gifwarno.rozklad.core.model.QuizQuestion
+import com.gifwarno.rozklad.core.model.QuizTodayEntry
 import com.gifwarno.rozklad.core.model.RewardSettings
 import com.gifwarno.rozklad.core.model.SchoolSchedule
 import com.gifwarno.rozklad.core.model.SessionState
@@ -241,6 +242,14 @@ internal class DemoFamilyRepository(initial: FamilyData, private val clock: Cloc
     )
     private var demoPaidToday = 0
 
+    /** Відповіді дитини сьогодні (бачать батьки): у демо одразу дві, щоб картку було видно. */
+    private val demoAnswers = mutableListOf(
+        QuizTodayEntry("Скільки буде 7 × 8?", "56", "56", correct = true, paid = 20),
+        QuizTodayEntry("Столиця Австралії?", "Сідней", "Канберра", correct = false, paid = 0),
+    )
+
+    override suspend fun quizToday(childId: String): Result<List<QuizTodayEntry>> = Result.success(demoAnswers.toList())
+
     override suspend fun quizRound(): Result<List<QuizQuestion>> =
         Result.success(demoQuiz.shuffled().take(3).map { (id, q, a) -> QuizQuestion(id, q, a.shuffled()) })
 
@@ -254,6 +263,7 @@ internal class DemoFamilyRepository(initial: FamilyData, private val clock: Cloc
             demoPaidToday++
             addLedger(familyId, child!!.userId, LedgerKind.BONUS, paid, "🧠 Вікторина: $q", LedgerSource.QUIZ)
         }
+        if (demoAnswers.none { it.question == q }) demoAnswers += QuizTodayEntry(q, answer, a.first(), ok, paid)
         return Result.success(QuizAnswer(ok, a.first(), paid, 3 - demoPaidToday))
     }
 }

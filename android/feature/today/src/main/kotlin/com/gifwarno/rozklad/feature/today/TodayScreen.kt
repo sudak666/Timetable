@@ -148,7 +148,7 @@ fun TodayRoute(
                         burst++
                     },
                     onTakeStar = viewModel::takeStar,
-                    quiz = { onCorrect -> QuizRoute(onCorrect) },
+                    quiz = { onCorrect -> QuizSlot(onCorrect) },
                 )
                 ConfettiBurst(burst, Modifier.matchParentSize())
             }

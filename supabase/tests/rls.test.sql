@@ -281,6 +281,23 @@ select is((public.school_quiz_answer(4::smallint, 'Юпітер') ->> 'left')::i
 select is((public.school_quiz_answer(5::smallint, 'вода') ->> 'paid')::int, 0, 'понад 3 на день — без грошей');
 select is((select coalesce(sum(amount), 0)::int from public.school_ledger where child_id = :'c1' and src = 'quiz'), 60, 'у гаманці рівно 3 × 20 ₴ за вікторину');
 select throws_like($$ select public.school_quiz_answer(999::smallint, 'x') $$, '%unknown question%', 'неіснуюче питання — помилка');
+select throws_like(format($$ select * from public.school_quiz_today(%L) $$, :'c1'), '%forbidden%', 'дитина не відкриває «відповіді для батьків»');
+
+-- Батьки бачать сьогоднішні відповіді своєї дитини (по одній на питання, з першою відповіддю).
+:as_p1
+select is((select count(*)::int from public.school_quiz_today(:'c1')), 5, 'батьки бачать 5 сьогоднішніх відповідей дитини');
+select is((select answer || ' / ' || right_answer || ' / ' || correct::text from public.school_quiz_today(:'c1') where quiz_id = 2),
+  'Сідней / Канберра / false', 'видно, що обрала дитина, і правильну відповідь');
+select is((select sum(paid)::int from public.school_quiz_today(:'c1')), 60, 'і скільки за вікторину зароблено');
+:as_q
+select is((select count(*)::int from public.school_quiz_today(:'c1')), 5, 'другі батьки теж бачать');
+:as_p2
+select throws_like(format($$ select * from public.school_quiz_today(%L) $$, :'c1'), '%forbidden%', 'чужі батьки — ні');
+select throws_like(format($$ select * from public.school_quiz_today(%L) $$, :'p1'), '%forbidden%', 'відповіді батьків — не для інших батьків');
+:as_anon
+select throws_like(format($$ select * from public.school_quiz_today(%L) $$, :'c1'), '%permission denied%', 'анонім — ні');
+:as_admin
+select has_trigger('public', 'school_quiz_answers', 'school_quiz_answers_push', 'після відповіді — сповіщення батькам');
 
 :as_p1
 select is((public.school_quiz_answer(6::smallint, 'went') ->> 'paid')::int, 0, 'батьки грають без грошей');

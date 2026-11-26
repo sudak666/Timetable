@@ -1,5 +1,6 @@
 package com.gifwarno.rozklad.feature.today
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -29,23 +31,122 @@ import com.gifwarno.rozklad.core.designsystem.component.GameButton
 import com.gifwarno.rozklad.core.designsystem.component.GameSurface
 import com.gifwarno.rozklad.core.designsystem.theme.RozkladTheme
 import com.gifwarno.rozklad.core.domain.Rewards
+import com.gifwarno.rozklad.core.model.QuizTodayEntry
 import com.gifwarno.rozklad.core.ui.Format
 import kotlin.random.Random
 
+/**
+ * Слот «Вікторина» на головній: дитині — гра, батькам — як дитина сьогодні відповідала ([ParentQuizViewModel]);
+ * пограти самим батьки можуть кнопкою «Пограти самому».
+ */
+@Composable
+internal fun QuizSlot(onCorrect: () -> Unit, modifier: Modifier = Modifier, viewModel: ParentQuizViewModel = hiltViewModel()) {
+    val parent by viewModel.state.collectAsStateWithLifecycle()
+    var selfPlay by rememberSaveable { mutableStateOf(false) }
+    when {
+        parent == ParentQuizUiState.NotParent -> QuizRoute(onCorrect, modifier)
+        selfPlay -> QuizRoute(onCorrect, modifier, onBack = { selfPlay = false })
+        else -> ParentQuizCard(parent, onRefresh = viewModel::refresh, onPlay = { selfPlay = true }, modifier = modifier)
+    }
+}
+
 /** Вікторина з сервера: стан — у [QuizViewModel] (питання й правильні відповіді знає лише сервер). */
 @Composable
-internal fun QuizRoute(onCorrect: () -> Unit, modifier: Modifier = Modifier, viewModel: QuizViewModel = hiltViewModel()) {
+internal fun QuizRoute(
+    onCorrect: () -> Unit,
+    modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null,
+    viewModel: QuizViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val note by viewModel.priceNote.collectAsStateWithLifecycle()
     // Салют — коли сервер підтвердив правильну відповідь.
     val q = state as? QuizUiState.Question
     LaunchedEffect(q?.right, q?.number) { if (q?.right != null && q.picked == q.right) onCorrect() }
-    QuizCard(state, note?.text, viewModel::answer, viewModel::start, modifier)
+    QuizCard(state, note?.text, viewModel::answer, viewModel::start, modifier, onBack)
+}
+
+/** Батькам: сьогоднішні відповіді дитини — підсумок і кожне питання (✅/❌, що обрала, правильна, гроші). */
+@Composable
+internal fun ParentQuizCard(state: ParentQuizUiState, onRefresh: () -> Unit, onPlay: () -> Unit, modifier: Modifier = Modifier) {
+    val c = RozkladTheme.colors
+    FunCard("Вікторина", modifier) {
+        val live = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+        when (state) {
+            ParentQuizUiState.NotParent, ParentQuizUiState.Loading ->
+                Text("Завантажую…", style = MaterialTheme.typography.bodyLarge, color = c.muted, modifier = live)
+
+            is ParentQuizUiState.Error ->
+                Text(
+                    "📡 ${state.childName}: не вдалося завантажити відповіді — потрібен інтернет",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = live,
+                )
+
+            is ParentQuizUiState.Ready -> if (state.entries.isEmpty()) {
+                Text(
+                    "🧠 ${state.childName}: сьогодні відповідей у вікторині ще немає. Після кожних 3 відповідей надійде сповіщення.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = live,
+                )
+            } else {
+                Text(state.summary, style = MaterialTheme.typography.titleMedium, modifier = live)
+                state.entries.forEach { e -> QuizEntryRow(e) }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            GameButton(
+                "Пограти самому",
+                onPlay,
+                modifier = Modifier.weight(1f),
+                color = c.soft,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                leading = "🎮",
+            )
+            GameButton(
+                if (state is ParentQuizUiState.Error) "Ще раз" else "Оновити",
+                onRefresh,
+                modifier = Modifier.weight(1f),
+                leading = "🔄",
+                enabled = state != ParentQuizUiState.Loading,
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuizEntryRow(e: QuizTodayEntry) {
+    val c = RozkladTheme.colors
+    val details = buildString {
+        append(e.answer ?: "—")
+        if (!e.correct) append(" · правильно: ${e.right}")
+        if (e.paid > 0) append(" · ${Format.money(e.paid)}")
+    }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(c.soft, RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .semantics(mergeDescendants = true) {
+                contentDescription = (if (e.correct) "Правильно. " else "Неправильно. ") + e.question + ". Відповідь: " + details
+            },
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text((if (e.correct) "✅ " else "❌ ") + e.question, style = MaterialTheme.typography.titleSmall)
+        Text(details, style = MaterialTheme.typography.bodyMedium, color = if (e.correct) c.positive else c.negative)
+    }
 }
 
 /** Вікторина на перерві: 3 питання, правильна відповідь — салют і гроші дитині (до 3 на день). */
 @Composable
-internal fun QuizCard(state: QuizUiState, note: String?, onAnswer: (String) -> Unit, onRestart: () -> Unit, modifier: Modifier = Modifier) {
+internal fun QuizCard(
+    state: QuizUiState,
+    note: String?,
+    onAnswer: (String) -> Unit,
+    onRestart: () -> Unit,
+    modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null,
+) {
     val c = RozkladTheme.colors
     FunCard("Вікторина", modifier) {
         when (state) {
@@ -104,6 +205,9 @@ internal fun QuizCard(state: QuizUiState, note: String?, onAnswer: (String) -> U
                     }
                 }
             }
+        }
+        onBack?.let {
+            GameButton("Відповіді дитини", it, color = c.soft, contentColor = MaterialTheme.colorScheme.onSurface, leading = "👀")
         }
     }
 }

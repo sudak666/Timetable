@@ -17,6 +17,7 @@ import com.gifwarno.rozklad.core.network.model.NetworkMember
 import com.gifwarno.rozklad.core.network.model.NetworkMembership
 import com.gifwarno.rozklad.core.network.model.NetworkQuizAnswer
 import com.gifwarno.rozklad.core.network.model.NetworkQuizQuestion
+import com.gifwarno.rozklad.core.network.model.NetworkQuizToday
 import com.gifwarno.rozklad.core.network.model.NetworkSnapshot
 import com.gifwarno.rozklad.core.network.model.NetworkTimetable
 import com.gifwarno.rozklad.core.network.model.NetworkUser
@@ -343,6 +344,10 @@ internal class SupabaseNetworkDataSource @Inject constructor(private val client:
                 put("p_answer", answer)
             },
         ).decodeAs<NetworkQuizAnswer>()
+    }
+
+    override suspend fun quizToday(childId: String): List<NetworkQuizToday> = authed {
+        client.postgrest.rpc("school_quiz_today", buildJsonObject { put("p_child", childId) }).decodeList<NetworkQuizToday>()
     }
 
     private suspend fun alertOf(uid: Int): NetworkAlert? = coroutineScope {

@@ -4,6 +4,7 @@ import { FcmAuth, fcmAlertMessage, parseServiceAccount, sendFcm, sendFcmMessage,
 import { ALERTS_URL, alertText, parseStatuses, transitions, type AlertEvent, type AlertLocation, type AlertState } from "./alerts.ts";
 import { bagFor, eveningMessage, type TimetableJson } from "./bag.ts";
 import { ledgerPush } from "./ledger.ts";
+import { quizParentPush } from "./quiz.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 let cfg: Record<string, string> | null = null;
@@ -152,6 +153,20 @@ async function notifyAlert(e: AlertEvent, status: string) {
   }));
 }
 
+/**
+ * Дитина відповіла у вікторині — батькам раз на раунд (3, 6, 9… відповідей за день) підсумок дня.
+ * Один tag на дитину й день: нове сповіщення замінює попереднє, а не множиться. Батьки, що грають самі, — без сповіщень.
+ */
+async function notifyQuiz(uid: string, day: string, at: string) {
+  const { data: kid } = await sb.from("school_members").select("family_id,name").eq("user_id", uid).eq("role", "child")
+    .order("family_id").limit(1).maybeSingle();
+  if (!kid) return;
+  // Лише відповіді до цієї включно: дві швидкі відповіді не дадуть двох однакових сповіщень.
+  const { data: today } = await sb.from("school_quiz_answers").select("correct,paid").eq("user_id", uid).eq("day", day).lte("created_at", at);
+  const m = quizParentPush(kid.name || "Дитина", today ?? []);
+  if (m) await send(await parents(kid.family_id), m.title, m.body, `qz${uid}${day}`, `#today?kid=${uid}`);
+}
+
 Deno.serve(async (req) => {
   const c = await secrets();
   if (req.headers.get("x-hook-secret") !== c.hook_secret) return new Response("forbidden", { status: 403 });
@@ -175,6 +190,8 @@ Deno.serve(async (req) => {
   } else if (table === "school_ledger" && type === "INSERT") {
     const m = ledgerPush(r);
     if (m) await send([r.child_id], m.title, m.body, "l" + r.id);
+  } else if (table === "school_quiz_answers" && type === "INSERT") {
+    await notifyQuiz(r.user_id, r.day, r.created_at);
   } else if (table === "school_challenges" && type === "INSERT") {
     await send([r.child_id], `🏅 Новий челендж: +${r.reward} ₴`, r.title, "c" + r.id);
   } else if (table === "school_members" && type === "INSERT") {

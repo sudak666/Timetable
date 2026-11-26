@@ -92,6 +92,9 @@ data class QuizQuestion(val id: Int, val question: String, val options: List<Str
 /** Відповідь сервера: [paid] — скільки нараховано (0 — без грошей), [left] — скільки оплачених відповідей лишилось на сьогодні. */
 data class QuizAnswer(val correct: Boolean, val right: String, val paid: Int, val left: Int)
 
+/** Сьогоднішня відповідь дитини у вікторині (бачать батьки): [answer] — що обрала, [right] — правильна, [paid] — скільки нараховано. */
+data class QuizTodayEntry(val question: String, val answer: String?, val right: String, val correct: Boolean, val paid: Int)
+
 /** Усе, що бачить сім'я, — локальна копія з Room (працює офлайн). */
 data class FamilyData(
     val family: Family,

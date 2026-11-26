@@ -9,6 +9,7 @@ import com.gifwarno.rozklad.core.model.LedgerSource
 import com.gifwarno.rozklad.core.model.Prices
 import com.gifwarno.rozklad.core.model.QuizAnswer
 import com.gifwarno.rozklad.core.model.QuizQuestion
+import com.gifwarno.rozklad.core.model.QuizTodayEntry
 import com.gifwarno.rozklad.core.model.SchoolSchedule
 import com.gifwarno.rozklad.core.model.Streak
 import com.gifwarno.rozklad.core.model.SyncStatus
@@ -107,6 +108,9 @@ interface FamilyRepository {
 
     /** Відповідь на питання: перевіряє й оплачує сервер (потрібна мережа). Гроші з'являються в гаманці після оновлення. */
     suspend fun quizAnswer(familyId: String, id: Int, answer: String): Result<QuizAnswer>
+
+    /** Сьогоднішні відповіді дитини у вікторині — для батьків (потрібна мережа; сервер перевіряє, що це ваша дитина). */
+    suspend fun quizToday(childId: String): Result<List<QuizTodayEntry>>
 }
 
 /** Найдовше ім'я чи назва сім'ї — як у вебі (maxlength=40). */
