@@ -290,4 +290,13 @@ class FakeFamilyRepository(initial: FamilyData?) : FamilyRepository {
         val ok = answer == right
         return Result.success(com.gifwarno.rozklad.core.model.QuizAnswer(ok, right, if (ok) quizPaid else 0, 2))
     }
+
+    /** Сьогоднішні відповіді дитини для батьків; [quizTodayAsked] — для якої дитини питали. */
+    var quizTodayResult: Result<List<com.gifwarno.rozklad.core.model.QuizTodayEntry>> = Result.success(emptyList())
+    val quizTodayAsked = mutableListOf<String>()
+
+    override suspend fun quizToday(childId: String): Result<List<com.gifwarno.rozklad.core.model.QuizTodayEntry>> {
+        quizTodayAsked += childId
+        return quizTodayResult
+    }
 }

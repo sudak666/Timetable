@@ -25,6 +25,7 @@ import com.gifwarno.rozklad.core.model.LedgerSource
 import com.gifwarno.rozklad.core.model.Prices
 import com.gifwarno.rozklad.core.model.QuizAnswer
 import com.gifwarno.rozklad.core.model.QuizQuestion
+import com.gifwarno.rozklad.core.model.QuizTodayEntry
 import com.gifwarno.rozklad.core.model.SchoolSchedule
 import com.gifwarno.rozklad.core.model.Streak
 import com.gifwarno.rozklad.core.model.SyncStatus
@@ -315,6 +316,10 @@ internal class OfflineFirstFamilyRepository @Inject constructor(
             val a = network.quizAnswer(id, answer)
             QuizAnswer(a.correct, a.right, a.paid, a.left)
         }.onSuccess { if (it.paid > 0) refresh(familyId) }
+    }
+
+    override suspend fun quizToday(childId: String): Result<List<QuizTodayEntry>> = withContext(io) {
+        runNetwork { network.quizToday(childId).map { QuizTodayEntry(it.q, it.answer, it.right, it.correct, it.paid) } }
     }
 
     override suspend fun alertLocations(oblastUid: Int?): Result<List<AlertLocation>> = withContext(io) {

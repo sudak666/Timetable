@@ -6,6 +6,7 @@ import com.gifwarno.rozklad.core.network.model.NetworkAuthState
 import com.gifwarno.rozklad.core.network.model.NetworkMembership
 import com.gifwarno.rozklad.core.network.model.NetworkQuizAnswer
 import com.gifwarno.rozklad.core.network.model.NetworkQuizQuestion
+import com.gifwarno.rozklad.core.network.model.NetworkQuizToday
 import com.gifwarno.rozklad.core.network.model.NetworkSnapshot
 import com.gifwarno.rozklad.core.network.model.NetworkWrite
 import com.gifwarno.rozklad.core.network.model.WriteResult
@@ -89,6 +90,9 @@ interface RozkladNetworkDataSource {
 
     /** Відповідь перевіряє й оплачує сервер (RPC school_quiz_answer). */
     suspend fun quizAnswer(id: Int, answer: String): NetworkQuizAnswer
+
+    /** Сьогоднішні відповіді дитини — лише для її батьків (RPC school_quiz_today). */
+    suspend fun quizToday(childId: String): List<NetworkQuizToday>
 }
 
 /** Хост адреси повернення після входу через Google: <пакет застосунку>://login-callback. */

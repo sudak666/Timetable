@@ -63,6 +63,17 @@ data class NetworkQuizQuestion(val id: Int, val q: String, val options: List<Str
 @Serializable
 data class NetworkQuizAnswer(val correct: Boolean, val right: String, val paid: Int = 0, val left: Int = 0)
 
+/** Сьогоднішня відповідь дитини з RPC school_quiz_today (лише для батьків її сім'ї). */
+@Serializable
+data class NetworkQuizToday(
+    @SerialName("quiz_id") val quizId: Int,
+    val q: String,
+    val answer: String? = null,
+    @SerialName("right_answer") val right: String,
+    val correct: Boolean,
+    val paid: Int = 0,
+)
+
 @Serializable
 data class NetworkChallenge(
     val id: String,
